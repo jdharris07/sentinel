@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>LCARS Login Puzzle</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="stylesheet" type="text/css" href="assets/classic.css">
+  <style>
+    /* Additional styles for code box only */
+    #code-box {
+      padding: 20px;
+      max-width: 320px;
+      margin: 20px auto;
+      background-color: #663300;
+      border-radius: 20px;
+      color: #FFCC66;
+      font-family: 'LCARS', sans-serif, Arial, sans-serif;
+      text-align: center;
+      box-shadow: 0 0 15px #FFCC66AA;
+    }
+    #code-box form {
+      margin: 0;
+    }
+    .code-input {
+      width: 40px;
+      height: 40px;
+      border-radius: 15px;
+      border: 2px solid #FFCC66;
+      background: #330000;
+      color: #FFCC66;
+      font-size: 24px;
+      text-align: center;
+      margin: 0 4px;
+      font-weight: bold;
+      outline-offset: 0;
+      outline-color: #FFCC66;
+    }
+    .code-input:disabled {
+      background-color: #225522 !important;
+      border-color: #88FF88 !important;
+      color: #DDFFDD !important;
+      cursor: default;
+    }
+    #code-box button {
+      margin-top: 10px;
+      border-radius: 20px;
+      background-color: #FFCC66;
+      border: none;
+      color: #330000;
+      font-weight: bold;
+      padding: 8px 20px;
+      cursor: pointer;
+      font-size: 18px;
+      transition: background-color 0.3s ease;
+    }
+    #code-box button:hover:not(:disabled) {
+      background-color: #FFD97F;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap-everything">
+    <section id="column-3">
+      <div class="wrap">
+        <div class="left-frame-top">
+          <div class="panel-1"><a href="">LCARS</a></div>
+          <div class="panel-2">02<span class="hop">-262000</span></div>
+        </div>
+        <div class="right-frame-top">
+          <div class="banner"> LCARS &#149; 47988 </div>
+          <div class="data-cascade-button-group">
+            <nav>
+              <a href="page1.html">01</a>
+              <a href="#">02</a>
+              <a href="#">03</a>
+              <a href="#">04</a>
+            </nav>
+            <div class="bar-panel first-bar-panel">
+              <div class="bar-1"></div>
+              <div class="bar-2"></div>
+              <div class="bar-3"></div>
+              <div class="bar-4"></div>
+              <div class="bar-5"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <main>
+        <h1>Access Puzzle</h1>
+        <h2>Enter the correct sequence</h2>
+        <div id="code-box">
+          <form id="code-form" autocomplete="off">
+            <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+              <input type="text" inputmode="numeric" maxlength="1" class="code-input" id="digit0" />
+              <input type="text" inputmode="numeric" maxlength="1" class="code-input" id="digit1" />
+              <input type="text" inputmode="numeric" maxlength="1" class="code-input" id="digit2" />
+              <input type="text" inputmode="numeric" maxlength="1" class="code-input" id="digit3" />
+              <input type="text" inputmode="numeric" maxlength="1" class="code-input" id="digit4" />
+              <input type="text" inputmode="numeric" maxlength="1" class="code-input" id="digit5" />
+            </div>
+            <button type="submit">Submit</button>
+          </form>
+        </div>
+      </main>
+      <footer>
+        <div class="meta-data">META DATA</div>
+        Content &copy; 2025 — LCARS Inspired Website Template by <a href="https://www.thelcars.com">www.TheLCARS.com</a>
+      </footer>
+    </section>
+  </div>
+  <script src="assets/lcars.js"></script>
+  <div class="headtrim"></div>
+  <div class="baseboard"></div>
+</body>
+</html>
