@@ -2665,3 +2665,57 @@ footer {
    	line-height: 1rem;
    }
 }
+/* Your entire code exactly as you shared above (colors, structure, panels, animations, etc.) */
+
+/* --- START CUSTOM CHANGES --- */
+
+/* Remove pills by default */
+nav {
+  display: none;
+}
+
+/* Optional utility to show pills again if needed on a specific page */
+nav.show-nav {
+  display: flex !important;
+}
+
+/* Remove meta data text */
+.meta-data {
+  display: none;
+}
+
+/* Fix for wrapping content nicely on mobile */
+.wrap-everything {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 950px) {
+  .wrap-everything {
+    flex-direction: column;
+  }
+
+  #column-3 {
+    order: 1;
+    width: 100%;
+  }
+}
+
+/* Add padding scaling on small screens */
+main {
+  padding-left: clamp(10px, 2vw, 30px);
+  padding-right: clamp(10px, 2vw, 30px);
+}
+
+footer {
+  padding-left: clamp(10px, 2vw, 30px);
+}
+
+/* Adjust headtrim/baseboard on very small screens */
+@media (max-width: 525px) {
+  .headtrim,
+  .baseboard {
+    display: none;
+  }
+}
+
+/* --- END CUSTOM CHANGES --- */
