@@ -56,7 +56,6 @@
     #code-box button:hover:not(:disabled) {
       background-color: #FFD97F;
     }
-    /* Mobile friendly adjustments */
     @media (max-width: 600px) {
       main h1 {
         font-size: 1.5rem;
@@ -113,7 +112,60 @@
       </main>
     </section>
   </div>
+
   <script src="lcars.js"></script>
+  <script>
+    (function() {
+      const correctCode = ['1', '2', '3', '4', '5', '6'];
+      const inputs = Array.from(document.querySelectorAll('.code-input'));
+      const form = document.getElementById('code-form');
+      const codeBox = document.getElementById('code-box');
+
+      inputs.forEach((input, i) => {
+        input.addEventListener('input', (e) => {
+          let val = e.target.value;
+          if (!/^\d$/.test(val)) {
+            e.target.value = '';
+            return;
+          }
+          if (i < inputs.length - 1) {
+            if (!inputs[i + 1].disabled) {
+              inputs[i + 1].focus();
+            }
+          }
+        });
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key === "Backspace" && !input.value && i > 0) {
+            inputs[i - 1].focus();
+          }
+        });
+      });
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        let allCorrect = true;
+
+        inputs.forEach((input, i) => {
+          if (input.disabled) return;
+          if (input.value === correctCode[i]) {
+            input.disabled = true;
+            input.style.backgroundColor = '#225522';
+            input.style.borderColor = '#88FF88';
+            input.style.color = '#DDFFDD';
+          } else {
+            input.value = '';
+            allCorrect = false;
+          }
+        });
+
+        if (inputs.every(input => input.disabled)) {
+          codeBox.innerHTML = '<p style="font-size: 28px; font-weight: bold; color: #FFCC66; font-family: \'LCARS\', sans-serif;">You did it</p>';
+        }
+      });
+    })();
+  </script>
+
   <div class="headtrim"></div>
   <div class="baseboard"></div>
 </body>
