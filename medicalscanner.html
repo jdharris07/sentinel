@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Medical Display Interactive</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: black;
+    }
+    .image-container {
+      position: relative;
+      width: 768px;
+      height: 1152px;
+      margin: 0 auto;
+      background: url('Untitled design (11).png') no-repeat;
+      background-size: cover;
+    }
+    .click-box {
+      position: absolute;
+      background-color: rgba(255, 0, 0, 0.3);
+      cursor: pointer;
+    }
+    #textBox {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: black;
+      color: white;
+      padding: 1rem 2rem;
+      font-size: 1.5rem;
+      border-radius: 10px;
+      display: none;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+
+<div class="image-container">
+  <!-- Adjust these box positions as needed -->
+  <div class="click-box" style="left: 30px; top: 60px; width: 180px; height: 180px;" data-text="Skull scan details"></div>
+  <div class="click-box" style="left: 30px; top: 300px; width: 180px; height: 250px;" data-text="Full body scan details"></div>
+  <div class="click-box" style="left: 260px; top: 50px; width: 460px; height: 500px;" data-text="Silhouette scan info"></div>
+  <div class="click-box" style="left: 500px; top: 570px; width: 200px; height: 120px;" data-text="DNA analysis info"></div>
+  <div class="click-box" style="left: 40px; top: 780px; width: 220px; height: 150px;" data-text="Graph analysis"></div>
+  <div class="click-box" style="left: 260px; top: 780px; width: 450px; height: 150px;" data-text="Incident report logs"></div>
+</div>
+
+<div id="textBox"></div>
+
+<script>
+  const boxes = document.querySelectorAll('.click-box');
+  const textBox = document.getElementById('textBox');
+
+  boxes.forEach(box => {
+    box.addEventListener('click', (e) => {
+      e.stopPropagation();
+      textBox.textContent = box.getAttribute('data-text');
+      textBox.style.display = 'block';
+    });
+  });
+
+  document.body.addEventListener('click', () => {
+    textBox.style.display = 'none';
+  });
+
+  textBox.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+</script>
+
+</body>
+</html>
