@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Red Alert</title>
+  <title>Medical Scanner Video</title>
   <style>
     html, body {
       margin: 0;
@@ -10,8 +10,8 @@
     }
     #container {
       position: relative;
-      width: 768px; /* Fixed width to match your design */
-      height: 1152px; /* Fixed height */
+      width: 768px; /* Your original image/video width */
+      height: 1152px; /* Your original image/video height */
       margin: auto;
       background: black;
       overflow: hidden;
@@ -30,18 +30,16 @@
     #textBox {
       position: absolute;
       top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 20px;
       display: none;
       z-index: 2;
     }
     #textBox img {
-  width: 200%; /* or any scale you like */
-  height: auto;
-  display: block;
-  transform: translateX(-25%); /* move it left, adjust this value as needed */
-}
-
+      width: 200%;
+      height: auto;
+      display: block;
+      transform: translateX(-25%);
+    }
   </style>
 </head>
 <body>
@@ -51,13 +49,12 @@
       Your browser does not support the video tag.
     </video>
 
-    <!-- Clickable boxes -->
+    <!-- Example clickable boxes -->
     <div class="clickable" style="left: 100px; top: 150px; width: 120px; height: 140px;" data-img="headpopup.png"></div>
-    <div class="clickable" style="left: 300px; top: 150px; width: 100px; height: 150px;" data-img=""></div>
-    <div class="clickable" style="left: 80px; top: 740px; width: 130px; height: 150px;" data-img=""></div>
-    <div class="clickable" style="left: 500px; top: 550px; width: 140px; height: 130px;" data-img=""></div>
-    <div class="clickable" style="left: 600px; top: 300px; width: 120px; height: 130px;" data-img=""></div>
-    <div class="clickable" style="left: 300px; top: 900px; width: 150px; height: 130px;" data-img=""></div>
+    <div class="clickable" style="left: 300px; top: 150px; width: 100px; height: 150px;" data-img="chestpopup.png"></div>
+    <div class="clickable" style="left: 80px; top: 740px; width: 130px; height: 150px;" data-img="abdomenpopup.png"></div>
+    <div class="clickable" style="left: 500px; top: 550px; width: 140px; height: 130px;" data-img="leftlegpopup.png"></div>
+    <div class="clickable" style="left: 600px; top: 300px; width: 120px; height: 130px;" data-img="rightlegpopup.png"></div>
 
     <div id="textBox"></div>
   </div>
@@ -71,21 +68,22 @@
       box.addEventListener('click', (e) => {
         e.stopPropagation();
         const imgSrc = box.getAttribute('data-img');
-        if (imgSrc) {
-          textBox.innerHTML = `<img src="${imgSrc}" alt="Popup Image">`;
-          textBox.style.display = 'block';
-          audio.currentTime = 0;
-          audio.play();
-        }
+        textBox.innerHTML = `<img src="${imgSrc}" alt="Popup">`;
+        textBox.style.display = 'block';
+        audio.currentTime = 0;
+        audio.play();
       });
     });
 
+    // Click anywhere outside to hide
     document.addEventListener('click', () => {
       textBox.style.display = 'none';
     });
 
+    // Click directly on image to hide
     textBox.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent closing when clicking on the image
+      e.stopPropagation();
+      textBox.style.display = 'none';
     });
   </script>
 </body>
