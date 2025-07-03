@@ -24,14 +24,14 @@
     }
     .clickable {
       position: absolute;
-      background: transparent;
+      background: transparent; /* transparent clickable boxes */
       cursor: pointer;
     }
     #textBox {
       position: absolute;
       top: 20px;
       left: 20px;
-      background: transparent;
+      background: rgba(0, 0, 0, 0.7);
       color: white;
       padding: 15px;
       display: none;
@@ -53,6 +53,7 @@
     <div class="clickable" style="left: 80px; top: 740px; width: 130px; height: 150px;" data-text="Abdomen scan info"></div>
     <div class="clickable" style="left: 500px; top: 550px; width: 140px; height: 130px;" data-text="Left leg info"></div>
     <div class="clickable" style="left: 600px; top: 300px; width: 120px; height: 130px;" data-text="Right leg info"></div>
+    <div class="clickable" style="left: 300px; top: 900px; width: 150px; height: 130px;" data-text="Pelvis scan info"></div>
 
     <div id="textBox"></div>
   </div>
@@ -62,20 +63,14 @@
     const clickables = document.querySelectorAll('.clickable');
     const audio = new Audio('padd_1.mp3');
 
-
     clickables.forEach(box => {
       box.addEventListener('click', (e) => {
         e.stopPropagation();
         textBox.innerText = box.getAttribute('data-text');
         textBox.style.display = 'block';
-        clickable.addEventListener("click", function(e) {
-  e.stopPropagation();
-  audio.currentTime = 0; // Reset to start in case it's still playing
-  audio.play();
-  modalText.textContent = item.text;
-  modal.style.display = "flex";
-});
 
+        audio.currentTime = 0; // Reset to start
+        audio.play();
       });
     });
 
