@@ -60,12 +60,22 @@
   <script>
     const textBox = document.getElementById('textBox');
     const clickables = document.querySelectorAll('.clickable');
+    const audio = new Audio('padd_1.mp3');
+
 
     clickables.forEach(box => {
       box.addEventListener('click', (e) => {
         e.stopPropagation();
         textBox.innerText = box.getAttribute('data-text');
         textBox.style.display = 'block';
+        clickable.addEventListener("click", function(e) {
+  e.stopPropagation();
+  audio.currentTime = 0; // Reset to start in case it's still playing
+  audio.play();
+  modalText.textContent = item.text;
+  modal.style.display = "flex";
+});
+
       });
     });
 
