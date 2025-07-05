@@ -1,107 +1,169 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Chat with COMPAS</title>
+  <title>COMPAS Interface</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="format-detection" content="telephone=no">
   <link rel="stylesheet" type="text/css" href="classic.css">
   <style>
-    body { background-color: black; color: #FFCC66; font-family: monospace; }
-    #chat { border: 2px solid #FFCC66; padding: 10px; height: 50vh; overflow-y: scroll; background-color: #330000; }
-    #inputArea { margin-top: 10px; text-align: center; display: flex; flex-direction: column; align-items: center; }
-    input { width: 90%; max-width: 500px; padding: 10px; background-color: #330000; color: #FFCC66; border: 2px solid #FFCC66; border-radius: 10px; font-size: 18px; margin-bottom: 10px; }
-    button { padding: 10px 30px; background-color: #FFCC66; border: none; color: #330000; font-weight: bold; border-radius: 20px; cursor: pointer; font-size: 18px; }
-    button:hover { background-color: #FFD97F; }
-    h1 { font-size: 24px; text-align: center; }
+    body {
+      background-color: black;
+      color: #FFCC66;
+      font-family: 'Arial', sans-serif;
+      padding: 20px;
+    }
+    #chat {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #330000;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #FFCC66AA;
+      overflow-y: auto;
+      height: 400px;
+    }
+    .entry {
+      margin-bottom: 15px;
+    }
+    .player {
+      color: #88FF88;
+    }
+    .compas {
+      color: #FFCC66;
+      white-space: pre-wrap;
+    }
+    #input-area {
+      display: flex;
+      justify-content: center;
+      margin-top: 15px;
+    }
+    #user-input {
+      width: 80%;
+      padding: 8px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 2px solid #FFCC66;
+      background: #330000;
+      color: #FFCC66;
+    }
+    button {
+      padding: 8px 16px;
+      margin-left: 8px;
+      border-radius: 5px;
+      background-color: #FFCC66;
+      border: none;
+      color: #330000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #FFD97F;
+    }
   </style>
 </head>
 <body>
+  <h1>COMPAS Interface</h1>
+  <div id="chat">
+    <div class="entry compas">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know who I can help, but note my responses are limited.</div>
+  </div>
+  <div id="input-area">
+    <input type="text" id="user-input" placeholder="Type your message here..." />
+    <button onclick="handleInput()">Send</button>
+  </div>
 
-<div class="wrap-everything">
-  <section id="column-3">
-    <div class="wrap">
-      <div class="left-frame-top">
-        <div class="panel-1 static-panel"></div>
-        <div class="panel-2 static-panel">&nbsp;</div>
-      </div>
-      <div class="right-frame-top">
-        <div class="banner"> LCARS • COMPAS INTERFACE </div>
-        <div class="bar-panel first-bar-panel">
-          <div class="bar-1"></div>
-          <div class="bar-2"></div>
-          <div class="bar-3"></div>
-          <div class="bar-4"></div>
-          <div class="bar-5"></div>
-        </div>
-      </div>
-    </div>
+  <audio id="compas-audio" src="compas.mp3"></audio>
 
-    <main>
-      <h1>Chat with COMPAS</h1>
-      <div id="chat"></div>
-      <div id="inputArea">
-        <input type="text" id="playerInput" placeholder="Enter your query...">
-        <button onclick="processInput()">Send</button>
-      </div>
-    </main>
-  </section>
-</div>
+  <script>
+    const chat = document.getElementById("chat");
+    const audio = document.getElementById("compas-audio");
+    let patchHintStep = 0;
 
-<script>
-const responses = {
-  storage: "Upon my reconstruction of the damaged security log, I have determined the individual voice command used belonged to Chief Specialist Lorr Vun. It appears that Lorr Vun accessed the replicator on the same deck where an excess amount of Vulcan liquor was obtained. Lorr accessed the storage room from time to time before exiting and attempting to wipe the security log.",
-  logs: "I have aggregated all known security logs for your review. Please specify which area or deck you wish to analyze further.",
-  medbay: "Biometric data confirms Dr. Renn Vok remained in the medbay during the specified window. No anomalies detected in her access logs.",
-  tavik: "Doctor Eno Tavik's access patterns show unusual power consumption and unauthorized system overrides. Further review is advised.",
-  vulcan: "Cross-reference indicates Vulcan brandy replicator pattern was accessed multiple times. Cross-contamination logs suggest possible intoxication scenario.",
-  hello: "Greetings, investigator. I am fully operational and ready to assist your inquiry.",
-  killer: "I am unable to provide a definitive answer. My function is to assist your investigation, not determine subjective guilt without evidence.",
-  creator: "I was developed by Starfleet Engineering in conjunction with the Federation Advanced Systems Division. My design integrates over 1.2 million subroutines for station management and tactical support.",
-  help: "You may ask me about specific locations, personnel, logs, or operational protocols. Please include relevant keywords to maximize efficiency.",
-  starbase: "Starbase Sentinel is currently operating at 87% efficiency. All critical systems are stable, though diplomatic tensions are escalating.",
-  thalen: "Commissioner Vorek Thalen's quarters show no external forced entry. Logs indicate he received multiple visitors in the hours before his termination.",
-  motive: "Determining motive requires subjective analysis beyond my standard operational scope. You may cross-reference suspect logs for further insight.",
-  suspects: "Current primary suspects include Ambassador Jora Tell, Commander Nira Vess, Counselor Gil Dalra, Chief Specialist Lorr Vun, Dr. Renn Vok, and Doctor Eno Tavik. Please specify a name for more detailed data.",
-  jora: "Ambassador Jora Tell (Trill) is an experienced diplomat known for advocating peaceful resolutions. No immediate evidence suggests she engaged in direct violence.",
-  vess: "Commander Nira Vess (Andorian) is the station's tactical advisor. Logs show a disciplined record and strong Federation loyalty.",
-  dalra: "Counselor Gil Dalra (Cardassian) specializes in conflict mediation. Surveillance logs confirm he was conducting private sessions at the time of the incident.",
-  vun: "Chief Specialist Lorr Vun (Bolian) manages engineering maintenance schedules. He was logged accessing multiple secure areas without proper clearance.",
-  vok: "Dr. Renn Vok (Tandaran) served as the ambassador's personal physician and cultural attaché. Medical logs confirm she attended to minor injuries prior to the ambassador's death.",
-  eno: "Doctor Eno Tavik (Denobulan) is a visiting medical specialist. Her access logs show irregular patterns that warrant further scrutiny.",
-  stardate: "Current stardate is 58814.6."
-};
+    const fallbackResponses = [
+      "I do not have sufficient data to process that query.",
+      "That input does not correspond to my available data modules.",
+      "Please rephrase. I am unable to provide a response.",
+      "That information is beyond my operational parameters."
+    ];
 
-const fallbackReplies = [
-  "I do not understand your query. Please rephrase or provide additional context.",
-  "Your input does not match any authorized parameters.",
-  "Clarification required. Unable to process this request as entered.",
-  "Request not recognized. Please use precise operational terms."
-];
+    const responses = {
+      "hello": "Hello, investigator. How may I assist you today?",
+      "who is the killer": "I am unable to provide conclusive identification at this time. Further evidence is required.",
+      "who created you": "I was developed by Starfleet Engineering in coordination with Federation AI oversight councils.",
+      "stardate": "Current stardate is 58814.6.",
+      "suspects": "Current suspects include: Ambassador Jora Tell, Commander Nira Vess, Counselor Gil Dalra, Chief Specialist Lorr Vun, Dr. Renn Vok, and Doctor Eno Tavik.",
+      "thalen": "Commissioner Vorek Thalen was the Tandaran ambassador, found deceased in his quarters. He was central to the current diplomatic summit.",
+      "motive": "Motives vary by suspect and require evidence analysis. Please specify a suspect for detailed data.",
+      "jora": "Ambassador Jora Tell is a Trill diplomat. Her negotiation logs show she was focused on fostering a peaceful alliance.",
+      "vess": "Commander Nira Vess is an Andorian tactical advisor. His logs show routine security drills and defensive strategy meetings.",
+      "dalra": "Counselor Gil Dalra is a Cardassian psychological advisor. His session logs suggest involvement in crew morale assessments.",
+      "vun": "Chief Specialist Lorr Vun is a Bolian engineer. Maintenance logs place him near plasma conduits during key intervals.",
+      "vok": "Dr. Renn Vok is the Tandaran medical attaché. Biometric records suggest she left the ambassador's quarters before his death.",
+      "eno": "Doctor Eno Tavik is a Denobulan medical consultant. Logs show unusual system accesses requiring further review."
+    };
 
-window.onload = function() {
-  const chat = document.getElementById("chat");
-  chat.innerHTML += `<div><strong>COMPAS:</strong> Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know who I can help, but please note my responses are limited.</div>`;
-};
+    const patchHints = [
+      "The Tandaran insignia is not just decorative; it may serve as a key overlay to hidden information.",
+      "Consider using the numbered points on the patch to guide your reading order.",
+      "The patch points can align with specific marks or clues on the letterhead. Try moving it carefully to see where they match.",
+      "There may be multiple ways to place the patch. Only one sequence will reveal a clear message when read in numerical order from 1 to 7.",
+      "When correctly placed, the message will read clearly across the points in order. You are seeking something that resembles a passcode for Taldare."
+    ];
 
-function processInput() {
-  const input = document.getElementById("playerInput").value.toLowerCase();
-  let reply = fallbackReplies[Math.floor(Math.random() * fallbackReplies.length)];
-
-  for (const keyword in responses) {
-    if (input.includes(keyword)) {
-      reply = responses[keyword];
-      break;
+    function getPatchHint() {
+      const hint = patchHints[Math.min(patchHintStep, patchHints.length - 1)];
+      patchHintStep++;
+      return hint;
     }
-  }
 
-  const chat = document.getElementById("chat");
-  chat.innerHTML += `<div><strong>You:</strong> ${input}</div>`;
-  chat.innerHTML += `<div><strong>COMPAS:</strong> ${reply}</div>`;
-  chat.scrollTop = chat.scrollHeight;
+    function addResponse(text) {
+      const div = document.createElement("div");
+      div.classList.add("entry", "compas");
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+      typeText(div, text, 20);
+      audio.play();
+    }
 
-  document.getElementById("playerInput").value = "";
-}
-</script>
+    function typeText(element, text, speed) {
+      let i = 0;
+      function typing() {
+        if (i < text.length) {
+          element.innerText += text.charAt(i);
+          i++;
+          chat.scrollTop = chat.scrollHeight;
+          setTimeout(typing, speed);
+        }
+      }
+      typing();
+    }
 
+    function handleInput() {
+      const input = document.getElementById("user-input");
+      const message = input.value.trim().toLowerCase();
+      if (!message) return;
+
+      const playerDiv = document.createElement("div");
+      playerDiv.classList.add("entry", "player");
+      playerDiv.innerText = "> " + input.value;
+      chat.appendChild(playerDiv);
+      chat.scrollTop = chat.scrollHeight;
+
+      input.value = "";
+
+      if (message.includes("patch") || message.includes("paper") || message.includes("letterhead") || message.includes("tandaran paper")) {
+        addResponse(getPatchHint());
+        return;
+      }
+
+      for (const key in responses) {
+        if (message.includes(key)) {
+          addResponse(responses[key]);
+          return;
+        }
+      }
+
+      const fallback = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+      addResponse(fallback);
+    }
+  </script>
 </body>
 </html>
