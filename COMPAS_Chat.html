@@ -171,11 +171,24 @@
 
       input.value = "";
 
-      if (message.includes("patch") || message.includes("paper") || message.includes("letterhead") || message.includes("tandaran paper")) {
+      // Check for any hint-related triggers
+      if (
+        message.includes("patch") ||
+        message.includes("paper") ||
+        message.includes("letterhead") ||
+        message.includes("tandaran paper") ||
+        message.includes("hint") ||
+        message.includes("another") ||
+        message.includes("more") ||
+        message.includes("next") ||
+        message.includes("continue") ||
+        message.includes("give me another")
+      ) {
         addResponse(getPatchHint());
         return;
       }
 
+      // Check standard responses
       for (const key in responses) {
         if (message.includes(key)) {
           addResponse(responses[key]);
@@ -183,6 +196,7 @@
         }
       }
 
+      // Fallback
       const fallback = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
       addResponse(fallback);
     }
