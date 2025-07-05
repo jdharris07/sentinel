@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat with COMPAS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="stylesheet" type="text/css" href="classic.css">
+  <style>
+    body { background-color: black; color: #FFCC66; font-family: monospace; }
+    #chat { border: 2px solid #FFCC66; padding: 10px; height: 400px; overflow-y: scroll; background-color: #330000; }
+    #inputArea { margin-top: 10px; text-align: center; }
+    input { width: 70%; padding: 8px; background-color: #330000; color: #FFCC66; border: 2px solid #FFCC66; border-radius: 10px; font-size: 16px; }
+    button { padding: 8px 20px; background-color: #FFCC66; border: none; color: #330000; font-weight: bold; border-radius: 20px; cursor: pointer; font-size: 16px; }
+    button:hover { background-color: #FFD97F; }
+  </style>
+</head>
+<body>
+
+<div class="wrap-everything">
+  <section id="column-3">
+    <div class="wrap">
+      <div class="left-frame-top">
+        <div class="panel-1 static-panel"></div>
+        <div class="panel-2 static-panel">&nbsp;</div>
+      </div>
+      <div class="right-frame-top">
+        <div class="banner"> LCARS • COMPAS INTERFACE </div>
+        <div class="bar-panel first-bar-panel">
+          <div class="bar-1"></div>
+          <div class="bar-2"></div>
+          <div class="bar-3"></div>
+          <div class="bar-4"></div>
+          <div class="bar-5"></div>
+        </div>
+      </div>
+    </div>
+
+    <main>
+      <h1>Chat with COMPAS</h1>
+      <div id="chat"></div>
+      <div id="inputArea">
+        <input type="text" id="playerInput" placeholder="Enter your query...">
+        <button onclick="processInput()">Send</button>
+      </div>
+    </main>
+  </section>
+</div>
+
+<script>
+const responses = {
+  storage: "Upon my reconstruction of the damaged security log, I have determined the individual voice command used belonged to Chief Specialist Lorr Vun. It appears that Lorr Vun accessed the replicator on the same deck where an excess amount of Vulcan liquor was obtained. Lorr accessed the storage room from time to time before exiting and attempting to wipe the security log.",
+  logs: "I have aggregated all known security logs for your review. Please specify which area or deck you wish to analyze further.",
+  medbay: "Biometric data confirms Dr. Renn Vok remained in the medbay during the specified window. No anomalies detected in her access logs.",
+  tavik: "Doctor Eno Tavik's access patterns show unusual power consumption and unauthorized system overrides. Further review is advised.",
+  vulcan: "Cross-reference indicates Vulcan brandy replicator pattern was accessed multiple times. Cross-contamination logs suggest possible intoxication scenario."
+};
+
+function processInput() {
+  const input = document.getElementById("playerInput").value.toLowerCase();
+  let reply = "I do not understand your query. Please rephrase or provide additional context.";
+
+  for (const keyword in responses) {
+    if (input.includes(keyword)) {
+      reply = responses[keyword];
+      break;
+    }
+  }
+
+  const chat = document.getElementById("chat");
+  chat.innerHTML += `<div><strong>You:</strong> ${input}</div>`;
+  chat.innerHTML += `<div><strong>COMPAS:</strong> ${reply}</div>`;
+  chat.scrollTop = chat.scrollHeight;
+
+  document.getElementById("playerInput").value = "";
+}
+</script>
+
+</body>
+</html>
