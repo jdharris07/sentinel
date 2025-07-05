@@ -188,7 +188,6 @@
         return;
       }
 
-      // Check standard responses
       for (const key in responses) {
         if (message.includes(key)) {
           addResponse(responses[key]);
@@ -196,10 +195,17 @@
         }
       }
 
-      // Fallback
       const fallback = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
       addResponse(fallback);
     }
+
+    // Add support for Enter key
+    document.getElementById("user-input").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleInput();
+      }
+    });
   </script>
 </body>
 </html>
