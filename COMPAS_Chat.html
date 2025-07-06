@@ -172,7 +172,7 @@
     function speakText(text) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.voice = speechSynthesis.getVoices().find(voice => voice.lang.includes('en')) || null;
-      utterance.rate = 0.95;
+      utterance.rate = 0.99;
       speechSynthesis.speak(utterance);
     }
 
