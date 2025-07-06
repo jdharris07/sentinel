@@ -93,10 +93,12 @@
   </div>
 
   <audio id="compas-audio" src="compas.mp3"></audio>
+  <audio id="fail-audio" src="input_failed_clean.mp3"></audio>
 
   <script>
     const chat = document.getElementById("chat-box");
     const audio = document.getElementById("compas-audio");
+    const failAudio = document.getElementById("fail-audio");
     let patchHintStep = 0;
 
     const fallbackResponses = [
@@ -140,13 +142,17 @@
       return hint;
     }
 
-    function addResponse(text) {
+    function addResponse(text, isFallback = false) {
       const div = document.createElement("div");
       div.classList.add("entry", "compas");
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
       typeText(div, text, 20);
-      audio.play();
+      if (isFallback) {
+        failAudio.play();
+      } else {
+        audio.play();
+      }
       speakText(text);
     }
 
@@ -166,7 +172,7 @@
     function speakText(text) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.voice = speechSynthesis.getVoices().find(voice => voice.lang.includes('en')) || null;
-      utterance.rate = 0.95; // Slightly slower for clarity
+      utterance.rate = 0.95;
       speechSynthesis.speak(utterance);
     }
 
@@ -183,7 +189,6 @@
 
       input.value = "";
 
-      // Check for any hint-related triggers
       if (
         message.includes("patch") ||
         message.includes("paper") ||
@@ -208,10 +213,9 @@
       }
 
       const fallback = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-      addResponse(fallback);
+      addResponse(fallback, true);
     }
 
-    // Add support for Enter key
     document.getElementById("user-input").addEventListener("keydown", function(e) {
       if (e.key === "Enter") {
         e.preventDefault();
