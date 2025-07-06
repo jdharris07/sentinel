@@ -58,6 +58,12 @@
     button:hover {
       background-color: #FFD97F;
     }
+    #voice-toggle {
+      margin-top: 10px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
   </style>
 </head>
 <body>
@@ -82,12 +88,13 @@
       <main>
         <h1>COMPAS Assistance Console</h1>
         <div id="chat-box">
-          <div class="entry compas" id="intro-text">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know how I can help, but note my responses are limited. </div>
+          <div class="entry compas" id="intro-text">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know who I can help, but note my responses are limited.</div>
         </div>
         <div id="input-area">
           <input type="text" id="user-input" placeholder="Type your message here..." />
           <button onclick="handleInput()">Send</button>
         </div>
+        <button id="voice-toggle">Voice: On</button>
       </main>
     </section>
   </div>
@@ -99,7 +106,9 @@
     const chat = document.getElementById("chat-box");
     const audio = document.getElementById("compas-audio");
     const failAudio = document.getElementById("fail-audio");
+    const voiceToggle = document.getElementById("voice-toggle");
     let patchHintStep = 0;
+    let voiceEnabled = true; // Default: voice on
 
     const fallbackResponses = [
       "I do not have sufficient data to process that query.",
@@ -153,7 +162,9 @@
       } else {
         audio.play();
       }
-      speakText(text);
+      if (voiceEnabled) {
+        speakText(text);
+      }
     }
 
     function typeText(element, text, speed) {
@@ -172,7 +183,7 @@
     function speakText(text) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.voice = speechSynthesis.getVoices().find(voice => voice.lang.includes('en')) || null;
-      utterance.rate = 0.99;
+      utterance.rate = 0.95;
       speechSynthesis.speak(utterance);
     }
 
@@ -226,7 +237,14 @@
     // Speak intro on load
     window.addEventListener("load", function() {
       const introText = document.getElementById("intro-text").innerText;
-      speakText(introText);
+      if (voiceEnabled) {
+        speakText(introText);
+      }
+    });
+
+    voiceToggle.addEventListener("click", function() {
+      voiceEnabled = !voiceEnabled;
+      voiceToggle.innerText = voiceEnabled ? "Voice: On" : "Voice: Off";
     });
   </script>
 </body>
