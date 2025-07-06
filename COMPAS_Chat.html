@@ -147,6 +147,7 @@
       chat.scrollTop = chat.scrollHeight;
       typeText(div, text, 20);
       audio.play();
+      speakText(text);
     }
 
     function typeText(element, text, speed) {
@@ -160,6 +161,13 @@
         }
       }
       typing();
+    }
+
+    function speakText(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = speechSynthesis.getVoices().find(voice => voice.lang.includes('en')) || null;
+      utterance.rate = 0.95; // Slightly slower for clarity
+      speechSynthesis.speak(utterance);
     }
 
     function handleInput() {
