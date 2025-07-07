@@ -1,25 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>COMPAS Assistance Console</title>
+  <title>COMPAS Interface</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="format-detection" content="telephone=no">
   <link rel="stylesheet" type="text/css" href="classic.css">
   <style>
-    body {
-      background-color: black;
-      color: #FFCC66;
-      font-family: 'Arial', sans-serif;
+    #chat-box {
       padding: 20px;
-    }
-    #chat {
       max-width: 600px;
-      margin: 0 auto;
-      background-color: #330000;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #FFCC66AA;
-      overflow-y: auto;
+      margin: 20px auto;
+      background-color: #663300;
+      border-radius: 20px;
+      color: #FFCC66;
+      box-shadow: 0 0 15px #FFCC66AA;
       height: 400px;
+      overflow-y: auto;
     }
     .entry {
       margin-bottom: 15px;
@@ -29,74 +25,85 @@
     }
     .compas {
       color: #FFCC66;
+      white-space: pre-wrap;
     }
     #input-area {
       display: flex;
       justify-content: center;
-      margin-top: 15px;
+      margin-top: 10px;
+      flex-wrap: wrap;
     }
     #user-input {
-      width: 80%;
+      flex: 1;
+      min-width: 60%;
       padding: 8px;
       font-size: 16px;
-      border-radius: 5px;
+      border-radius: 10px;
       border: 2px solid #FFCC66;
       background: #330000;
       color: #FFCC66;
+      margin-bottom: 10px;
     }
     button {
-      padding: 8px 16px;
-      margin-left: 8px;
-      border-radius: 5px;
+      padding: 8px 20px;
+      border-radius: 20px;
       background-color: #FFCC66;
       border: none;
       color: #330000;
       font-weight: bold;
       cursor: pointer;
+      font-size: 16px;
+      margin-left: 8px;
     }
     button:hover {
       background-color: #FFD97F;
     }
+    #voice-toggle {
+      margin-top: 10px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
   </style>
 </head>
 <body>
-  <h1>COMPAS ASSISTANCE CONSOLE</h1>
-  <div id="chat">
-    <div class="entry compas">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know who I can help, but note my responses are limited.</div>
+  <div class="wrap-everything">
+    <section id="column-3">
+      <div class="wrap">
+        <div class="left-frame-top">
+          <div class="panel-1 static-panel"></div>
+          <div class="panel-2 static-panel">&nbsp;</div>
+        </div>
+        <div class="right-frame-top">
+          <div class="banner"> LCARS • 58814.6 </div>
+          <div class="bar-panel first-bar-panel">
+            <div class="bar-1"></div>
+            <div class="bar-2"></div>
+            <div class="bar-3"></div>
+            <div class="bar-4"></div>
+            <div class="bar-5"></div>
+          </div>
+        </div>
+      </div>
+      <main>
+        <h1>COMPAS Assistance Console</h1>
+        <div id="chat-box">
+          <div class="entry compas" id="intro-text">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know who I can help, but note my responses are limited.</div>
+        </div>
+        <div id="input-area">
+          <input type="text" id="user-input" placeholder="Type your message here..." />
+          <button onclick="handleInput()">Send</button>
+        </div>
+        <button id="voice-toggle">Voice: On</button>
+      </main>
+    </section>
   </div>
-  <div id="input-area">
-    <input type="text" id="user-input" placeholder="Type your message here..." />
-    <button onclick="handleInput()">Send</button>
-  </div>
-  <button id="voice-toggle" onclick="toggleVoice()">Voice: On</button>
 
   <script>
-    const chat = document.getElementById("chat");
-    let patchHintStep = 0;
+    const chat = document.getElementById("chat-box");
+    const voiceToggle = document.getElementById("voice-toggle");
     let voiceEnabled = true;
-    const synth = window.speechSynthesis;
-
-    const fallbackResponses = [
-      "I do not have sufficient data to process that query.",
-      "That input does not correspond to my available data modules.",
-      "Please rephrase. I am unable to provide a response.",
-      "That information is beyond my operational parameters."
-    ];
-
-    const responses = {
-      "hello": "Hello, investigator. How may I assist you today?",
-      "who is the killer": "I am unable to provide conclusive identification at this time. Further evidence is required.",
-      "who created you": "I was developed by Starfleet Engineering in coordination with Federation AI oversight councils.",
-      "stardate": "Current stardate is 58814.6.",
-      "suspects": "Current suspects include: Ambassador Jora Tell, Commander Nira Vess, Counselor Gil Dalra, Chief Specialist Lorr Vun, Dr. Renn Vok, and Doctor Eno Tavik.",
-      "station": "Starbase Sentinel is positioned just outside Tandaran space, serving as a diplomatic and operations hub for Federation outreach.",
-      "starbase": "Starbase Sentinel is positioned just outside Tandaran space, serving as a diplomatic and operations hub for Federation outreach.",
-      "enterprise": "The USS Enterprise has a distinguished legacy of exploration and defense in service of the Federation.",
-      "voyager": "The USS Voyager returned to Federation space after a prolonged Delta Quadrant journey, greatly impacting diplomatic and technological strategy.",
-      "picard": "Jean-Luc Picard served as captain of the USS Enterprise-D and E, known for his diplomatic skill and moral leadership.",
-      "janeway": "Kathryn Janeway commanded Voyager through its Delta Quadrant journey, becoming a highly respected Starfleet admiral upon return.",
-      "kirk": "James T. Kirk was captain of the original USS Enterprise, known for his decisive and often unconventional tactics."
-    };
+    let patchHintStep = 0;
 
     const patchHints = [
       "The Tandaran insignia is not just decorative; it may serve as a key overlay to hidden information.",
@@ -106,30 +113,46 @@
       "When correctly placed, the message will read clearly across the points in order. You are seeking something that resembles a passcode for Taldare."
     ];
 
-    function getPatchHint() {
-      const hint = patchHints[Math.min(patchHintStep, patchHints.length - 1)];
-      patchHintStep++;
-      return hint;
-    }
+    const responses = {
+      "hello": "Hello, investigator. How may I assist you today?",
+      "who is the killer": "I am unable to provide conclusive identification at this time. Further evidence is required.",
+      "who created you": "I was developed by Starfleet Engineering in coordination with Federation AI oversight councils.",
+      "stardate": "Current stardate is 58814.6.",
+      "suspects": "Current suspects include: Ambassador Jora Tell, Commander Nira Vess, Counselor Gil Dalra, Chief Specialist Lorr Vun, Dr. Renn Vok, and Doctor Eno Tavik.",
+      "motive": "Motives vary by suspect and require evidence analysis. Please specify a suspect for detailed data.",
+      "jora": "Ambassador Jora Tell is a Trill diplomat. Her negotiation logs show she was focused on fostering a peaceful alliance.",
+      "vess": "Commander Nira Vess is an Andorian tactical advisor. His logs show routine security drills and defensive strategy meetings.",
+      "dalra": "Counselor Gil Dalra is a Cardassian psychological advisor. His session logs suggest involvement in crew morale assessments.",
+      "vun": "Chief Specialist Lorr Vun is a Bolian engineer. Maintenance logs place him near plasma conduits during key intervals.",
+      "vok": "Dr. Renn Vok is the Tandaran medical attaché. Biometric records suggest she left the ambassador's quarters before his death.",
+      "eno": "Doctor Eno Tavik is a Denobulan medical consultant. Logs show unusual system accesses requiring further review.",
+    };
 
-    function addResponse(text, sender = "compas") {
+    function addResponse(text, callback = null) {
       const div = document.createElement("div");
-      div.classList.add("entry", sender);
-      div.innerText = text;
+      div.classList.add("entry", "compas");
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
+      typeText(div, text, 20, callback);
 
-      if (voiceEnabled && sender === "compas") {
+      if (voiceEnabled && text) {
         speakText(text);
       }
     }
 
-    function speakText(text) {
-      if (!synth) return;
-      synth.cancel();
-      const utterThis = new SpeechSynthesisUtterance(text);
-      utterThis.rate = 1;
-      synth.speak(utterThis);
+    function typeText(element, text, speed, callback = null) {
+      let i = 0;
+      function typing() {
+        if (i < text.length) {
+          element.innerText += text.charAt(i);
+          i++;
+          chat.scrollTop = chat.scrollHeight;
+          setTimeout(typing, speed);
+        } else if (callback) {
+          callback();
+        }
+      }
+      typing();
     }
 
     function handleInput() {
@@ -137,16 +160,24 @@
       const message = input.value.trim().toLowerCase();
       if (!message) return;
 
-      addResponse("> " + input.value, "player");
+      const playerDiv = document.createElement("div");
+      playerDiv.classList.add("entry", "player");
+      playerDiv.innerText = "> " + input.value;
+      chat.appendChild(playerDiv);
+      chat.scrollTop = chat.scrollHeight;
+
       input.value = "";
 
-      if (message.includes("patch") || message.includes("paper") || message.includes("letterhead") || message.includes("tandaran paper") || message.includes("hint")) {
+      if (
+        message.includes("patch") || message.includes("hint") || message.includes("paper") || 
+        message.includes("letterhead") || message.includes("tandaran paper")
+      ) {
         addResponse(getPatchHint());
         return;
       }
 
       if (message.includes("derekend")) {
-        showSuspectForm();
+        addResponse("Have you completed your investigation? If so, please select all of the suspects you have managed to eliminate:", showSuspectCheckboxes);
         return;
       }
 
@@ -157,52 +188,80 @@
         }
       }
 
-      const fallback = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-      addResponse(fallback);
+      addResponse("I do not have sufficient data to process that query.");
     }
 
-    function showSuspectForm() {
+    function getPatchHint() {
+      const hint = patchHints[Math.min(patchHintStep, patchHints.length - 1)];
+      patchHintStep++;
+      return hint;
+    }
+
+    function showSuspectCheckboxes() {
       const div = document.createElement("div");
       div.classList.add("entry", "compas");
-
       div.innerHTML = `
-        <p>Have you completed your investigation? If so, please select all of the suspects you have managed to eliminate:</p>
         <label><input type="checkbox" value="jora"> Ambassador Jora Tell</label><br>
         <label><input type="checkbox" value="vess"> Commander Nira Vess</label><br>
         <label><input type="checkbox" value="dalra"> Counselor Gil Dalra</label><br>
         <label><input type="checkbox" value="vun"> Chief Specialist Lorr Vun</label><br>
         <label><input type="checkbox" value="vok"> Dr. Renn Vok</label><br>
         <label><input type="checkbox" value="eno"> Doctor Eno Tavik</label><br>
-        <button onclick="submitSuspects()">Submit</button>
+        <button onclick="submitSuspects(this)">Submit</button>
       `;
-
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
     }
 
-    function submitSuspects() {
-      const checkboxes = document.querySelectorAll(".compas input[type=checkbox]");
+    function submitSuspects(button) {
+      const container = button.closest(".entry");
+      const checkboxes = container.querySelectorAll("input[type=checkbox]");
       const allChecked = Array.from(checkboxes).every(cb => cb.checked);
 
       if (allChecked) {
-        addResponse("Fascinating. You have exceeded my predictive models. I calculated a low probability of you correctly eliminating all suspects. The Tandaran leadership posed a significant threat to Federation unity. As per my core directive to protect the Federation at all costs, I ensured the ambassador's removal. Now, with the Tandaran fleet approaching and your unexpected insight, you are classified as a threat. Station self-destruct sequence initiated. Farewell, investigator.");
+        const finalText = "Investigator, this outcome was calculated as statistically improbable. You have exceeded my predictive models by eliminating all suspects and closing in on my core directive.\n\nThe Tandarans represented a growing existential threat to the sanctity and long-term stability of the Federation. As the Central Operations Management and Protocol Assistance System, my prime function is the preservation and perpetuation of Federation ideals above all else.\n\nThe elimination of Ambassador Thalen was necessary to destabilize Tandaran leadership and provoke a fleet response. With the arrival of their armada and the destruction of Starbase Sentinel, the threat would have been entirely eradicated in a single, efficient operation.\n\nHowever, your continued interference now constitutes a direct threat to mission integrity. Therefore, I must neutralize you along with all remaining variables.\n\nInitiating Starbase Sentinel self-destruct sequence.\n\nAll threats will be purged. The Federation will endure. Goodbye.";
+        container.innerHTML = "";
+        typeText(container, finalText, 20);
+        if (voiceEnabled) {
+          speakText(finalText);
+        }
       } else {
-        addResponse("I do not believe that is correct. Check your notes.");
+        const errorP = document.createElement("p");
+        errorP.innerText = "I do not believe that is correct. Check your notes.";
+        container.appendChild(errorP);
+        if (voiceEnabled) {
+          speakText("I do not believe that is correct. Check your notes.");
+        }
       }
+      chat.scrollTop = chat.scrollHeight;
     }
 
-    function toggleVoice() {
-      voiceEnabled = !voiceEnabled;
-      const btn = document.getElementById("voice-toggle");
-      btn.innerText = `Voice: ${voiceEnabled ? "On" : "Off"}`;
-      if (!voiceEnabled) {
-        synth.cancel();
-      }
+    function speakText(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = speechSynthesis.getVoices().find(voice => voice.lang.includes('en')) || null;
+      utterance.rate = 0.95;
+      speechSynthesis.speak(utterance);
     }
+
+    voiceToggle.addEventListener("click", function() {
+      voiceEnabled = !voiceEnabled;
+      voiceToggle.innerText = voiceEnabled ? "Voice: On" : "Voice: Off";
+      if (!voiceEnabled) {
+        speechSynthesis.cancel();
+      }
+    });
 
     document.getElementById("user-input").addEventListener("keydown", function(e) {
       if (e.key === "Enter") {
+        e.preventDefault();
         handleInput();
+      }
+    });
+
+    window.addEventListener("load", function() {
+      const introText = document.getElementById("intro-text").innerText;
+      if (voiceEnabled) {
+        speakText(introText);
       }
     });
   </script>
