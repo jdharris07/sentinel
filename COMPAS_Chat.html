@@ -10,16 +10,18 @@
       color: #FFCC66;
       font-family: 'Arial', sans-serif;
       padding: 20px;
+      text-align: center;
     }
     #chat {
       max-width: 600px;
-      margin: 0 auto;
+      margin: 0 auto 15px auto;
       background-color: #330000;
       padding: 20px;
       border-radius: 10px;
       box-shadow: 0 0 10px #FFCC66AA;
       overflow-y: auto;
       height: 400px;
+      text-align: left;
     }
     .entry {
       margin-bottom: 15px;
@@ -33,10 +35,10 @@
     #input-area {
       display: flex;
       justify-content: center;
-      margin-top: 15px;
+      margin-top: 10px;
     }
     #user-input {
-      width: 80%;
+      width: 70%;
       padding: 8px;
       font-size: 16px;
       border-radius: 5px;
@@ -58,8 +60,7 @@
       background-color: #FFD97F;
     }
     #voice-toggle {
-      display: block;
-      margin: 10px auto;
+      margin-top: 10px;
       background-color: #FFCC66;
       color: #330000;
       border: none;
@@ -84,7 +85,6 @@
 </head>
 <body>
   <h1>COMPAS Assistance Console</h1>
-  <button id="voice-toggle">Voice: On</button>
   <div id="chat">
     <div class="entry compas">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know who I can help, but note my responses are limited.</div>
   </div>
@@ -92,6 +92,7 @@
     <input type="text" id="user-input" placeholder="Type your message here..." />
     <button onclick="handleInput()">Send</button>
   </div>
+  <button id="voice-toggle">Voice: On</button>
 
   <audio id="success-sound" src="compas.mp3"></audio>
   <audio id="fail-sound" src="input_failed_clean.mp3"></audio>
