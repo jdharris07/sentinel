@@ -15,15 +15,9 @@
     h1 {
       color: #CFA5FF;
     }
-    #container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-    }
     #chat {
       max-width: 600px;
-      width: 100%;
+      margin: 0 auto 15px auto;
       background-color: #330000;
       padding: 20px;
       border-radius: 10px;
@@ -31,7 +25,6 @@
       overflow-y: auto;
       height: 400px;
       text-align: left;
-      margin-bottom: 15px;
     }
     .entry {
       margin-bottom: 15px;
@@ -43,11 +36,9 @@
       color: #FFCC66;
     }
     #input-area {
-      display: flex;
-      justify-content: center;
-      width: 100%;
       max-width: 600px;
-      margin-bottom: 10px;
+      margin: 0 auto 10px auto;
+      display: flex;
     }
     #user-input {
       flex: 1;
@@ -72,6 +63,7 @@
       background-color: #FFD97F;
     }
     #voice-toggle {
+      margin-top: 8px;
       background-color: #FFCC66;
       color: #330000;
       border: none;
@@ -97,16 +89,14 @@
 </head>
 <body>
   <h1>COMPAS ASSISTANCE CONSOLE</h1>
-  <div id="container">
-    <div id="chat">
-      <div class="entry compas">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know who I can help, but note my responses are limited.</div>
-    </div>
-    <div id="input-area">
-      <input type="text" id="user-input" placeholder="Type your message here..." />
-      <button onclick="handleInput()">Send</button>
-    </div>
-    <button id="voice-toggle">Voice: On</button>
+  <div id="chat">
+    <div class="entry compas">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know who I can help, but note my responses are limited.</div>
   </div>
+  <div id="input-area">
+    <input type="text" id="user-input" placeholder="Type your message here..." />
+    <button onclick="handleInput()">Send</button>
+  </div>
+  <button id="voice-toggle">Voice: On</button>
 
   <audio id="success-sound" src="compas.mp3"></audio>
   <audio id="fail-sound" src="input_failed_clean.mp3"></audio>
