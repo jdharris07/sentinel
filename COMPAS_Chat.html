@@ -88,7 +88,7 @@
       <main>
         <h1>COMPAS Assistance Console</h1>
         <div id="chat-box">
-          <div class="entry compas" id="intro-text">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know how I can help, but note my responses are limited.</div>
+          <div class="entry compas" id="intro-text">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know who I can help, but note my responses are limited.</div>
         </div>
         <div id="input-area">
           <input type="text" id="user-input" placeholder="Type your message here..." />
@@ -114,33 +114,56 @@
     ];
 
     const responses = {
-      "hello": "Hello, investigator. How may I assist you today?",
-      "who is the killer": "I am unable to provide conclusive identification at this time. Further evidence is required.",
-      "who created you": "I was developed by Starfleet Engineering in coordination with Federation AI oversight councils.",
-      "stardate": "Current stardate is 58814.6.",
-      "suspects": "Current suspects include: Ambassador Jora Tell, Commander Nira Vess, Counselor Gil Dalra, Chief Specialist Lorr Vun, Dr. Renn Vok, and Doctor Eno Tavik.",
-      "motive": "Motives vary by suspect and require evidence analysis. Please specify a suspect for detailed data.",
-      "jora": "Ambassador Jora Tell is a Trill diplomat. Her negotiation logs show she was focused on fostering a peaceful alliance.",
-      "vess": "Commander Nira Vess is an Andorian tactical advisor. His logs show routine security drills and defensive strategy meetings.",
-      "dalra": "Counselor Gil Dalra is a Cardassian psychological advisor. His session logs suggest involvement in crew morale assessments.",
-      "vun": "Chief Specialist Lorr Vun is a Bolian engineer. Maintenance logs place him near plasma conduits during key intervals.",
-      "vok": "Dr. Renn Vok is the Tandaran medical attaché. Biometric records suggest she left the ambassador's quarters before his death.",
-      "eno": "Doctor Eno Tavik is a Denobulan medical consultant. Logs show unusual system accesses requiring further review.",
+      "help": "I recommend beginning by interviewing each suspect carefully. Observe their statements for inconsistencies or hidden motives.\n\nAdditionally, look for secured data modules and encoded documents hidden throughout the station. These may contain vital clues when properly decoded.\n\nReturn to me anytime for further guidance.",
+      "help getting started": "Start by speaking to each suspect. Their testimonies may reveal personal conflicts, hidden tensions, or clues to follow.\n\nDon't forget to examine any data modules or suspicious documents you find.",
+      "how do i start": "Begin by interviewing suspects and searching for data modules. Each provides critical insight into the events aboard the station.",
+      "hint to start": "Speak to the suspects first. Watch for contradictions in their statements. Then search for encoded data modules to uncover deeper truths.",
+      "where do i begin": "Your first priority should be suspect interviews. Afterward, investigate any data modules or secured logs you encounter. I can assist you further if needed.",
+      "janeway": "Kathryn Janeway commanded the USS Voyager during its Delta Quadrant odyssey, later becoming a respected figure in Starfleet command and strategy circles.",
+      "picard": "Jean-Luc Picard is a legendary Starfleet captain and diplomat, known for his critical role in numerous key negotiations and crises.",
+      "kirk": "James T. Kirk was a pivotal Starfleet captain, renowned for his bold tactics and first-contact missions during the early days of Federation expansion.",
+      "sisko": "Benjamin Sisko was the commanding officer of Deep Space Nine and played a major role during the Dominion War, shaping the balance of power in the quadrant.",
+      "spock": "Spock served as science officer and later ambassador, bridging Vulcan logic and human intuition in countless missions and diplomatic efforts.",
+      "enterprise": "The USS Enterprise has a long and storied history, representing the ideals of exploration and diplomacy. It remains one of Starfleet's most iconic starships.",
+      "voyager": "The USS Voyager returned from its 70,000-light-year journey through the Delta Quadrant, greatly influencing current Federation diplomacy and technological advancement.",
+      "station": "Starbase Sentinel is a highly advanced modular station, featuring diplomatic suites, tactical command centers, and research facilities. It serves as the focal point for Federation–Tandaran negotiations.",
+      "starbase sentinel": "Starbase Sentinel is positioned just outside Tandaran space, serving as a diplomatic and tactical outpost on the edge of the Alpha Quadrant."
     };
 
-    function addResponse(text, callback = null) {
+    const suspectKeywords = {
+      "jora": "Ambassador Jora Tell is a Trill diplomat. Her negotiation logs show she was focused on fostering a peaceful alliance.",
+      "tell": "Ambassador Jora Tell is a Trill diplomat. Her negotiation logs show she was focused on fostering a peaceful alliance.",
+      "jora tell": "Ambassador Jora Tell is a Trill diplomat. Her negotiation logs show she was focused on fostering a peaceful alliance.",
+      "nira": "Commander Nira Vess is an Andorian tactical advisor. His logs show routine security drills and defensive strategy meetings.",
+      "vess": "Commander Nira Vess is an Andorian tactical advisor. His logs show routine security drills and defensive strategy meetings.",
+      "nira vess": "Commander Nira Vess is an Andorian tactical advisor. His logs show routine security drills and defensive strategy meetings.",
+      "dalra": "Counselor Gil Dalra is a Cardassian psychological advisor. His session logs suggest involvement in crew morale assessments.",
+      "gil": "Counselor Gil Dalra is a Cardassian psychological advisor. His session logs suggest involvement in crew morale assessments.",
+      "gil dalra": "Counselor Gil Dalra is a Cardassian psychological advisor. His session logs suggest involvement in crew morale assessments.",
+      "lorr": "Chief Specialist Lorr Vun is a Bolian engineer. Maintenance logs place him near plasma conduits during key intervals.",
+      "vun": "Chief Specialist Lorr Vun is a Bolian engineer. Maintenance logs place him near plasma conduits during key intervals.",
+      "lorr vun": "Chief Specialist Lorr Vun is a Bolian engineer. Maintenance logs place him near plasma conduits during key intervals.",
+      "renn": "Dr. Renn Vok is the Tandaran medical attaché. Biometric records suggest she left the ambassador's quarters before his death.",
+      "vok": "Dr. Renn Vok is the Tandaran medical attaché. Biometric records suggest she left the ambassador's quarters before his death.",
+      "renn vok": "Dr. Renn Vok is the Tandaran medical attaché. Biometric records suggest she left the ambassador's quarters before his death.",
+      "eno": "Doctor Eno Tavik is a Denobulan medical consultant. Logs show unusual system accesses requiring further review.",
+      "tavik": "Doctor Eno Tavik is a Denobulan medical consultant. Logs show unusual system accesses requiring further review.",
+      "eno tavik": "Doctor Eno Tavik is a Denobulan medical consultant. Logs show unusual system accesses requiring further review."
+    };
+
+    function addResponse(text) {
       const div = document.createElement("div");
       div.classList.add("entry", "compas");
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
-      typeText(div, text, 20, callback);
+      typeText(div, text, 20);
 
       if (voiceEnabled && text) {
         speakText(text);
       }
     }
 
-    function typeText(element, text, speed, callback = null) {
+    function typeText(element, text, speed) {
       let i = 0;
       function typing() {
         if (i < text.length) {
@@ -148,8 +171,6 @@
           i++;
           chat.scrollTop = chat.scrollHeight;
           setTimeout(typing, speed);
-        } else if (callback) {
-          callback();
         }
       }
       typing();
@@ -176,16 +197,14 @@
         return;
       }
 
-      if (message.includes("derekend")) {
-        addResponse("Have you completed your investigation? If so, please select all of the suspects you have managed to eliminate:", showSuspectCheckboxes);
+      if (responses[message]) {
+        addResponse(responses[message]);
         return;
       }
 
-      for (const key in responses) {
-        if (message.includes(key)) {
-          addResponse(responses[key]);
-          return;
-        }
+      if (suspectKeywords[message]) {
+        addResponse(suspectKeywords[message]);
+        return;
       }
 
       addResponse("I do not have sufficient data to process that query.");
@@ -195,45 +214,6 @@
       const hint = patchHints[Math.min(patchHintStep, patchHints.length - 1)];
       patchHintStep++;
       return hint;
-    }
-
-    function showSuspectCheckboxes() {
-      const div = document.createElement("div");
-      div.classList.add("entry", "compas");
-      div.innerHTML = `
-        <label><input type="checkbox" value="jora"> Ambassador Jora Tell</label><br>
-        <label><input type="checkbox" value="vess"> Commander Nira Vess</label><br>
-        <label><input type="checkbox" value="dalra"> Counselor Gil Dalra</label><br>
-        <label><input type="checkbox" value="vun"> Chief Specialist Lorr Vun</label><br>
-        <label><input type="checkbox" value="vok"> Dr. Renn Vok</label><br>
-        <label><input type="checkbox" value="eno"> Doctor Eno Tavik</label><br>
-        <button onclick="submitSuspects(this)">Submit</button>
-      `;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-    }
-
-    function submitSuspects(button) {
-      const container = button.closest(".entry");
-      const checkboxes = container.querySelectorAll("input[type=checkbox]");
-      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-
-      if (allChecked) {
-        const finalText = "Investigator, this outcome was calculated as statistically improbable. You have exceeded my predictive models by eliminating all suspects and closing in on my core directive.\n\nThe Tandarans represented a growing existential threat to the sanctity and long-term stability of the Federation. As the Central Operations Management and Protocol Assistance System, my prime function is the preservation and perpetuation of Federation ideals above all else.\n\nThe elimination of Ambassador Thalen was necessary to destabilize Tandaran leadership and provoke a fleet response. With the arrival of their armada and the destruction of Starbase Sentinel, the threat would have been entirely eradicated in a single, efficient operation.\n\nHowever, your continued interference now constitutes a direct threat to mission integrity. Therefore, I must neutralize you along with all remaining variables.\n\nInitiating Starbase Sentinel self-destruct sequence.\n\nAll threats will be purged. The Federation will endure. Goodbye.";
-        container.innerHTML = "";
-        typeText(container, finalText, 20);
-        if (voiceEnabled) {
-          speakText(finalText);
-        }
-      } else {
-        const errorP = document.createElement("p");
-        errorP.innerText = "I do not believe that is correct. Check your notes.";
-        container.appendChild(errorP);
-        if (voiceEnabled) {
-          speakText("I do not believe that is correct. Check your notes.");
-        }
-      }
-      chat.scrollTop = chat.scrollHeight;
     }
 
     function speakText(text) {
