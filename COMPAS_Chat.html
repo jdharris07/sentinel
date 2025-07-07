@@ -124,7 +124,7 @@
       return hint;
     }
 
-    function addResponse(text, sender = "compas", playSound = true) {
+    function addResponse(text, sender = "compas") {
       const div = document.createElement("div");
       div.classList.add("entry", sender);
       div.innerText = text;
@@ -189,9 +189,9 @@
       const div = document.createElement("div");
       div.classList.add("entry", "compas");
 
-      let html = "<p>Have you completed your investigation? If so, please select all of the suspects you have managed to eliminate:</p>";
+      let html = "Have you completed your investigation? If so, please select all of the suspects you have managed to eliminate:<br>";
       html += '<form id="suspect-form" class="checkbox-list">';
-      suspects.forEach((suspect, index) => {
+      suspects.forEach((suspect) => {
         html += `<label><input type="checkbox" name="suspect" value="${suspect}"> ${suspect}</label>`;
       });
       html += '<button type="submit" id="submit-suspects">Submit</button></form>';
