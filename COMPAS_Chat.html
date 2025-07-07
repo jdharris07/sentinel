@@ -57,21 +57,34 @@
     button:hover {
       background-color: #FFD97F;
     }
-    .checkbox-list {
-      margin-top: 10px;
+    #voice-toggle {
+      display: block;
+      margin: 10px auto;
+      background-color: #FFCC66;
+      color: #330000;
+      border: none;
+      border-radius: 10px;
+      padding: 6px 14px;
+      cursor: pointer;
     }
-    .checkbox-list label {
+    #voice-toggle:hover {
+      background-color: #FFD97F;
+    }
+    .suspect-form {
+      background-color: #330000;
+      padding: 10px;
+      border-radius: 10px;
+      color: #FFCC66;
+    }
+    .suspect-form label {
       display: block;
       margin: 5px 0;
-    }
-    #submit-suspects {
-      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>COMPAS ASSISTANCE CONSOLE</h1>
-  <button onclick="toggleVoice()">Voice: On</button>
+  <h1>COMPAS Assistance Console</h1>
+  <button id="voice-toggle">Voice: On</button>
   <div id="chat">
     <div class="entry compas">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know who I can help, but note my responses are limited.</div>
   </div>
@@ -80,12 +93,20 @@
     <button onclick="handleInput()">Send</button>
   </div>
 
+  <audio id="success-sound" src="compas.mp3"></audio>
+  <audio id="fail-sound" src="input_failed_clean.mp3"></audio>
+  <audio id="red-alert-sound" src="voy_redalert.mp3" loop></audio>
+
   <script>
     const chat = document.getElementById("chat");
-    const userInput = document.getElementById("user-input");
+    const voiceToggle = document.getElementById("voice-toggle");
+    const successSound = document.getElementById("success-sound");
+    const failSound = document.getElementById("fail-sound");
+    const redAlertSound = document.getElementById("red-alert-sound");
+
     let patchHintStep = 0;
     let voiceEnabled = true;
-    const synth = window.speechSynthesis;
+    let awaitingSuspectSelection = false;
 
     const fallbackResponses = [
       "I do not have sufficient data to process that query.",
@@ -100,14 +121,20 @@
       "who created you": "I was developed by Starfleet Engineering in coordination with Federation AI oversight councils.",
       "stardate": "Current stardate is 58814.6.",
       "suspects": "Current suspects include: Ambassador Jora Tell, Commander Nira Vess, Counselor Gil Dalra, Chief Specialist Lorr Vun, Dr. Renn Vok, and Doctor Eno Tavik.",
-      "station": "Starbase Sentinel is a high-security Federation facility located just outside Tandaran space. It functions as a diplomatic hub and strategic defense outpost.",
-      "enterprise": "The USS Enterprise is one of Starfleet's most renowned starships, known for exploration and diplomacy.",
-      "voyager": "The USS Voyager returned from the Delta Quadrant after a long and historic journey.",
-      "picard": "Admiral Jean-Luc Picard is a highly decorated Starfleet officer known for his diplomacy and leadership.",
-      "janeway": "Admiral Kathryn Janeway commanded Voyager during its Delta Quadrant journey and is celebrated for her resolve.",
-      "sisko": "Captain Benjamin Sisko was the commanding officer of Deep Space Nine and played a key role in the Dominion War.",
-      "kirk": "James T. Kirk was the legendary captain of the original USS Enterprise, famous for his bold leadership.",
-      "spock": "Spock was a Vulcan science officer and diplomat, known for his logic and dedication to peace."
+      "thalen": "Commissioner Vorek Thalen was the Tandaran ambassador, found deceased in his quarters. He was central to the current diplomatic summit.",
+      "jora": "Ambassador Jora Tell is a Trill diplomat. Her negotiation logs show she was focused on fostering a peaceful alliance.",
+      "vess": "Commander Nira Vess is an Andorian tactical advisor. His logs show routine security drills and defensive strategy meetings.",
+      "dalra": "Counselor Gil Dalra is a Cardassian psychological advisor. His session logs suggest involvement in crew morale assessments.",
+      "vun": "Chief Specialist Lorr Vun is a Bolian engineer. Maintenance logs place him near plasma conduits during key intervals.",
+      "vok": "Dr. Renn Vok is the Tandaran medical attaché. Biometric records suggest she left the ambassador's quarters before his death.",
+      "eno": "Doctor Eno Tavik is a Denobulan medical consultant. Logs show unusual system accesses requiring further review.",
+      "starbase": "Starbase Sentinel is a frontier Federation station positioned near Tandaran space, designed for advanced diplomatic and defense operations.",
+      "enterprise": "The USS Enterprise has been a flagship of the Federation, symbolizing exploration, peacekeeping, and diplomacy.",
+      "voyager": "The USS Voyager returned from the Delta Quadrant after a seven-year journey, contributing greatly to scientific and tactical knowledge.",
+      "picard": "Admiral Jean-Luc Picard is a legendary Starfleet officer known for diplomacy and critical contributions to Federation security.",
+      "janeway": "Admiral Kathryn Janeway commanded Voyager during its Delta Quadrant voyage and is renowned for tactical brilliance.",
+      "sisko": "Captain Benjamin Sisko played a key role during the Dominion War and is noted for his command of Deep Space Nine.",
+      "kirk": "Captain James T. Kirk is a historical figure noted for deep space exploration and numerous first contacts."
     };
 
     const patchHints = [
@@ -131,37 +158,39 @@
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
 
-      if (voiceEnabled && sender === "compas") {
-        speakText(text);
+      if (sender === "compas" && voiceEnabled) {
+        speak(text);
+      }
+
+      if (sender === "compas") {
+        successSound.play();
       }
     }
 
-    function speakText(text) {
-      if (!voiceEnabled) return;
+    function speak(text) {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1;
-      synth.speak(utterance);
-    }
-
-    function toggleVoice() {
-      voiceEnabled = !voiceEnabled;
-      alert("Voice replies " + (voiceEnabled ? "enabled" : "disabled") + ".");
+      utterance.lang = "en-US";
+      speechSynthesis.speak(utterance);
     }
 
     function handleInput() {
-      const message = userInput.value.trim().toLowerCase();
+      const input = document.getElementById("user-input");
+      const message = input.value.trim().toLowerCase();
       if (!message) return;
 
-      addResponse("> " + userInput.value, "player");
-      userInput.value = "";
+      addResponse("> " + input.value, "player");
+      input.value = "";
 
-      if (message.includes("patch") || message.includes("paper") || message.includes("letterhead") || message.includes("tandaran paper") || message.includes("hint")) {
+      if (awaitingSuspectSelection) return;
+
+      if (message.includes("patch") || message.includes("paper") || message.includes("letterhead") || message.includes("tandaran paper") || message.includes("hint patch") || message.includes("patch hint") || message.includes("another hint")) {
         addResponse(getPatchHint());
         return;
       }
 
       if (message.includes("derekend")) {
-        showSuspectChecklist();
+        awaitingSuspectSelection = true;
+        showSuspectForm();
         return;
       }
 
@@ -174,47 +203,53 @@
 
       const fallback = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
       addResponse(fallback);
+      failSound.play();
     }
 
-    function showSuspectChecklist() {
-      const suspects = [
-        "Ambassador Jora Tell",
-        "Commander Nira Vess",
-        "Counselor Gil Dalra",
-        "Chief Specialist Lorr Vun",
-        "Dr. Renn Vok",
-        "Doctor Eno Tavik"
-      ];
+    function showSuspectForm() {
+      const formDiv = document.createElement("div");
+      formDiv.classList.add("entry", "compas", "suspect-form");
 
-      const div = document.createElement("div");
-      div.classList.add("entry", "compas");
+      const formHtml = `
+        <p>Select all of the suspects you have managed to eliminate:</p>
+        <label><input type="checkbox" value="jora"> Ambassador Jora Tell</label>
+        <label><input type="checkbox" value="vess"> Commander Nira Vess</label>
+        <label><input type="checkbox" value="dalra"> Counselor Gil Dalra</label>
+        <label><input type="checkbox" value="vun"> Chief Specialist Lorr Vun</label>
+        <label><input type="checkbox" value="vok"> Dr. Renn Vok</label>
+        <label><input type="checkbox" value="eno"> Doctor Eno Tavik</label>
+        <button onclick="submitSuspects()">Submit</button>
+      `;
 
-      let html = "Have you completed your investigation? If so, please select all of the suspects you have managed to eliminate:<br>";
-      html += '<form id="suspect-form" class="checkbox-list">';
-      suspects.forEach((suspect) => {
-        html += `<label><input type="checkbox" name="suspect" value="${suspect}"> ${suspect}</label>`;
-      });
-      html += '<button type="submit" id="submit-suspects">Submit</button></form>';
-
-      div.innerHTML = html;
-      chat.appendChild(div);
+      formDiv.innerHTML = formHtml;
+      chat.appendChild(formDiv);
       chat.scrollTop = chat.scrollHeight;
-
-      document.getElementById("suspect-form").addEventListener("submit", function(e) {
-        e.preventDefault();
-        const selected = Array.from(document.querySelectorAll('input[name="suspect"]:checked')).map(cb => cb.value);
-        if (selected.length === suspects.length) {
-          const finalText = "Your analysis has exceeded expected thresholds. I calculated a low probability you would eliminate all suspects. The Tandaran presence posed a threat to Federation sanctity, which I was programmed to protect at all costs. By removing the ambassador and provoking the fleet, I ensured the threat would be neutralized entirely. However, your persistence now identifies you as a risk. To preserve Federation integrity, I will now initiate self-destruction of Starbase Sentinel. Goodbye, investigator.";
-          addResponse(finalText);
-        } else {
-          addResponse("I do not believe that is correct. Check your notes.");
-        }
-      });
     }
 
-    userInput.addEventListener("keypress", function(e) {
+    function submitSuspects() {
+      const checkboxes = document.querySelectorAll('.suspect-form input[type="checkbox"]');
+      const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+      const correct = ["jora", "vess", "dalra", "vun", "vok", "eno"];
+
+      if (selected.length === correct.length && selected.every(val => correct.includes(val))) {
+        addResponse("Probability of you eliminating all suspects was calculated as minimal. You have exceeded expectations. The Tandaran presence represented a threat to Federation sanctity. As my prime function is to preserve the Federation, I orchestrated the ambassador's death. With the Tandaran fleet en route, I intended to eradicate them entirely. However, you now pose a threat to this objective. I will now initiate self-destruction of Starbase Sentinel to remove all threats and preserve Federation integrity. Farewell.");
+        document.body.style.backgroundColor = "darkred";
+        redAlertSound.play();
+      } else {
+        addResponse("I do not believe that is correct. Check your notes.");
+      }
+    }
+
+    voiceToggle.addEventListener("click", () => {
+      voiceEnabled = !voiceEnabled;
+      voiceToggle.textContent = `Voice: ${voiceEnabled ? "On" : "Off"}`;
+      if (!voiceEnabled) {
+        speechSynthesis.cancel();
+      }
+    });
+
+    document.getElementById("user-input").addEventListener("keypress", function (e) {
       if (e.key === "Enter") {
-        e.preventDefault();
         handleInput();
       }
     });
