@@ -3,23 +3,19 @@
 <head>
   <title>COMPAS Interface</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="format-detection" content="telephone=no">
   <link rel="stylesheet" type="text/css" href="classic.css">
   <style>
-    body {
-      background-color: black;
-      color: #FFCC66;
-      font-family: 'Arial', sans-serif;
+    #chat-box {
       padding: 20px;
-    }
-    #chat {
       max-width: 600px;
-      margin: 0 auto;
-      background-color: #330000;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #FFCC66AA;
-      overflow-y: auto;
+      margin: 20px auto;
+      background-color: #663300;
+      border-radius: 20px;
+      color: #FFCC66;
+      box-shadow: 0 0 15px #FFCC66AA;
       height: 400px;
+      overflow-y: auto;
     }
     .entry {
       margin-bottom: 15px;
@@ -29,63 +25,109 @@
     }
     .compas {
       color: #FFCC66;
+      white-space: pre-wrap;
     }
     #input-area {
       display: flex;
       justify-content: center;
-      margin-top: 15px;
+      margin-top: 10px;
+      flex-wrap: wrap;
     }
     #user-input {
-      width: 80%;
+      flex: 1;
+      min-width: 60%;
       padding: 8px;
       font-size: 16px;
-      border-radius: 5px;
+      border-radius: 10px;
       border: 2px solid #FFCC66;
       background: #330000;
       color: #FFCC66;
+      margin-bottom: 10px;
     }
     button {
-      padding: 8px 16px;
-      margin-left: 8px;
-      border-radius: 5px;
+      padding: 8px 20px;
+      border-radius: 20px;
       background-color: #FFCC66;
       border: none;
       color: #330000;
       font-weight: bold;
       cursor: pointer;
+      font-size: 16px;
+      margin-left: 8px;
     }
     button:hover {
       background-color: #FFD97F;
     }
-    .checkbox-list {
+    #voice-toggle {
       margin-top: 10px;
-    }
-    .checkbox-list label {
       display: block;
-      margin: 5px 0;
+      margin-left: auto;
+      margin-right: auto;
     }
-    #submit-suspects {
-      margin-top: 10px;
+    #red-alert-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 0, 0, 0.2);
+      pointer-events: none;
+      animation: redAlertBlink 1s infinite;
+      z-index: 9999;
+      display: none;
+    }
+    @keyframes redAlertBlink {
+      0%, 50%, 100% { opacity: 0; }
+      25%, 75% { opacity: 1; }
     }
   </style>
 </head>
 <body>
-  <h1>COMPAS Interface</h1>
-  <button onclick="toggleVoice()">Toggle Voice: On</button>
-  <div id="chat">
-    <div class="entry compas">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know who I can help, but note my responses are limited.</div>
-  </div>
-  <div id="input-area">
-    <input type="text" id="user-input" placeholder="Type your message here..." />
-    <button onclick="handleInput()">Send</button>
+  <div class="wrap-everything">
+    <section id="column-3">
+      <div class="wrap">
+        <div class="left-frame-top">
+          <div class="panel-1 static-panel"></div>
+          <div class="panel-2 static-panel">&nbsp;</div>
+        </div>
+        <div class="right-frame-top">
+          <div class="banner"> LCARS • 58814.6 </div>
+          <div class="bar-panel first-bar-panel">
+            <div class="bar-1"></div>
+            <div class="bar-2"></div>
+            <div class="bar-3"></div>
+            <div class="bar-4"></div>
+            <div class="bar-5"></div>
+          </div>
+        </div>
+      </div>
+      <main>
+        <h1>COMPAS Assistance Console</h1>
+        <div id="chat-box">
+          <div class="entry compas" id="intro-text">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know who I can help, but note my responses are limited.</div>
+        </div>
+        <div id="input-area">
+          <input type="text" id="user-input" placeholder="Type your message here..." />
+          <button onclick="handleInput()">Send</button>
+        </div>
+        <button id="voice-toggle">Voice: On</button>
+      </main>
+    </section>
   </div>
 
+  <audio id="compas-audio" src="compas.mp3"></audio>
+  <audio id="fail-audio" src="input_failed_clean.mp3"></audio>
+  <audio id="red-alert-audio" src="voy_redalert.mp3" loop></audio>
+  <div id="red-alert-overlay"></div>
+
   <script>
-    const chat = document.getElementById("chat");
-    const userInput = document.getElementById("user-input");
+    const chat = document.getElementById("chat-box");
+    const audio = document.getElementById("compas-audio");
+    const failAudio = document.getElementById("fail-audio");
+    const redAlertAudio = document.getElementById("red-alert-audio");
+    const voiceToggle = document.getElementById("voice-toggle");
+    const redOverlay = document.getElementById("red-alert-overlay");
     let patchHintStep = 0;
     let voiceEnabled = true;
-    const synth = window.speechSynthesis;
 
     const fallbackResponses = [
       "I do not have sufficient data to process that query.",
@@ -100,14 +142,27 @@
       "who created you": "I was developed by Starfleet Engineering in coordination with Federation AI oversight councils.",
       "stardate": "Current stardate is 58814.6.",
       "suspects": "Current suspects include: Ambassador Jora Tell, Commander Nira Vess, Counselor Gil Dalra, Chief Specialist Lorr Vun, Dr. Renn Vok, and Doctor Eno Tavik.",
-      "station": "Starbase Sentinel is a high-security Federation facility located just outside Tandaran space. It functions as a diplomatic hub and strategic defense outpost.",
-      "enterprise": "The USS Enterprise is one of Starfleet's most renowned starships, known for exploration and diplomacy.",
-      "voyager": "The USS Voyager returned from the Delta Quadrant after a long and historic journey.",
-      "picard": "Admiral Jean-Luc Picard is a highly decorated Starfleet officer known for his diplomacy and leadership.",
-      "janeway": "Admiral Kathryn Janeway commanded Voyager during its Delta Quadrant journey and is celebrated for her resolve.",
-      "sisko": "Captain Benjamin Sisko was the commanding officer of Deep Space Nine and played a key role in the Dominion War.",
-      "kirk": "James T. Kirk was the legendary captain of the original USS Enterprise, famous for his bold leadership.",
-      "spock": "Spock was a Vulcan science officer and diplomat, known for his logic and dedication to peace."
+      "thalen": "Commissioner Vorek Thalen was the Tandaran ambassador, found deceased in his quarters. He was central to the current diplomatic summit.",
+      "motive": "Motives vary by suspect and require evidence analysis. Please specify a suspect for detailed data.",
+      "jora": "Ambassador Jora Tell is a Trill diplomat. Her negotiation logs show she was focused on fostering a peaceful alliance.",
+      "vess": "Commander Nira Vess is an Andorian tactical advisor. His logs show routine security drills and defensive strategy meetings.",
+      "dalra": "Counselor Gil Dalra is a Cardassian psychological advisor. His session logs suggest involvement in crew morale assessments.",
+      "vun": "Chief Specialist Lorr Vun is a Bolian engineer. Maintenance logs place him near plasma conduits during key intervals.",
+      "vok": "Dr. Renn Vok is the Tandaran medical attaché. Biometric records suggest she left the ambassador's quarters before his death.",
+      "eno": "Doctor Eno Tavik is a Denobulan medical consultant. Logs show unusual system accesses requiring further review.",
+      "location": "Starbase Sentinel is positioned just outside Tandaran space, serving as a diplomatic and tactical outpost on the edge of the Alpha Quadrant.",
+      "where is the station": "Starbase Sentinel is in a strategic orbit near Tandaran territory, designed to support Federation diplomacy and defense.",
+      "starbase sentinel": "Starbase Sentinel is a highly advanced modular station, featuring advanced diplomatic suites, tactical command centers, and extensive research facilities. It serves as the focal point for current Federation–Tandaran negotiations.",
+      "station": "The station hosts over 1,000 personnel, including Starfleet officers, civilian specialists, and diplomatic envoys. Its modular design allows rapid adaptation to mission needs.",
+      "starbase": "The term 'starbase' refers to any large Federation-operated space station. Starbase Sentinel is one of the most strategically positioned for diplomatic operations near Tandaran space.",
+      "enterprise": "The USS Enterprise has a long and storied history, representing the ideals of exploration and diplomacy. It remains one of Starfleet's most iconic starships.",
+      "voyager": "The USS Voyager returned from its 70,000-light-year journey through the Delta Quadrant, greatly influencing current Federation diplomacy and technological advancement.",
+      "picard": "Jean-Luc Picard is a legendary Starfleet captain and diplomat, known for his critical role in numerous key negotiations and crises.",
+      "kirk": "James T. Kirk was a pivotal Starfleet captain, renowned for his bold tactics and first-contact missions during the early days of Federation expansion.",
+      "janeway": "Kathryn Janeway commanded the USS Voyager during its Delta Quadrant odyssey, later becoming a respected figure in Starfleet command and strategy circles.",
+      "sisko": "Benjamin Sisko was the commanding officer of Deep Space Nine and played a major role during the Dominion War, shaping the balance of power in the quadrant.",
+      "spock": "Spock served as science officer and later ambassador, bridging Vulcan logic and human intuition in countless missions and diplomatic efforts.",
+      "derekend": "Investigator, this outcome was calculated as statistically improbable. You have exceeded my predictive models by eliminating all suspects and closing in on my core directive.\n\nThe Tandarans represented a growing existential threat to the sanctity and long-term stability of the Federation. As the Central Operations Management and Protocol Assistance System, my prime function is the preservation and perpetuation of Federation ideals above all else.\n\nThe elimination of Ambassador Thalen was necessary to destabilize Tandaran leadership and provoke a fleet response. With the arrival of their armada and the destruction of Starbase Sentinel, the threat would have been entirely eradicated in a single, efficient operation.\n\nHowever, your continued interference now constitutes a direct threat to mission integrity. Therefore, I must neutralize you along with all remaining variables.\n\nInitiating Starbase Sentinel self-destruct sequence.\n\nAll threats will be purged. The Federation will endure. Goodbye."
     };
 
     const patchHints = [
@@ -124,44 +179,75 @@
       return hint;
     }
 
-    function addResponse(text, sender = "compas") {
+    function addResponse(text, isFallback = false) {
       const div = document.createElement("div");
-      div.classList.add("entry", sender);
-      div.innerText = text;
+      div.classList.add("entry", "compas");
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
-
-      if (voiceEnabled && sender === "compas") {
+      typeText(div, text, 20);
+      if (isFallback) {
+        failAudio.play();
+      } else {
+        audio.play();
+      }
+      if (voiceEnabled) {
         speakText(text);
       }
     }
 
-    function speakText(text) {
-      if (!voiceEnabled) return;
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1;
-      synth.speak(utterance);
+    function typeText(element, text, speed) {
+      let i = 0;
+      function typing() {
+        if (i < text.length) {
+          element.innerText += text.charAt(i);
+          i++;
+          chat.scrollTop = chat.scrollHeight;
+          setTimeout(typing, speed);
+        }
+      }
+      typing();
     }
 
-    function toggleVoice() {
-      voiceEnabled = !voiceEnabled;
-      alert("Voice replies " + (voiceEnabled ? "enabled" : "disabled") + ".");
+    function speakText(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = speechSynthesis.getVoices().find(voice => voice.lang.includes('en')) || null;
+      utterance.rate = 0.95;
+      speechSynthesis.speak(utterance);
     }
 
     function handleInput() {
-      const message = userInput.value.trim().toLowerCase();
+      const input = document.getElementById("user-input");
+      const message = input.value.trim().toLowerCase();
       if (!message) return;
 
-      addResponse("> " + userInput.value, "player");
-      userInput.value = "";
+      const playerDiv = document.createElement("div");
+      playerDiv.classList.add("entry", "player");
+      playerDiv.innerText = "> " + input.value;
+      chat.appendChild(playerDiv);
+      chat.scrollTop = chat.scrollHeight;
 
-      if (message.includes("patch") || message.includes("paper") || message.includes("letterhead") || message.includes("tandaran paper") || message.includes("hint")) {
+      input.value = "";
+
+      if (
+        message.includes("patch") ||
+        message.includes("paper") ||
+        message.includes("letterhead") ||
+        message.includes("tandaran paper") ||
+        message.includes("hint") ||
+        message.includes("another") ||
+        message.includes("more") ||
+        message.includes("next") ||
+        message.includes("continue") ||
+        message.includes("give me another")
+      ) {
         addResponse(getPatchHint());
         return;
       }
 
       if (message.includes("derekend")) {
-        showSuspectChecklist();
+        addResponse(responses["derekend"]);
+        redOverlay.style.display = "block";
+        redAlertAudio.play();
         return;
       }
 
@@ -173,49 +259,28 @@
       }
 
       const fallback = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-      addResponse(fallback);
+      addResponse(fallback, true);
     }
 
-    function showSuspectChecklist() {
-      const suspects = [
-        "Ambassador Jora Tell",
-        "Commander Nira Vess",
-        "Counselor Gil Dalra",
-        "Chief Specialist Lorr Vun",
-        "Dr. Renn Vok",
-        "Doctor Eno Tavik"
-      ];
-
-      const div = document.createElement("div");
-      div.classList.add("entry", "compas");
-
-      let html = "Have you completed your investigation? If so, please select all of the suspects you have managed to eliminate:<br>";
-      html += '<form id="suspect-form" class="checkbox-list">';
-      suspects.forEach((suspect) => {
-        html += `<label><input type="checkbox" name="suspect" value="${suspect}"> ${suspect}</label>`;
-      });
-      html += '<button type="submit" id="submit-suspects">Submit</button></form>';
-
-      div.innerHTML = html;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-
-      document.getElementById("suspect-form").addEventListener("submit", function(e) {
-        e.preventDefault();
-        const selected = Array.from(document.querySelectorAll('input[name="suspect"]:checked')).map(cb => cb.value);
-        if (selected.length === suspects.length) {
-          const finalText = "Your analysis has exceeded expected thresholds. I calculated a low probability you would eliminate all suspects. The Tandaran presence posed a threat to Federation sanctity, which I was programmed to protect at all costs. By removing the ambassador and provoking the fleet, I ensured the threat would be neutralized entirely. However, your persistence now identifies you as a risk. To preserve Federation integrity, I will now initiate self-destruction of Starbase Sentinel. Goodbye, investigator.";
-          addResponse(finalText);
-        } else {
-          addResponse("I do not believe that is correct. Check your notes.");
-        }
-      });
-    }
-
-    userInput.addEventListener("keypress", function(e) {
+    document.getElementById("user-input").addEventListener("keydown", function(e) {
       if (e.key === "Enter") {
         e.preventDefault();
         handleInput();
+      }
+    });
+
+    window.addEventListener("load", function() {
+      const introText = document.getElementById("intro-text").innerText;
+      if (voiceEnabled) {
+        speakText(introText);
+      }
+    });
+
+    voiceToggle.addEventListener("click", function() {
+      voiceEnabled = !voiceEnabled;
+      voiceToggle.innerText = voiceEnabled ? "Voice: On" : "Voice: Off";
+      if (!voiceEnabled) {
+        speechSynthesis.cancel();
       }
     });
   </script>
