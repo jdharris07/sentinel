@@ -127,7 +127,7 @@
     const voiceToggle = document.getElementById("voice-toggle");
     const redOverlay = document.getElementById("red-alert-overlay");
     let patchHintStep = 0;
-    let voiceEnabled = true; // Default: voice on
+    let voiceEnabled = true;
 
     const fallbackResponses = [
       "I do not have sufficient data to process that query.",
@@ -279,6 +279,9 @@
     voiceToggle.addEventListener("click", function() {
       voiceEnabled = !voiceEnabled;
       voiceToggle.innerText = voiceEnabled ? "Voice: On" : "Voice: Off";
+      if (!voiceEnabled) {
+        speechSynthesis.cancel();
+      }
     });
   </script>
 </body>
