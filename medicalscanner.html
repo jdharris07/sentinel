@@ -10,8 +10,8 @@
     }
     #container {
       position: relative;
-      width: 768px; /* Your original image/video width */
-      height: 1152px; /* Your original image/video height */
+      width: 768px;
+      height: 1152px;
       margin: auto;
       background: black;
       overflow: hidden;
@@ -26,6 +26,16 @@
       position: absolute;
       background: transparent;
       cursor: pointer;
+    }
+    .clickable-label {
+      position: absolute;
+      color: #FFCC66;
+      font-weight: bold;
+      font-size: 14px;
+      background-color: rgba(0, 0, 0, 0.6);
+      padding: 2px 4px;
+      border-radius: 4px;
+      pointer-events: none;
     }
     #textBox {
       position: absolute;
@@ -48,12 +58,12 @@
       Your browser does not support the video tag.
     </video>
 
-    <!-- Example clickable boxes -->
-    <div class="clickable" style="left: 100px; top: 150px; width: 120px; height: 140px;" data-img="headpopup.png"></div>
-    <div class="clickable" style="left: 300px; top: 170px; width: 100px; height: 150px;" data-img="chestpopup.png"></div>
-    <div class="clickable" style="left: 80px; top: 200px; width: 130px; height: 150px;" data-img="abdomenpopup.png"></div>
-    <div class="clickable" style="left: 500px; top: 650px; width: 140px; height: 130px;" data-img="leftlegpopup.png"></div>
-    <div class="clickable" style="left: 600px; top: 300px; width: 120px; height: 130px;" data-img="rightlegpopup.png"></div>
+    <!-- Clickable boxes -->
+    <div class="clickable" style="left: 100px; top: 150px; width: 120px; height: 140px;" data-img="tox.png" data-label="Head"></div>
+    <div class="clickable" style="left: 300px; top: 220px; width: 100px; height: 150px;" data-img="stomach.png" data-label="Chest"></div>
+    <div class="clickable" style="left: 80px; top: 340px; width: 130px; height: 150px;" data-img="4.png" data-label="Abdomen"></div>
+    <div class="clickable" style="left: 450px; top: 750px; width: 160px; height: 120px;" data-img="summary.png" data-label="Left Leg"></div>
+    <div class="clickable" style="left: 500px; top: 180px; width: 120px; height: 130px;" data-img="heart.png" data-label="Right Leg"></div>
 
     <div id="textBox"></div>
   </div>
@@ -62,6 +72,27 @@
     const textBox = document.getElementById('textBox');
     const clickables = document.querySelectorAll('.clickable');
     const audio = new Audio('padd_1.mp3');
+
+    // Toggle this to true to show labels
+    const showLabels = false;
+
+    if (showLabels) {
+      clickables.forEach(box => {
+        // Outline for debugging
+        box.style.border = '2px dashed #FFCC66';
+
+        // Create label
+        const label = document.createElement('div');
+        label.className = 'clickable-label';
+        label.innerText = box.getAttribute('data-label');
+        label.style.left = box.style.left;
+        label.style.top = box.style.top;
+        label.style.transform = 'translateY(-20px)';
+
+        // Add label to container
+        document.getElementById('container').appendChild(label);
+      });
+    }
 
     clickables.forEach(box => {
       box.addEventListener('click', (e) => {
@@ -74,12 +105,10 @@
       });
     });
 
-    // Click anywhere outside to hide
     document.addEventListener('click', () => {
       textBox.style.display = 'none';
     });
 
-    // Click directly on image to hide
     textBox.addEventListener('click', (e) => {
       e.stopPropagation();
       textBox.style.display = 'none';
