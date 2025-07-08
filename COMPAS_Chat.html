@@ -88,7 +88,7 @@
       <main>
         <h1>COMPAS Assistance Console</h1>
         <div id="chat-box">
-          <div class="entry compas" id="intro-text">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know who I can help, but note my responses are limited.</div>
+          <div class="entry compas" id="intro-text">Greetings. I am the Federation's Central Operations Management and Protocol Assistance System. You may call me COMPAS for short. I am here to assist in your investigation. Please let me know how I can help, but note my responses are limited.</div>
         </div>
         <div id="input-area">
           <input type="text" id="user-input" placeholder="Type your message here..." />
@@ -104,6 +104,12 @@
     const voiceToggle = document.getElementById("voice-toggle");
     let voiceEnabled = true;
     let patchHintStep = 0;
+    let submissionStep = 0;
+    let submittedCause = "";
+    let submittedStart = "";
+    let submittedEnd = "";
+
+    const validCauses = ["poison", "poisoning", "food poisoning"];
 
     const patchHints = [
       "The Tandaran insignia is not just decorative; it may serve as a key overlay to hidden information.",
@@ -115,10 +121,6 @@
 
     const responses = {
       "help": "I recommend beginning by interviewing each suspect carefully. Observe their statements for inconsistencies or hidden motives.\n\nAdditionally, look for secured data modules and encoded documents hidden throughout the station. These may contain vital clues when properly decoded.\n\nReturn to me anytime for further guidance.",
-      "help getting started": "Start by speaking to each suspect. Their testimonies may reveal personal conflicts, hidden tensions, or clues to follow.\n\nDon't forget to examine any data modules or suspicious documents you find.",
-      "how do i start": "Begin by interviewing suspects and searching for data modules. Each provides critical insight into the events aboard the station.",
-      "hint to start": "Speak to the suspects first. Watch for contradictions in their statements. Then search for encoded data modules to uncover deeper truths.",
-      "where do i begin": "Your first priority should be suspect interviews. Afterward, investigate any data modules or secured logs you encounter. I can assist you further if needed.",
       "janeway": "Kathryn Janeway commanded the USS Voyager during its Delta Quadrant odyssey, later becoming a respected figure in Starfleet command and strategy circles.",
       "picard": "Jean-Luc Picard is a legendary Starfleet captain and diplomat, known for his critical role in numerous key negotiations and crises.",
       "kirk": "James T. Kirk was a pivotal Starfleet captain, renowned for his bold tactics and first-contact missions during the early days of Federation expansion.",
@@ -127,7 +129,8 @@
       "enterprise": "The USS Enterprise has a long and storied history, representing the ideals of exploration and diplomacy. It remains one of Starfleet's most iconic starships.",
       "voyager": "The USS Voyager returned from its 70,000-light-year journey through the Delta Quadrant, greatly influencing current Federation diplomacy and technological advancement.",
       "station": "Starbase Sentinel is a highly advanced modular station, featuring diplomatic suites, tactical command centers, and research facilities. It serves as the focal point for Federation–Tandaran negotiations.",
-      "starbase sentinel": "Starbase Sentinel is positioned just outside Tandaran space, serving as a diplomatic and tactical outpost on the edge of the Alpha Quadrant."
+      "starbase sentinel": "Starbase Sentinel is positioned just outside Tandaran space, serving as a diplomatic and tactical outpost on the edge of the Alpha Quadrant.",
+      "submit forensic info": "Understood. Please enter the suspected cause of death first (e.g., poisoning or food poisoning)."
     };
 
     const suspectKeywords = {
@@ -189,11 +192,50 @@
 
       input.value = "";
 
+      if (submissionStep === 1) {
+        submittedCause = message;
+        if (validCauses.some(c => submittedCause.includes(c))) {
+          addResponse("Cause accepted. Now enter the start time (e.g., 1300):");
+          submissionStep = 2;
+        } else {
+          addResponse("That cause of death does not seem accurate. Please try again.");
+        }
+        return;
+      }
+
+      if (submissionStep === 2) {
+        submittedStart = message;
+        if (submittedStart === "1300") {
+          addResponse("Start time accepted. Now enter the end time (e.g., 1440):");
+          submissionStep = 3;
+        } else {
+          addResponse("That start time does not match the evidence. Please try again.");
+        }
+        return;
+      }
+
+      if (submissionStep === 3) {
+        submittedEnd = message;
+        if (submittedEnd === "1440") {
+          addResponse("That seems correct. Let me analyze further... Accessing logs to determine who tampered with the victim's quarters and replicator during that window.");
+          submissionStep = 0;
+        } else {
+          addResponse("That end time does not align with the data. Please try again.");
+        }
+        return;
+      }
+
       if (
         message.includes("patch") || message.includes("hint") || message.includes("paper") || 
         message.includes("letterhead") || message.includes("tandaran paper")
       ) {
         addResponse(getPatchHint());
+        return;
+      }
+
+      if (message === "submit forensic info" || message.includes("submit forensic info")) {
+        addResponse(responses["submit forensic info"]);
+        submissionStep = 1;
         return;
       }
 
