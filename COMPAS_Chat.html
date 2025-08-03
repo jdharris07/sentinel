@@ -130,8 +130,10 @@
       "voyager": "The USS Voyager returned from its 70,000-light-year journey through the Delta Quadrant, greatly influencing current Federation diplomacy and technological advancement.",
       "station": "Starbase Sentinel is a highly advanced modular station, featuring diplomatic suites, tactical command centers, and research facilities. It serves as the focal point for Federation–Tandaran negotiations.",
       "starbase sentinel": "Starbase Sentinel is positioned just outside Tandaran space, serving as a diplomatic and tactical outpost on the edge of the Alpha Quadrant.",
-      "submit forensic info": "Understood. Please enter the suspected cause of death first (e.g., poisoning or food poisoning)."
-    };
+      "submit forensic info": "Understood. Please enter the suspected cause of death first (e.g., poisoning or food poisoning).",
+      "hello": "Hello, investiagtor. How may I help you?",
+      "dragon con": "I have heard of this gathering that occurs annually on Earth. Rumor has it the best track there is the Trek track.",
+          };
 
     const suspectKeywords = {
       "jora": "Ambassador Jora Tell is a Trill diplomat. Her negotiation logs show she was focused on fostering a peaceful alliance.",
@@ -248,6 +250,28 @@
         addResponse(suspectKeywords[message]);
         return;
       }
+            const killerPhrases = [
+        "who is the killer",
+        "who do you think the killer is",
+        "do you know who the killer is",
+        "who killed him",
+        "who killed her",
+        "who committed the murder",
+        "who committed the crime",
+        "who's the killer",
+        "who was the murderer",
+        "is there a killer",
+        "who murdered",
+        "who is the murderer"
+      ];
+
+      for (const phrase of killerPhrases) {
+        if (message.includes(phrase)) {
+          addResponse("I am still analyzing the data, but I believe the answer lies within the inconsistencies in their statements and timelines. Trust your instincts, investigator.");
+          return;
+        }
+      }
+
 
       addResponse("I do not have sufficient data to process that query.");
     }
@@ -289,3 +313,4 @@
   </script>
 </body>
 </html>
+
