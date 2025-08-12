@@ -6,9 +6,7 @@
   <meta name="format-detection" content="telephone=no">
   <link rel="stylesheet" type="text/css" href="classic.css">
   <style>
-    #intro-text {
-  white-space: pre-wrap;
-}
+    #intro-text { white-space: pre-wrap; }
     #chat-box {
       padding: 20px;
       max-width: 600px;
@@ -20,53 +18,22 @@
       height: 400px;
       overflow-y: auto;
     }
-    .entry {
-      margin-bottom: 15px;
-    }
-    .player {
-      color: #88FF88;
-    }
-    .compas {
-      color: #FFCC66;
-      white-space: pre-wrap;
-    }
+    .entry { margin-bottom: 15px; }
+    .player { color: #88FF88; }
+    .compas { color: #FFCC66; white-space: pre-wrap; }
     #input-area {
-      display: flex;
-      justify-content: center;
-      margin-top: 10px;
-      flex-wrap: wrap;
+      display: flex; justify-content: center; margin-top: 10px; flex-wrap: wrap;
     }
     #user-input {
-      flex: 1;
-      min-width: 60%;
-      padding: 8px;
-      font-size: 16px;
-      border-radius: 10px;
-      border: 2px solid #FFCC66;
-      background: #330000;
-      color: #FFCC66;
-      margin-bottom: 10px;
+      flex: 1; min-width: 60%; padding: 8px; font-size: 16px;
+      border-radius: 10px; border: 2px solid #FFCC66; background: #330000; color: #FFCC66; margin-bottom: 10px;
     }
     button {
-      padding: 8px 20px;
-      border-radius: 20px;
-      background-color: #FFCC66;
-      border: none;
-      color: #330000;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 16px;
-      margin-left: 8px;
+      padding: 8px 20px; border-radius: 20px; background-color: #FFCC66; border: none;
+      color: #330000; font-weight: bold; cursor: pointer; font-size: 16px; margin-left: 8px;
     }
-    button:hover {
-      background-color: #FFD97F;
-    }
-    #voice-toggle {
-      margin-top: 10px;
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-    }
+    button:hover { background-color: #FFD97F; }
+    #voice-toggle { margin-top: 10px; display: block; margin-left: auto; margin-right: auto; }
   </style>
 </head>
 <body>
@@ -80,11 +47,7 @@
         <div class="right-frame-top">
           <div class="banner"> LCARS • 58814.6 </div>
           <div class="bar-panel first-bar-panel">
-            <div class="bar-1"></div>
-            <div class="bar-2"></div>
-            <div class="bar-3"></div>
-            <div class="bar-4"></div>
-            <div class="bar-5"></div>
+            <div class="bar-1"></div><div class="bar-2"></div><div class="bar-3"></div><div class="bar-4"></div><div class="bar-5"></div>
           </div>
         </div>
       </div>
@@ -110,11 +73,16 @@ That said, low odds are still odds. Ask, and I will provide what information I c
     const chat = document.getElementById("chat-box");
     const voiceToggle = document.getElementById("voice-toggle");
     let voiceEnabled = true;
+
+    // Existing multi-step forensic submission state
     let patchHintStep = 0;
     let submissionStep = 0;
     let submittedCause = "";
     let submittedStart = "";
     let submittedEnd = "";
+
+    // NEW: cause-of-death submission mode
+    let causeSubmitMode = false;
 
     const validCauses = ["poison", "poisoning", "food poisoning"];
 
@@ -140,7 +108,9 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       "submit forensic info": "Understood. Please enter the suspected cause of death first (e.g., poisoning or food poisoning).",
       "hello": "Hello, investiagtor. How may I help you?",
       "dragon con": "I have heard of this gathering that occurs annually on Earth. Rumor has it the best track there is the Trek track.",
-                };
+      // NEW: trigger line for cause-of-death submission
+      "submit cause of death": "Acknowledged. Please submit the cause of death."
+    };
 
     const suspectKeywords = {
       "jora": "Ambassador Jora Tell is a Trill diplomat. Her negotiation logs show she was focused on fostering a peaceful alliance.",
@@ -169,38 +139,52 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
       typeText(div, text, 20);
-
-      if (voiceEnabled && text) {
-        speakText(text);
-      }
+      if (voiceEnabled && text) { speakText(text); }
     }
 
     function typeText(element, text, speed) {
       let i = 0;
-      function typing() {
+      (function typing(){
         if (i < text.length) {
-          element.innerText += text.charAt(i);
-          i++;
+          element.innerText += text.charAt(i++);
           chat.scrollTop = chat.scrollHeight;
           setTimeout(typing, speed);
         }
-      }
-      typing();
+      })();
+    }
+
+    // Helper: does a message count as "Raciline" cause-of-death?
+    function isRacilineAnswer(msg){
+      // Accept any message that contains "raciline" (any case),
+      // optionally with "poison", "poisoning", or "poisoned by" in any order.
+      return /\braciline\b/i.test(msg);
     }
 
     function handleInput() {
       const input = document.getElementById("user-input");
-      const message = input.value.trim().toLowerCase();
+      const raw = input.value;
+      const message = raw.trim().toLowerCase();
       if (!message) return;
 
       const playerDiv = document.createElement("div");
       playerDiv.classList.add("entry", "player");
-      playerDiv.innerText = "> " + input.value;
+      playerDiv.innerText = "> " + raw;
       chat.appendChild(playerDiv);
       chat.scrollTop = chat.scrollHeight;
-
       input.value = "";
 
+      // If we're in cause-of-death submission mode, evaluate that first.
+      if (causeSubmitMode) {
+        if (isRacilineAnswer(message)) {
+          addResponse("Confirmed. Cause of death recorded: Raciline poisoning.");
+        } else {
+          addResponse("Based on the available evidnce that does not seem right. Please check your notes, investigator.");
+        }
+        causeSubmitMode = false;
+        return;
+      }
+
+      // Existing multi-step forensic submission (cause → start time → end time)
       if (submissionStep === 1) {
         submittedCause = message;
         if (validCauses.some(c => submittedCause.includes(c))) {
@@ -211,7 +195,6 @@ That said, low odds are still odds. Ask, and I will provide what information I c
         }
         return;
       }
-
       if (submissionStep === 2) {
         submittedStart = message;
         if (submittedStart === "1300") {
@@ -222,7 +205,6 @@ That said, low odds are still odds. Ask, and I will provide what information I c
         }
         return;
       }
-
       if (submissionStep === 3) {
         submittedEnd = message;
         if (submittedEnd === "1440") {
@@ -234,51 +216,45 @@ That said, low odds are still odds. Ask, and I will provide what information I c
         return;
       }
 
-      if (
-        message.includes("patch") || message.includes("hint") || message.includes("paper") || 
-        message.includes("letterhead") || message.includes("tandaran paper")
-      ) {
+      // Patch hint triggers
+      if (message.includes("patch") || message.includes("hint") || message.includes("paper") ||
+          message.includes("letterhead") || message.includes("tandaran paper")) {
         addResponse(getPatchHint());
         return;
       }
 
+      // NEW: start cause-of-death submission flow
+      if (message === "submit cause of death" || message.includes("submit cause of death")) {
+        addResponse(responses["submit cause of death"]);
+        causeSubmitMode = true;
+        return;
+      }
+
+      // Existing: start forensic info flow
       if (message === "submit forensic info" || message.includes("submit forensic info")) {
         addResponse(responses["submit forensic info"]);
         submissionStep = 1;
         return;
       }
 
-      if (responses[message]) {
-        addResponse(responses[message]);
-        return;
-      }
+      // Direct mapped responses
+      if (responses[message]) { addResponse(responses[message]); return; }
 
-      if (suspectKeywords[message]) {
-        addResponse(suspectKeywords[message]);
-        return;
-      }
-            const killerPhrases = [
-        "who is the killer",
-        "who do you think the killer is",
-        "do you know who the killer is",
-        "who killed him",
-        "who killed her",
-        "who committed the murder",
-        "who committed the crime",
-        "who's the killer",
-        "who was the murderer",
-        "is there a killer",
-        "who murdered",
-        "who is the murderer"
+      // Suspect lookup by keywords
+      if (suspectKeywords[message]) { addResponse(suspectKeywords[message]); return; }
+
+      // Flexible killer question detection
+      const killerPhrases = [
+        "who is the killer","who do you think the killer is","do you know who the killer is","who killed him",
+        "who killed her","who committed the murder","who committed the crime","who's the killer",
+        "who was the murderer","is there a killer","who murdered","who is the murderer"
       ];
-
       for (const phrase of killerPhrases) {
         if (message.includes(phrase)) {
           addResponse("I am still analyzing the data, but I believe the answer lies within the inconsistencies in their statements and timelines. Trust your instincts, investigator.");
           return;
         }
       }
-
 
       addResponse("I do not have sufficient data to process that query.");
     }
@@ -291,7 +267,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
 
     function speakText(text) {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.voice = speechSynthesis.getVoices().find(voice => voice.lang.includes('en')) || null;
+      utterance.voice = speechSynthesis.getVoices().find(voice => voice.lang && voice.lang.includes('en')) || null;
       utterance.rate = 0.95;
       speechSynthesis.speak(utterance);
     }
@@ -299,31 +275,17 @@ That said, low odds are still odds. Ask, and I will provide what information I c
     voiceToggle.addEventListener("click", function() {
       voiceEnabled = !voiceEnabled;
       voiceToggle.innerText = voiceEnabled ? "Voice: On" : "Voice: Off";
-      if (!voiceEnabled) {
-        speechSynthesis.cancel();
-      }
+      if (!voiceEnabled) { speechSynthesis.cancel(); }
     });
 
     document.getElementById("user-input").addEventListener("keydown", function(e) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        handleInput();
-      }
+      if (e.key === "Enter") { e.preventDefault(); handleInput(); }
     });
 
     window.addEventListener("load", function() {
       const introText = document.getElementById("intro-text").innerText;
-      if (voiceEnabled) {
-        speakText(introText);
-      }
+      if (voiceEnabled) { speakText(introText); }
     });
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
