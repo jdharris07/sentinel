@@ -81,8 +81,13 @@ That said, low odds are still odds. Ask, and I will provide what information I c
     let submittedStart = "";
     let submittedEnd = "";
 
-    // NEW: cause-of-death submission mode
+    // Cause-of-death submission mode (new from last change)
     let causeSubmitMode = false;
+
+    // NEW: timeline submission mode
+    // 0 = off, 1 = expect start, 2 = expect end
+    let timelineMode = 0;
+    let timelineStart = "";
 
     const validCauses = ["poison", "poisoning", "food poisoning"];
 
@@ -108,8 +113,9 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       "submit forensic info": "Understood. Please enter the suspected cause of death first (e.g., poisoning or food poisoning).",
       "hello": "Hello, investiagtor. How may I help you?",
       "dragon con": "I have heard of this gathering that occurs annually on Earth. Rumor has it the best track there is the Trek track.",
-      // NEW: trigger line for cause-of-death submission
-      "submit cause of death": "Acknowledged. Please submit the cause of death."
+      // Triggers
+      "submit cause of death": "Acknowledged. Please submit the cause of death.",
+      "submit timeline": "Acknowledged. Please enter the start time (e.g., 1300). You may also enter both as 1300-1440."
     };
 
     const suspectKeywords = {
@@ -155,10 +161,16 @@ That said, low odds are still odds. Ask, and I will provide what information I c
 
     // Helper: does a message count as "Raciline" cause-of-death?
     function isRacilineAnswer(msg){
-      // Accept any message that contains "raciline" (any case),
-      // optionally with "poison", "poisoning", or "poisoned by" in any order.
       return /\braciline\b/i.test(msg);
     }
+
+    // Parse "1300-1440" or return null
+    function parseRange(text){
+      const m = text.replace(/\s+/g,'').match(/^(\d{4})-(\d{4})$/);
+      return m ? {start:m[1], end:m[2]} : null;
+    }
+    // Basic 24h 4-digit time check
+    function isTime(t){ return /^\d{4}$/.test(t); }
 
     function handleInput() {
       const input = document.getElementById("user-input");
@@ -173,7 +185,65 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       chat.scrollTop = chat.scrollHeight;
       input.value = "";
 
-      // If we're in cause-of-death submission mode, evaluate that first.
+      /* ===== TIMELINE MODE (new) ===== */
+      // Allow single-line "1300-1440" at any time when timelineMode is active
+      if (timelineMode > 0) {
+        // If they typed a range in one line, handle it directly
+        const oneLine = parseRange(message);
+        if (oneLine) {
+          const startOk = (oneLine.start === "1300");
+          const endOk   = (oneLine.end   === "1440");
+          if (startOk && endOk) {
+            addResponse("Timeline accepted: 1300–1440. Proceeding with correlation to access logs.");
+            timelineMode = 0; timelineStart = "";
+          } else if (!startOk && !endOk) {
+            addResponse("Neither the start nor end time matches the available data.");
+          } else if (!startOk) {
+            addResponse("The start time does not align with the available data.");
+          } else {
+            addResponse("The end time does not align with the available data.");
+          }
+          return;
+        }
+
+        // Stepwise mode
+        if (timelineMode === 1) {
+          // Expect start time
+          if (isTime(message)) {
+            timelineStart = message;
+            addResponse("Start time recorded. Please enter the end time (e.g., 1440).");
+            timelineMode = 2;
+          } else {
+            addResponse("Please provide a 4-digit start time (e.g., 1300) or enter both as 1300-1440.");
+          }
+          return;
+        }
+        if (timelineMode === 2) {
+          // Expect end time
+          if (isTime(message)) {
+            const startOk = (timelineStart === "1300");
+            const endOk   = (message === "1440");
+            if (startOk && endOk) {
+              addResponse("Timeline accepted: 1300–1440. Proceeding with correlation to access logs.");
+              timelineMode = 0; timelineStart = "";
+            } else if (!startOk && !endOk) {
+              addResponse("Neither the start nor end time matches the available data.");
+              timelineMode = 0; timelineStart = "";
+            } else if (!startOk) {
+              addResponse("The start time does not align with the available data.");
+              timelineMode = 0; timelineStart = "";
+            } else {
+              addResponse("The end time does not align with the available data.");
+              timelineMode = 0; timelineStart = "";
+            }
+          } else {
+            addResponse("Please provide a 4-digit end time (e.g., 1440) or enter both as 1300-1440.");
+          }
+          return;
+        }
+      }
+
+      /* ===== CAUSE-OF-DEATH SUBMISSION MODE ===== */
       if (causeSubmitMode) {
         if (isRacilineAnswer(message)) {
           addResponse("Confirmed. Cause of death recorded: Raciline poisoning.");
@@ -184,7 +254,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
         return;
       }
 
-      // Existing multi-step forensic submission (cause → start time → end time)
+      /* ===== EXISTING FORENSIC MULTI-STEP (cause -> start -> end) ===== */
       if (submissionStep === 1) {
         submittedCause = message;
         if (validCauses.some(c => submittedCause.includes(c))) {
@@ -216,34 +286,41 @@ That said, low odds are still odds. Ask, and I will provide what information I c
         return;
       }
 
-      // Patch hint triggers
+      /* ===== PATCH HINTS ===== */
       if (message.includes("patch") || message.includes("hint") || message.includes("paper") ||
           message.includes("letterhead") || message.includes("tandaran paper")) {
         addResponse(getPatchHint());
         return;
       }
 
-      // NEW: start cause-of-death submission flow
+      /* ===== NEW TRIGGERS ===== */
       if (message === "submit cause of death" || message.includes("submit cause of death")) {
         addResponse(responses["submit cause of death"]);
         causeSubmitMode = true;
         return;
       }
 
-      // Existing: start forensic info flow
+      if (message === "submit timeline" || message.includes("submit timeline")) {
+        addResponse(responses["submit timeline"]);
+        timelineMode = 1;
+        timelineStart = "";
+        return;
+      }
+
+      /* ===== EXISTING TRIGGER ===== */
       if (message === "submit forensic info" || message.includes("submit forensic info")) {
         addResponse(responses["submit forensic info"]);
         submissionStep = 1;
         return;
       }
 
-      // Direct mapped responses
+      /* ===== DIRECT RESPONSES ===== */
       if (responses[message]) { addResponse(responses[message]); return; }
 
-      // Suspect lookup by keywords
+      /* ===== SUSPECT LOOKUPS ===== */
       if (suspectKeywords[message]) { addResponse(suspectKeywords[message]); return; }
 
-      // Flexible killer question detection
+      /* ===== FLEXIBLE 'KILLER' QUESTIONS ===== */
       const killerPhrases = [
         "who is the killer","who do you think the killer is","do you know who the killer is","who killed him",
         "who killed her","who committed the murder","who committed the crime","who's the killer",
