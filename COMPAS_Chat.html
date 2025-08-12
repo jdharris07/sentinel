@@ -204,7 +204,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       if (submissionStep === 1) {
         submittedCause = message;
         if (validCauses.some(c => submittedCause.includes(c))) {
-          addResponse("Cause accepted. Now enter the start time (e.g., 1300):");
+          addResponse("Cause accepted. Now enter the start time:");
           submissionStep = 2;
         } else {
           addResponse("That cause of death does not seem accurate. Please try again.");
@@ -215,7 +215,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       if (submissionStep === 2) {
         submittedStart = message;
         if (submittedStart === "1300") {
-          addResponse("Start time accepted. Now enter the end time (e.g., 1440):");
+          addResponse("Start time accepted. Now enter the end time:");
           submissionStep = 3;
         } else {
           addResponse("That start time does not match the evidence. Please try again.");
@@ -320,6 +320,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
   </script>
 </body>
 </html>
+
 
 
 
