@@ -34,6 +34,47 @@
     }
     button:hover { background-color: #FFD97F; }
     #voice-toggle { margin-top: 10px; display: block; margin-left: auto; margin-right: auto; }
+
+    /* Action buttons row */
+    .actions-row{
+      max-width: 600px; margin: 0 auto 8px auto; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    }
+    .task-btn{
+      border-radius: 16px; padding: 10px 14px; border: 2px solid #FFCC66; background:#402000; color:#FFCC66;
+      box-shadow: 0 0 8px #FFCC6644 inset;
+    }
+    .task-btn[disabled]{
+      background:#153a25; border-color:#7cffb6; color:#b6ffd9; cursor: default;
+    }
+
+    /* Inline form host */
+    #form-host{ max-width: 600px; margin: 0 auto 16px auto; }
+    .inline-card{
+      background:#402000; color:#FFCC66; border:2px solid #FFCC66; border-radius:16px; padding:12px;
+      box-shadow:0 0 12px #FFCC6644 inset;
+    }
+    .inline-card h3{ margin: 0 0 10px 0; font-size: 18px; }
+    .inline-row{ display:flex; gap:8px; flex-wrap:wrap; }
+    .inline-row > *{ flex:1 }
+    .inline-card label{ display:block; font-size:13px; margin-bottom:4px; opacity:.9 }
+    .inline-card input{
+      width:100%; padding:10px; border-radius:10px; border:2px solid #FFCC66; background:#330000; color:#FFCC66;
+    }
+    .inline-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
+    .muted{ opacity:.85; font-size: 13px; }
+    .feedback{ margin-top:8px; font-size: 14px; }
+    .ok{ color:#b6ffd9 }
+    .warn{ color:#ffe28f }
+    .err{ color:#ffd0d0 }
+
+    /* Phase 2 simple layout */
+    .phase2{
+      max-width: 700px; margin: 30px auto; background:#331a00; border-radius: 20px; padding:20px;
+      color:#FFCC66; box-shadow:0 0 15px #FFCC66AA;
+      text-align:center;
+    }
+    .phase2 h2{ margin-top:0; }
+
   </style>
 </head>
 <body>
@@ -51,8 +92,18 @@
           </div>
         </div>
       </div>
-      <main>
+      <main id="main-root">
         <h1>COMPAS Assistance Console</h1>
+
+        <!-- Action buttons -->
+        <div class="actions-row" id="actions">
+          <button id="btnTimeline" class="task-btn">Submit the timeline of the murder</button>
+          <button id="btnCause" class="task-btn">Submit Cause of Death</button>
+        </div>
+
+        <!-- Inline form host -->
+        <div id="form-host"></div>
+
         <div id="chat-box">
           <div class="entry compas" id="intro-text">Greetings. I am the Federation’s Central Operations Management and Protocol Assistance System — COMPAS. My primary functions aboard this station include coordinating critical systems, monitoring compliance with Starfleet protocols, and providing operational support to personnel… and occasionally reminding the Captain to hydrate.
 
@@ -72,20 +123,38 @@ That said, low odds are still odds. Ask, and I will provide what information I c
   <script>
     const chat = document.getElementById("chat-box");
     const voiceToggle = document.getElementById("voice-toggle");
+    const mainRoot = document.getElementById("main-root");
+    const btnTimeline = document.getElementById("btnTimeline");
+    const btnCause = document.getElementById("btnCause");
+    const formHost = document.getElementById("form-host");
+
     let voiceEnabled = true;
 
-    // Existing multi-step forensic submission state
+    // ====== Persistent state ======
+    const LS_KEY = "compas_progress_v4";
+    const stateDefault = { timelineDone:false, causeDone:false };
+    let progress = loadProgress();
+
+    function loadProgress(){
+      try{
+        const raw = localStorage.getItem(LS_KEY);
+        return raw ? Object.assign({}, stateDefault, JSON.parse(raw)) : {...stateDefault};
+      }catch(e){ return {...stateDefault}; }
+    }
+    function saveProgress(){
+      localStorage.setItem(LS_KEY, JSON.stringify(progress));
+    }
+
+    // Keep chat state features from previous build
     let patchHintStep = 0;
     let submissionStep = 0;
     let submittedCause = "";
     let submittedStart = "";
     let submittedEnd = "";
 
-    // Cause-of-death submission mode (new from last change)
     let causeSubmitMode = false;
 
-    // NEW: timeline submission mode
-    // 0 = off, 1 = expect start, 2 = expect end
+    // Chat-only timeline stepper (still supported)
     let timelineMode = 0;
     let timelineStart = "";
 
@@ -113,7 +182,6 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       "submit forensic info": "Understood. Please enter the suspected cause of death first (e.g., poisoning or food poisoning).",
       "hello": "Hello, investiagtor. How may I help you?",
       "dragon con": "I have heard of this gathering that occurs annually on Earth. Rumor has it the best track there is the Trek track.",
-      // Triggers
       "submit cause of death": "Acknowledged. Please submit the cause of death.",
       "submit timeline": "Acknowledged. Please enter the start time (e.g., 1300). You may also enter both as 1300-1440."
     };
@@ -139,6 +207,208 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       "eno tavik": "Doctor Eno Tavik is a Denobulan medical consultant. Logs show unusual system accesses requiring further review."
     };
 
+    // ====== UI helpers ======
+    function setButtonState(){
+      if (progress.timelineDone){
+        btnTimeline.textContent = "COMPLETED";
+        btnTimeline.disabled = true;
+      } else {
+        btnTimeline.textContent = "Submit the timeline of the murder";
+        btnTimeline.disabled = false;
+      }
+      if (progress.causeDone){
+        btnCause.textContent = "COMPLETED";
+        btnCause.disabled = true;
+      } else {
+        btnCause.textContent = "Submit Cause of Death";
+        btnCause.disabled = false;
+      }
+    }
+
+    function clearForm(){ formHost.innerHTML = ""; }
+
+    function maybeAdvanceToPhase2(){
+      if (progress.timelineDone && progress.causeDone){
+        mainRoot.innerHTML = `
+          <h1>COMPAS — Phase 2</h1>
+          <div class="phase2">
+            <h2>Elimination Protocol</h2>
+            <p class="muted">Preliminary objectives complete. Proceed to submit your elimination decision.</p>
+            <button id="btnElimination" class="task-btn">Submit Elimination</button>
+            <p class="muted" style="margin-top:14px">This is a placeholder action — wire it into your final logic when ready.</p>
+          </div>
+        `;
+        const btnElim = document.getElementById('btnElimination');
+        btnElim.addEventListener('click', ()=>{
+          const who = prompt("Who would you like to eliminate (enter a name)?");
+          if (!who) return;
+          alert("Received. Logging elimination submission for: " + who + ". COMPAS will evaluate this in the final build.");
+        });
+      }
+    }
+
+    // ====== Time parsing helpers (accepts HHMM, HH:MM, and AM/PM) ======
+    function parseTime(input){
+      if(!input) return null;
+      let s = input.trim().toUpperCase();
+
+      // "HH:MM AM/PM" or "H:MM AM/PM" or "HH AM/PM"
+      const ampm = s.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
+      if(ampm){
+        let h = parseInt(ampm[1],10);
+        let m = ampm[2] ? parseInt(ampm[2],10) : 0;
+        const tag = ampm[3].toUpperCase();
+        if(h===12) h=0;
+        if(tag==='PM') h+=12;
+        if(h<0||h>23||m<0||m>59) return null;
+        return String(h).padStart(2,'0') + String(m).padStart(2,'0');
+      }
+
+      // "HH:MM" 24h
+      const hm = s.match(/^(\d{1,2}):(\d{2})$/);
+      if(hm){
+        let h = parseInt(hm[1],10), m=parseInt(hm[2],10);
+        if(h<0||h>23||m<0||m>59) return null;
+        return String(h).padStart(2,'0') + String(m).padStart(2,'0');
+      }
+
+      // "HHMM"
+      const d = s.match(/^(\d{3,4})$/);
+      if(d){
+        let v = d[1].padStart(4,'0');
+        let h = parseInt(v.slice(0,2),10), m = parseInt(v.slice(2),10);
+        if(h<0||h>23||m<0||m>59) return null;
+        return v;
+      }
+      return null;
+    }
+    function prettyHHMM(hhmm){
+      if(!hhmm) return '';
+      const h = parseInt(hhmm.slice(0,2),10), m = hhmm.slice(2);
+      return `${String(h).padStart(2,'0')}:${m}`;
+    }
+
+    // ====== Inline forms ======
+    function showTimelineForm(){
+      if (btnTimeline.disabled) return;
+      formHost.innerHTML = `
+        <div class="inline-card" id="tlCard">
+          <h3>Submit Timeline</h3>
+          <div class="inline-row">
+            <div>
+              <label for="tlStart">Start Time</label>
+              <input id="tlStart" type="text" placeholder="e.g., 1300 or 1:00 PM" />
+            </div>
+            <div>
+              <label for="tlEnd">End Time</label>
+              <input id="tlEnd" type="text" placeholder="e.g., 1440 or 2:40 PM" />
+            </div>
+          </div>
+          <div class="muted" style="margin-top:6px">You may also enter a range like <b>1300-1440</b> in the Start field and leave End blank.</div>
+          <div class="feedback" id="tlFeedback"></div>
+          <div class="inline-actions">
+            <button id="tlCancel">Cancel</button>
+            <button id="tlSubmit">Submit</button>
+          </div>
+        </div>
+      `;
+      const tlStart = document.getElementById('tlStart');
+      const tlEnd = document.getElementById('tlEnd');
+      const tlFeedback = document.getElementById('tlFeedback');
+      document.getElementById('tlCancel').addEventListener('click', clearForm);
+      document.getElementById('tlSubmit').addEventListener('click', submitTimelineInline);
+      tlStart.focus();
+
+      function submitTimelineInline(){
+        const startVal = (tlStart.value||"").trim();
+        const endVal = (tlEnd.value||"").trim();
+
+        // Range allowed in start field
+        const range = startVal.replace(/\s+/g,'').match(/^(\d{3,4})-(\d{3,4})$/);
+        let startParsed, endParsed;
+
+        if(range && !endVal){
+          startParsed = parseTime(range[1]);
+          endParsed = parseTime(range[2]);
+        } else {
+          startParsed = parseTime(startVal);
+          endParsed = parseTime(endVal);
+        }
+
+        if(!startParsed || !endParsed){
+          tlFeedback.innerHTML = `<span class="err">Invalid format.</span> Use HHMM, HH:MM, or AM/PM (e.g., 1:00 PM).`;
+          return;
+        }
+
+        const correctStart = (startParsed === "1300");
+        const correctEnd   = (endParsed === "1440");
+
+        if (correctStart && correctEnd){
+          progress.timelineDone = true; saveProgress(); setButtonState(); clearForm();
+          addResponse("Timeline accepted: " + prettyHHMM(startParsed) + "–" + prettyHHMM(endParsed) + ". Proceeding with correlation to access logs.");
+          maybeAdvanceToPhase2();
+        } else if (!correctStart && !correctEnd){
+          tlFeedback.innerHTML = `<span class="err">Both the start and end times are incorrect.</span>`;
+        } else if (!correctStart){
+          tlFeedback.innerHTML = `<span class="warn">Start time is incorrect.</span>`;
+        } else {
+          tlFeedback.innerHTML = `<span class="warn">End time is incorrect.</span>`;
+        }
+      }
+
+      // Enter to submit from either input
+      tlStart.addEventListener('keydown', (e)=>{ if(e.key==='Enter') submitTimelineInline(); });
+      tlEnd.addEventListener('keydown', (e)=>{ if(e.key==='Enter') submitTimelineInline(); });
+    }
+
+    function showCauseForm(){
+      if (btnCause.disabled) return;
+      formHost.innerHTML = `
+        <div class="inline-card" id="cdCard">
+          <h3>Submit Cause of Death</h3>
+          <label for="cdText">Describe the cause</label>
+          <input id="cdText" type="text" placeholder="e.g., Raciline poison / poisoned by raciline" />
+          <div class="muted" style="margin-top:6px">Flexible phrasing accepted. Spelling of “Raciline” must be correct.</div>
+          <div class="feedback" id="cdFeedback"></div>
+          <div class="inline-actions">
+            <button id="cdCancel">Cancel</button>
+            <button id="cdSubmit">Submit</button>
+          </div>
+        </div>
+      `;
+      const cdText = document.getElementById('cdText');
+      const cdFeedback = document.getElementById('cdFeedback');
+      document.getElementById('cdCancel').addEventListener('click', clearForm);
+      document.getElementById('cdSubmit').addEventListener('click', submitCauseInline);
+      cdText.focus();
+
+      function isRacilineAnswer(msg){ return /\braciline\b/i.test(msg||""); }
+
+      function submitCauseInline(){
+        const val = cdText.value || "";
+        if (isRacilineAnswer(val)){
+          progress.causeDone = true; saveProgress(); setButtonState(); clearForm();
+          addResponse("Confirmed. Cause of death recorded: Raciline poisoning.");
+          maybeAdvanceToPhase2();
+        } else {
+          cdFeedback.innerHTML = `<span class="err">That doesn't match the forensic data.</span> Re-evaluate the toxin.`;
+        }
+      }
+
+      cdText.addEventListener('keydown', (e)=>{ if(e.key==='Enter') submitCauseInline(); });
+    }
+
+    // Button handlers (inline forms)
+    btnTimeline.addEventListener('click', ()=>{
+      if (btnTimeline.disabled) return;
+      showTimelineForm();
+    });
+    btnCause.addEventListener('click', ()=>{
+      if (btnCause.disabled) return;
+      showCauseForm();
+    });
+
+    // ====== Chat helpers ======
     function addResponse(text) {
       const div = document.createElement("div");
       div.classList.add("entry", "compas");
@@ -159,19 +429,14 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       })();
     }
 
-    // Helper: does a message count as "Raciline" cause-of-death?
-    function isRacilineAnswer(msg){
-      return /\braciline\b/i.test(msg);
+    function speakText(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = speechSynthesis.getVoices().find(voice => voice.lang && voice.lang.includes('en')) || null;
+      utterance.rate = 0.95;
+      speechSynthesis.speak(utterance);
     }
 
-    // Parse "1300-1440" or return null
-    function parseRange(text){
-      const m = text.replace(/\s+/g,'').match(/^(\d{4})-(\d{4})$/);
-      return m ? {start:m[1], end:m[2]} : null;
-    }
-    // Basic 24h 4-digit time check
-    function isTime(t){ return /^\d{4}$/.test(t); }
-
+    // ====== Original chat logic (kept; still supports type-based submissions) ======
     function handleInput() {
       const input = document.getElementById("user-input");
       const raw = input.value;
@@ -185,17 +450,18 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       chat.scrollTop = chat.scrollHeight;
       input.value = "";
 
-      /* ===== TIMELINE MODE (new) ===== */
-      // Allow single-line "1300-1440" at any time when timelineMode is active
+      // TIMELINE MODE (chat)
       if (timelineMode > 0) {
-        // If they typed a range in one line, handle it directly
-        const oneLine = parseRange(message);
+        const oneLine = (message.replace(/\s+/g,'').match(/^(\d{3,4})-(\d{3,4})$/));
         if (oneLine) {
-          const startOk = (oneLine.start === "1300");
-          const endOk   = (oneLine.end   === "1440");
+          const s = parseTime(oneLine[1]);
+          const e = parseTime(oneLine[2]);
+          const startOk = (s === "1300");
+          const endOk   = (e === "1440");
           if (startOk && endOk) {
-            addResponse("Timeline accepted: 1300–1440. Proceeding with correlation to access logs.");
+            addResponse("Timeline accepted: 13:00–14:40. Proceeding with correlation to access logs.");
             timelineMode = 0; timelineStart = "";
+            progress.timelineDone = true; saveProgress(); setButtonState(); clearForm(); maybeAdvanceToPhase2();
           } else if (!startOk && !endOk) {
             addResponse("Neither the start nor end time matches the available data.");
           } else if (!startOk) {
@@ -206,26 +472,26 @@ That said, low odds are still odds. Ask, and I will provide what information I c
           return;
         }
 
-        // Stepwise mode
         if (timelineMode === 1) {
-          // Expect start time
-          if (isTime(message)) {
-            timelineStart = message;
+          const s = parseTime(message);
+          if (s) {
+            timelineStart = s;
             addResponse("Start time recorded. Please enter the end time (e.g., 1440).");
             timelineMode = 2;
           } else {
-            addResponse("Please provide a 4-digit start time (e.g., 1300) or enter both as 1300-1440.");
+            addResponse("Please provide a valid time (e.g., 1300 or 1:00 PM) or enter both as 1300-1440.");
           }
           return;
         }
         if (timelineMode === 2) {
-          // Expect end time
-          if (isTime(message)) {
+          const e = parseTime(message);
+          if (e) {
             const startOk = (timelineStart === "1300");
-            const endOk   = (message === "1440");
+            const endOk   = (e === "1440");
             if (startOk && endOk) {
-              addResponse("Timeline accepted: 1300–1440. Proceeding with correlation to access logs.");
+              addResponse("Timeline accepted: 13:00–14:40. Proceeding with correlation to access logs.");
               timelineMode = 0; timelineStart = "";
+              progress.timelineDone = true; saveProgress(); setButtonState(); clearForm(); maybeAdvanceToPhase2();
             } else if (!startOk && !endOk) {
               addResponse("Neither the start nor end time matches the available data.");
               timelineMode = 0; timelineStart = "";
@@ -237,16 +503,17 @@ That said, low odds are still odds. Ask, and I will provide what information I c
               timelineMode = 0; timelineStart = "";
             }
           } else {
-            addResponse("Please provide a 4-digit end time (e.g., 1440) or enter both as 1300-1440.");
+            addResponse("Please provide a valid time (e.g., 1440 or 2:40 PM) or enter both as 1300-1440.");
           }
           return;
         }
       }
 
-      /* ===== CAUSE-OF-DEATH SUBMISSION MODE ===== */
+      // CAUSE-OF-DEATH SUBMISSION MODE (chat)
       if (causeSubmitMode) {
-        if (isRacilineAnswer(message)) {
+        if (/\braciline\b/i.test(message)) {
           addResponse("Confirmed. Cause of death recorded: Raciline poisoning.");
+          progress.causeDone = true; saveProgress(); setButtonState(); clearForm(); maybeAdvanceToPhase2();
         } else {
           addResponse("Based on the available evidnce that does not seem right. Please check your notes, investigator.");
         }
@@ -254,7 +521,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
         return;
       }
 
-      /* ===== EXISTING FORENSIC MULTI-STEP (cause -> start -> end) ===== */
+      // OLD multi-step (cause -> start -> end) kept for compatibility
       if (submissionStep === 1) {
         submittedCause = message;
         if (validCauses.some(c => submittedCause.includes(c))) {
@@ -286,41 +553,40 @@ That said, low odds are still odds. Ask, and I will provide what information I c
         return;
       }
 
-      /* ===== PATCH HINTS ===== */
+      // PATCH HINTS
       if (message.includes("patch") || message.includes("hint") || message.includes("paper") ||
           message.includes("letterhead") || message.includes("tandaran paper")) {
         addResponse(getPatchHint());
         return;
       }
 
-      /* ===== NEW TRIGGERS ===== */
-      if (message === "submit cause of death" || message.includes("submit cause of death")) {
+      // NEW TRIGGERS
+      if (message.includes("submit cause of death")) {
         addResponse(responses["submit cause of death"]);
         causeSubmitMode = true;
         return;
       }
-
-      if (message === "submit timeline" || message.includes("submit timeline")) {
+      if (message.includes("submit timeline")) {
         addResponse(responses["submit timeline"]);
         timelineMode = 1;
         timelineStart = "";
         return;
       }
 
-      /* ===== EXISTING TRIGGER ===== */
-      if (message === "submit forensic info" || message.includes("submit forensic info")) {
+      // EXISTING TRIGGER
+      if (message.includes("submit forensic info")) {
         addResponse(responses["submit forensic info"]);
         submissionStep = 1;
         return;
       }
 
-      /* ===== DIRECT RESPONSES ===== */
+      // DIRECT RESPONSES
       if (responses[message]) { addResponse(responses[message]); return; }
 
-      /* ===== SUSPECT LOOKUPS ===== */
+      // SUSPECT LOOKUPS
       if (suspectKeywords[message]) { addResponse(suspectKeywords[message]); return; }
 
-      /* ===== FLEXIBLE 'KILLER' QUESTIONS ===== */
+      // FLEXIBLE 'KILLER' QUESTIONS
       const killerPhrases = [
         "who is the killer","who do you think the killer is","do you know who the killer is","who killed him",
         "who killed her","who committed the murder","who committed the crime","who's the killer",
@@ -342,13 +608,6 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       return hint;
     }
 
-    function speakText(text) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.voice = speechSynthesis.getVoices().find(voice => voice.lang && voice.lang.includes('en')) || null;
-      utterance.rate = 0.95;
-      speechSynthesis.speak(utterance);
-    }
-
     voiceToggle.addEventListener("click", function() {
       voiceEnabled = !voiceEnabled;
       voiceToggle.innerText = voiceEnabled ? "Voice: On" : "Voice: Off";
@@ -360,8 +619,13 @@ That said, low odds are still odds. Ask, and I will provide what information I c
     });
 
     window.addEventListener("load", function() {
-      const introText = document.getElementById("intro-text").innerText;
-      if (voiceEnabled) { speakText(introText); }
+      setButtonState();
+      if (progress.timelineDone && progress.causeDone){
+        maybeAdvanceToPhase2();
+      } else {
+        const introText = document.getElementById("intro-text").innerText;
+        if (voiceEnabled) { speakText(introText); }
+      }
     });
   </script>
 </body>
