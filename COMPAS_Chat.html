@@ -109,7 +109,7 @@
 
 I will assist you in your investigation to the best of my capacity, though based on available evidence and your apparent experience level, I calculate only a 14.7% probability that you will solve this case. Please do not take this personally — statistics are indifferent.
 
-That said, low odds are still odds. Ask, and I will provide what information I can, but pleas enote my responses may be limited as the station is preparing for the Tandaran fleet's arrival.</div>
+That said, low odds are still odds. Ask, and I will provide what information I can, but please note my responses may be limited as the station is preparing for the Tandaran fleet's arrival. It appears the logical next ste is for you to determine the cause of death as well as the timeline it could have occured.</div>
         </div>
         <div id="input-area">
           <input type="text" id="user-input" placeholder="Type your message here..." />
@@ -297,14 +297,14 @@ That said, low odds are still odds. Ask, and I will provide what information I c
           <div class="inline-row">
             <div>
               <label for="tlStart">Start Time</label>
-              <input id="tlStart" type="text" placeholder="e.g., 1300 or 1:00 PM" />
+              <input id="tlStart" type="text" placeholder="e.g., 1500 or 3:00 PM" />
             </div>
             <div>
               <label for="tlEnd">End Time</label>
-              <input id="tlEnd" type="text" placeholder="e.g., 1440 or 2:40 PM" />
+              <input id="tlEnd" type="text" placeholder="e.g., 1800 or 6:00 PM" />
             </div>
           </div>
-          <div class="muted" style="margin-top:6px">You may also enter a range like <b>1300-1440</b> in the Start field and leave End blank.</div>
+          <div class="muted" style="margin-top:6px">You may also enter a range like <b>1200-1630</b> in the Start field and leave End blank.</div>
           <div class="feedback" id="tlFeedback"></div>
           <div class="inline-actions">
             <button id="tlCancel">Cancel</button>
@@ -367,7 +367,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
         <div class="inline-card" id="cdCard">
           <h3>Submit Cause of Death</h3>
           <label for="cdText">Describe the cause</label>
-          <input id="cdText" type="text" placeholder="e.g., Raciline poison / poisoned by raciline" />
+          <input id="cdText" type="text" placeholder="e.g., Name of weapon" />
           <div class="muted" style="margin-top:6px">Flexible phrasing accepted. Spelling of “Raciline” must be correct.</div>
           <div class="feedback" id="cdFeedback"></div>
           <div class="inline-actions">
@@ -503,7 +503,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
               timelineMode = 0; timelineStart = "";
             }
           } else {
-            addResponse("Please provide a valid time (e.g., 1440 or 2:40 PM) or enter both as 1300-1440.");
+            addResponse("Please provide a valid time (e.g.,1230 or 12:30 PM) or enter both as 1200-1500.");
           }
           return;
         }
@@ -630,3 +630,4 @@ That said, low odds are still odds. Ask, and I will provide what information I c
   </script>
 </body>
 </html>
+
