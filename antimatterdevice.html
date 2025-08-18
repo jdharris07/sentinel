@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tandaran Device — Final Puzzle</title>
+<style>
+  :root{
+    --bg:#080c14; --panel:#0f1726; --panel2:#0c1422;
+    --text:#eaf2ff; --muted:#bcd0f2; --ok:#4be38f; --warn:#ff6b6b;
+    --accent:#ffb84d; --accent2:#6bdcff; --glass:rgba(255,255,255,.05);
+    --rad:16px; --shadow:0 10px 30px rgba(0,0,0,.45);
+    --greenBand:#15351f;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:
+      radial-gradient(900px 420px at 70% -10%, rgba(120,160,255,.12), transparent),
+      radial-gradient(800px 400px at 70% 120%, rgba(255,190,120,.10), transparent),
+      var(--bg);
+    color:var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    padding:14px; display:flex; justify-content:center; align-items:center;
+  }
+  .wrap{ width:min(96vw, 860px); }
+
+  header, .card{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:var(--rad);
+    box-shadow:var(--shadow);
+    padding:14px; margin-bottom:12px;
+  }
+
+  h1{ margin:0 0 6px 0; font-size:clamp(20px,6vw,28px) }
+  p{ color:var(--muted); line-height:1.55; margin:8px 0 }
+  .tag{ display:inline-block; padding:2px 8px; border-radius:999px; background:var(--glass); color:#ffd866; font-weight:800; border:1px solid rgba(255,255,255,.08) }
+
+  .timer{ font-variant-numeric:tabular-nums; font-weight:900; font-size:clamp(22px,6vw,36px) }
+  .timer.ok{ color:var(--ok) } .timer.mid{ color:#ffd866 } .timer.low{ color:var(--warn); animation:throb 1s infinite }
+  @keyframes throb{0%,100%{transform:none}50%{transform:scale(1.05)}}
+  .meta{ display:flex; gap:10px; align-items:center; justify-content:space-between }
+
+  .btn{
+    border:0; border-radius:12px; -webkit-tap-highlight-color:transparent;
+    padding:12px 16px; font-weight:900; letter-spacing:.02em; color:#e6f0ff;
+    background:linear-gradient(180deg,#223b56,#1b2f47); box-shadow:var(--shadow);
+    cursor:pointer;
+  }
+  .btn.warn{ background:linear-gradient(180deg,#5b1f1f,#391212) }
+  .btn[disabled]{opacity:.55; cursor:not-allowed}
+
+  .gate{ position:relative; overflow:hidden; }
+  .gate .blurred{
+    filter: blur(6px) brightness(.75);
+    pointer-events:none; user-select:none;
+  }
+  .gate .overlay{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.65); text-align:center; padding:18px;
+  }
+  .overlayBox{
+    width:min(94%,560px);
+    background:linear-gradient(180deg,#142036,#0b1322);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:14px; padding:16px;
+  }
+  .overlayBox h2{ margin:0 0 6px 0; font-size:clamp(18px,5vw,24px) }
+  .overlayBox p{ margin:8px 0 }
+
+  .title{ display:flex; align-items:center; gap:10px; margin:0 0 8px 0; font-size:clamp(18px,5vw,22px); font-weight:900 }
+  .hint{
+    margin-top:6px; padding:10px 12px; border-left:4px solid var(--accent);
+    background:rgba(255,184,77,.08); color:#ffe9cb; border-radius:8px; font-size:.95em;
+  }
+
+  /* Indicators (Lights 1–6 with colors) */
+  .indicators{
+    display:grid; grid-template-columns: repeat(3, 1fr);
+    gap:10px; margin-top:10px;
+  }
+  @media(min-width:560px){ .indicators{ grid-template-columns: repeat(6, 1fr); } }
+  .light{
+    position:relative;
+    height:58px; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-weight:900; letter-spacing:.02em; text-transform:uppercase;
+    border:1px solid rgba(255,255,255,.10); color:#0b1220;
+    box-shadow: var(--shadow);
+  }
+  .light .small{ font-size:.75em; opacity:.9; margin-top:2px; color:#0b1220 }
+  .light.on{ filter:none }
+  .light.off{ opacity:.35; filter:grayscale(.8); text-decoration:line-through }
+
+  /* Color fills + glow */
+  .c-red{    background:linear-gradient(180deg,#ff5a5a,#b93333); box-shadow:0 0 18px #ff5a5a77, inset 0 0 12px #ffffff22 }
+  .c-green{  background:linear-gradient(180deg,#66e186,#2b8b4a); box-shadow:0 0 18px #66e18677, inset 0 0 12px #ffffff22 }
+  .c-blue{   background:linear-gradient(180deg,#6bdcff,#2f92b0); box-shadow:0 0 18px #6bdcff77, inset 0 0 12px #ffffff22 }
+  .c-yellow{ background:linear-gradient(180deg,#ffd866,#b38a2a); box-shadow:0 0 18px #ffd86677, inset 0 0 12px #ffffff22 }
+  .c-orange{ background:linear-gradient(180deg,#ffb84d,#b3771c); box-shadow:0 0 18px #ffb84d77, inset 0 0 12px #ffffff22 }
+  .c-purple{ background:linear-gradient(180deg,#c792ea,#7e4bb0); box-shadow:0 0 18px #c792ea77, inset 0 0 12px #ffffff22 }
+
+  /* Target pulse */
+  .light.target{
+    outline:3px solid #eaf2ff; outline-offset:2px;
+    animation: pulseTarget 1.2s infinite;
+  }
+  @keyframes pulseTarget{ 0%,100%{ transform:none } 50%{ transform: scale(1.03) } }
+
+  /* Circuits (chips) */
+  .chips{ display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-top:10px }
+  @media(min-width:520px){ .chips{grid-template-columns: repeat(6, 1fr);} }
+  .chip{
+    position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+    min-height:98px; padding:12px 8px; text-transform:uppercase; font-weight:800; color:#cfe3ff;
+    background:linear-gradient(180deg,#10233a,#0d1a2d); border:1px solid rgba(255,255,255,.12); border-radius:12px;
+    cursor:pointer; transition: transform .06s ease;
+  }
+  .chip:active{ transform:scale(0.98) }
+  .chip .lamp{
+    width:22px; height:22px; border-radius:50%; background:#263a5a; border:2px solid rgba(255,255,255,.18);
+    position: relative; overflow: hidden;
+  }
+  /* Blink N times per cycle to hint which light it controls */
+  .chip .lamp::after{
+    content:"";
+    position:absolute; inset:0;
+    background: radial-gradient(circle at 50% 50%, #9fe0ff 0 40%, transparent 41%);
+    animation: burst var(--cycle,2.4s) steps(var(--pulses,1)) infinite;
+    opacity: 0;
+  }
+  @keyframes burst{ 0%{opacity:1} 100%{opacity:0} }
+  .chip.removed{ opacity:.35; filter:grayscale(.8); text-decoration:line-through }
+  .taplabel{ font-size:.78em; color:#9fb6db; font-weight:700; opacity:.95 }
+
+  .msg{ font-weight:800; margin-left:6px }
+  .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px }
+
+  .hidden{ display:none !important; }
+
+  /* Success/Fail overlays */
+  .overlayFinal{
+    position:fixed; inset:0; background:rgba(0,0,0,.75);
+    display:none; align-items:center; justify-content:center; padding:16px; z-index:999;
+  }
+  .overlayFinal.show{ display:flex }
+  .modal{
+    width:min(95vw,700px);
+    background:linear-gradient(180deg,#132033,#0c1522);
+    border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:18px; text-align:center; box-shadow:var(--shadow);
+  }
+  .modal h2{ margin:0 0 8px 0; font-size:clamp(20px,6vw,28px) }
+  .modal p{ color:var(--muted) }
+  .modal.success h2{ color:var(--ok) }
+  .modal.fail h2{ color:var(--warn) }
+
+  /* === Tandaran font + decorative echoes === */
+  @font-face{
+    font-family: "Tandaran";
+    src: url("Andarion-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  .tandaran{ font-family:"Tandaran", ui-monospace, "Courier New", monospace; letter-spacing:.06em; }
+  .deco-sub{ display:block; margin-top:4px; color:#9fb6db; opacity:.8; font-size:.9em; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+
+  <!-- In-universe explanation -->
+  <header>
+    <h1>
+      Emergency Ordnance: Antimatter Breach Device
+      <span class="tandaran deco-sub" aria-hidden="true">
+        Emergency Ordnance: Antimatter Breach Device
+      </span>
+    </h1>
+    <p>
+      Analysis confirms a tandem antimatter injector coupled to a trilithium interdictor. If triggered,
+      the device will vent antimatter into the station’s EPS lattice, causing a core overload that
+      annihilates <em>this station</em> and cascades a shock front into the docking perimeter — destroying the Tandaran fleet on arrival.
+    </p>
+    <div class="meta">
+      <div>
+        <div class="timer ok" id="timer">03:00</div>
+        <span class="tag" id="timerTag">Countdown paused</span>
+      </div>
+      <!-- Small visible font test (decorative) -->
+      <span class="tag tandaran" aria-hidden="true">Tandaran font active • ɅƞƌⱤɅɪ◊ƞ</span>
+    </div>
+  </header>
+
+  <!-- Gated puzzle area -->
+  <section class="card gate" id="gate">
+    <div id="puzzleShell" class="blurred" aria-hidden="true">
+      <!-- STAGE 1 ONLY -->
+      <section class="card" id="stage1" aria-labelledby="s1title">
+        <h2 class="title" id="s1title">
+          Isolinear Circuit Order
+          <span class="tandaran deco-sub" aria-hidden="true">Isolinear Circuit Order</span>
+        </h2>
+        <p>Six colored indicators are locked <strong>ON</strong>. Remove circuits in the correct order to switch indicators <strong>OFF</strong> from <em>1 → 6</em>. A wrong circuit resets the board.</p>
+        <div class="hint">
+          “Each circuit’s pilot lamp pulses in <strong>N bursts per cycle</strong> — that <em>N</em> is the indicator it disables.
+          Power-down must proceed in order: <strong>1, 2, 3, 4, 5, 6</strong>. <em>Tap the correct circuit to remove it.</em>”
+          <span class="tandaran deco-sub" aria-hidden="true">
+            Each circuit’s pilot lamp pulses in N bursts per cycle. Power-down must proceed in order.
+          </span>
+        </div>
+
+        <!-- Target banner -->
+        <p class="tag" id="targetTag" style="display:inline-block;margin-top:8px;">
+          Target: Indicator 1 — Red
+          <span class="tandaran deco-sub" id="targetTagAlien" aria-hidden="true">Target: Indicator 1 — Red</span>
+        </p>
+
+        <!-- Indicators (1–6 colors) -->
+        <div class="indicators" id="indicators">
+          <div class="light on c-red target"    data-id="1"><div>Indicator 1</div><div class="small">Red</div></div>
+          <div class="light on c-green"  data-id="2"><div>Indicator 2</div><div class="small">Green</div></div>
+          <div class="light on c-blue"   data-id="3"><div>Indicator 3</div><div class="small">Blue</div></div>
+          <div class="light on c-yellow" data-id="4"><div>Indicator 4</div><div class="small">Yellow</div></div>
+          <div class="light on c-orange" data-id="5"><div>Indicator 5</div><div class="small">Orange</div></div>
+          <div class="light on c-purple" data-id="6"><div>Indicator 6</div><div class="small">Purple</div></div>
+        </div>
+
+        <!-- Circuits -->
+        <div class="chips" id="chips">
+          <!-- Mapping: 1→3, 2→5, 3→1, 4→6, 5→2, 6→4 ; required circuit order: 3,5,1,6,2,4 -->
+          <button class="chip" data-circuit="1" data-disables="3">
+            <div class="lamp" style="--pulses:3; --cycle:2.4s;"></div>
+            <span>Circuit 1</span>
+            <div class="taplabel">Tap to remove</div>
+          </button>
+          <button class="chip" data-circuit="2" data-disables="5">
+            <div class="lamp" style="--pulses:5; --cycle:2.4s;"></div>
+            <span>Circuit 2</span>
+            <div class="taplabel">Tap to remove</div>
+          </button>
+          <button class="chip" data-circuit="3" data-disables="1">
+            <div class="lamp" style="--pulses:1; --cycle:2.4s;"></div>
+            <span>Circuit 3</span>
+            <div class="taplabel">Tap to remove</div>
+          </button>
+          <button class="chip" data-circuit="4" data-disables="6">
+            <div class="lamp" style="--pulses:6; --cycle:2.4s;"></div>
+            <span>Circuit 4</span>
+            <div class="taplabel">Tap to remove</div>
+          </button>
+          <button class="chip" data-circuit="5" data-disables="2">
+            <div class="lamp" style="--pulses:2; --cycle:2.4s;"></div>
+            <span>Circuit 5</span>
+            <div class="taplabel">Tap to remove</div>
+          </button>
+          <button class="chip" data-circuit="6" data-disables="4">
+            <div class="lamp" style="--pulses:4; --cycle:2.4s;"></div>
+            <span>Circuit 6</span>
+            <div class="taplabel">Tap to remove</div>
+          </button>
+        </div>
+
+        <div class="actions">
+          <span class="msg" id="s1msg" aria-live="polite"></span>
+        </div>
+      </section>
+    </div>
+
+    <!-- Start overlay -->
+    <div class="overlay" id="startOverlay">
+      <div class="overlayBox">
+        <h2>
+          Ready to Attempt Disarm?
+          <span class="tandaran deco-sub" aria-hidden="true">Ready to Attempt Disarm?</span>
+        </h2>
+        <p>This device will detonate on a tight window. Once you begin, you’ll have only a few minutes to complete the procedure.</p>
+        <p><em>Proceed only if your team is prepared.</em></p>
+        <div style="margin-top:10px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap">
+          <button class="btn" id="beginBtn">Ready — Start Countdown</button>
+          <button class="btn warn" id="notYet">Not Yet</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="card" style="display:flex;align-items:center;justify-content:space-between">
+    <span>
+      LCARS Subroutine: <strong>DEFUSE-GAMMA</strong>
+      <span class="tandaran deco-sub" aria-hidden="true">DEFUSE-GAMMA</span>
+    </span>
+    <button class="btn" id="restart">Restart</button>
+  </footer>
+</div>
+
+<!-- Success / Fail overlays -->
+<div class="overlayFinal" id="success">
+  <div class="modal success">
+    <h2>Bomb Disarmed</h2>
+    <p>Countdown frozen at <strong id="freezeAt">00:07</strong>. Antimatter flow collapsed, EPS grid stabilized, docking perimeter secure.</p>
+    <div style="margin-top:12px"><button class="btn" onclick="location.reload()">Play Again</button></div>
+  </div>
+</div>
+
+<div class="overlayFinal" id="fail">
+  <div class="modal fail">
+    <h2>Detonation</h2>
+    <p>Antimatter breach propagates through the EPS lattice. The cargo bay flashes white as the core overloads.</p>
+    <p style="margin-top:8px; font-style:italic;">Well… boom. Try not to vaporize us all this time.</p>
+    <div style="margin-top:12px"><button class="btn warn" onclick="location.reload()">Retry</button></div>
+  </div>
+</div>
+
+<script>
+  // ===== Timer (3 minutes, constant) =====
+  const timerEl = document.getElementById('timer');
+  const timerTag = document.getElementById('timerTag');
+  let total = 180; // seconds
+  let timerId = null;
+  const pad = n => String(n).padStart(2,'0');
+  function renderTime(){
+    const m = Math.floor(total/60), s = total%60;
+    timerEl.textContent = `${pad(m)}:${pad(s)}`;
+    timerEl.classList.remove('ok','mid','low');
+    if(total > 60) timerEl.classList.add('ok'); else if(total > 20) timerEl.classList.add('mid'); else timerEl.classList.add('low');
+  }
+  function tick(){
+    total--;
+    if(total <= 0){ total = 0; renderTime(); explode(); return; }
+    renderTime();
+  }
+  function startTimer(){ renderTime(); timerId = setInterval(tick, 1000); timerTag.textContent='Countdown active'; }
+  function freezeTimer(){ if(timerId){ clearInterval(timerId); timerId = null; } }
+
+  // ===== Gate / Start =====
+  const puzzleShell = document.getElementById('puzzleShell');
+  const startOverlay = document.getElementById('startOverlay');
+  document.getElementById('beginBtn').addEventListener('click', ()=>{
+    puzzleShell.classList.remove('blurred');
+    puzzleShell.removeAttribute('aria-hidden');
+    startOverlay.style.display = 'none';
+    startTimer();
+  });
+  document.getElementById('notYet').addEventListener('click', ()=>{
+    document.getElementById('notYet').animate(
+      [{transform:'scale(1)'},{transform:'scale(1.06)'},{transform:'scale(1)'}],
+      {duration:300}
+    );
+  });
+
+  // ===== Stage 1: Circuit order puzzle =====
+  const lights = Array.from(document.querySelectorAll('.light'));
+  const chips = Array.from(document.querySelectorAll('.chip'));
+  const s1msg = document.getElementById('s1msg');
+  const targetTag = document.getElementById('targetTag');
+
+  const colorName = {1:'Red',2:'Green',3:'Blue',4:'Yellow',5:'Orange',6:'Purple'};
+  const map = { 1:3, 2:5, 3:1, 4:6, 5:2, 6:4 };
+  let nextIndicator = 1;
+
+  function setLight(id, on){
+    const el = lights.find(l => l.dataset.id === String(id));
+    if(!el) return;
+    el.classList.toggle('on', on);
+    el.classList.toggle('off', !on);
+  }
+  function clearTargets(){ lights.forEach(l => l.classList.remove('target')); }
+  function setTarget(id){
+    clearTargets();
+    const el = lights.find(l => l.dataset.id === String(id));
+    if(el){ el.classList.add('target'); }
+    const text = `Target: Indicator ${id} — ${colorName[id]}`;
+    targetTag.textContent = text;
+    // re-append the alien echo
+    const echo = document.createElement('span');
+    echo.className = 'tandaran deco-sub';
+    echo.setAttribute('aria-hidden','true');
+    echo.textContent = text;
+    targetTag.appendChild(echo);
+  }
+  function resetStage1(){
+    nextIndicator = 1;
+    lights.forEach(l => { l.classList.add('on'); l.classList.remove('off'); });
+    setTarget(1);
+    chips.forEach(c => { c.classList.remove('removed'); c.disabled = false; });
+    s1msg.textContent = 'Reset: Sequence reinitialized.';
+    s1msg.style.color = 'var(--warn)';
+  }
+  function allLightsOff(){ return lights.every(l => l.classList.contains('off')); }
+
+  // Success / Fail overlays
+  const success = document.getElementById('success');
+  const fail = document.getElementById('fail');
+  const freezeAt = document.getElementById('freezeAt');
+
+  function explode(){
+    freezeTimer();
+    document.getElementById('app').setAttribute('aria-hidden','true');
+    fail.classList.add('show');
+  }
+  function disarm(){
+    freezeTimer();
+    freezeAt.textContent = timerEl.textContent;
+    document.getElementById('app').setAttribute('aria-hidden','true');
+    success.classList.add('show');
+  }
+
+  chips.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const circuit = Number(btn.dataset.circuit);
+      const disables = map[circuit];
+      if(disables !== nextIndicator){
+        btn.animate(
+          [{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],
+          {duration:220}
+        );
+        resetStage1();
+        return;
+      }
+      btn.classList.add('removed');
+      btn.disabled = true;
+      setLight(disables, false);
+      nextIndicator++;
+      if(allLightsOff()){
+        s1msg.textContent = 'Indicator sequence collapsed. Containment interlock exposed.';
+        s1msg.style.color = 'var(--ok)';
+        chips.forEach(c=> c.disabled = true);
+        // No Stage 2 — directly disarm!
+        disarm();
+      } else {
+        s1msg.textContent = `Accepted. Next: disable Indicator ${nextIndicator} (${colorName[nextIndicator]}).`;
+        s1msg.style.color = 'var(--ok)';
+        setTarget(nextIndicator);
+      }
+    }, {passive:true});
+  });
+  setTarget(1);
+
+  // Initial (timer paused until Start)
+  renderTime();
+</script>
+</body>
+</html>
