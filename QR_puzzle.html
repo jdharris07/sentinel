@@ -1,8 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Holodeck Admin Console — Log</title>
+  <style>
+    :root{
+      --fg: #eaf2ff;
+      --muted: #c8d2e8;
+      --bg-glass: rgba(0, 0, 0, 0.58);
+      --ring: rgba(120,170,255,0.45);
+      --shadow: 0 12px 40px rgba(0,0,0,0.55);
+      --radius: 18px;
+      --pad: 18px;
+      --maxw: 820px;
+    }
 
+    /* Full-page background */
+    html, body {
+      height: 100%;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+      color: var(--fg);
+      background: #000 url("space.png") center / cover no-repeat fixed;
+      display: grid;
+      place-items: center;
+    }
+
+    /* Subtle vignette for readability over space bg */
+    body::before{
+      content:"";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 20%, rgba(0,0,0,0.25), transparent 60%),
+        radial-gradient(ellipse at 50% 120%, rgba(0,0,0,0.55), transparent 65%),
+        linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(0,0,0,0.65));
+      pointer-events: none;
+    }
+
+    main {
+      width: min(92vw, var(--maxw));
+      margin: 32px auto;
+    }
+
+    .card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .media {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 9;
+      object-fit: contain;
+      background: rgba(0,0,0,0.35);
+    }
+
+    .content {
+      padding: clamp(14px, 3.5vw, 28px);
+    }
+
+    h1 {
+      margin: 0 0 10px 0;
+      font-size: clamp(18px, 4.2vw, 26px);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--fg);
+      text-shadow: 0 1px 0 rgba(0,0,0,0.4);
+    }
+
+    p {
+      margin: 0 0 14px 0;
+      line-height: 1.6;
+      font-size: clamp(14px, 3.6vw, 18px);
+      color: var(--muted);
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--ring), transparent);
+      margin: 12px 0 16px 0;
+      opacity: 0.7;
+    }
+
+    /* Mobile tweaks */
+    @media (max-width: 480px){
+      .card { border-radius: 14px; }
+      .content { padding: 16px; }
+    }
+  </style>
+</head>
 <body>
-TEST this is a placeholder
+  <main>
+    <article class="card" role="article" aria-labelledby="log-title">
+      <img
+        class="media"
+        src="nirafunny.png"
+        alt="Commander Nira Vess looking flustered in a ready room"
+      />
+      <div class="content">
+        <h1 id="log-title">Holodeck Admin Console — Access Log</h1>
+        <div class="divider" aria-hidden="true"></div>
+        <p>
+          Once the isolinear circuit is unscrambled, you are able to log into the holodeck’s admin console. From there you learn that from 1300 until 1460 the holodeck was in use.
+        </p>
+        <p>
+          Doing some digging you learn that the program being ran was one on the “restricted program list” — “Two Klingons. one bat'leth”. The voice command override was none other than Commander Nira Vess. You find him sitting in one of the station’s ready rooms where you confront him.
+        </p>
+        <p>
+          “Oh, uh...that program was...uh, nothing more than research. I was trying to understand why anyone would want to run that program in the first place. I..uh, look - can we please just drop this? We have other more pressing matters at hand such as the Tandaran fleet. I trust you are making progress on the murder?
+        </p>
+        <p>
+          If you will excuse me, I have to go see about a bat'leth... I mean uh a bathroom. Goodbye.”
+        </p>
+      </div>
+    </article>
+  </main>
 </body>
-
 </html>
