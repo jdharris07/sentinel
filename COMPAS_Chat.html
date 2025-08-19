@@ -536,7 +536,7 @@ So, cross them off your list. They may be a poor gambler, but they’re no kille
         <div class="inline-card">
           <h3>Unauthorized Deep Space Communication</h3>
           <label for="commsCode">Enter access key</label>
-          <input id="commsCode" type="text" placeholder="e.g., delta1701 or delta 1701">
+          <input id="commsCode" type="text" placeholder="">
           <div class="muted" style="margin-top:6px">Capitalization and spacing do not matter.</div>
           <div class="feedback" id="commsFb"></div>
           <div class="inline-actions">
@@ -573,35 +573,50 @@ Gil Dalra is in his quarters when you confront him about the package.
       }
     }
 
-    function showSolveForm(){
-      if (!isAllPhase2Ready()) return;
-      const host = document.getElementById('phase2-form-host');
-      host.innerHTML = `
-        <div class="inline-card">
-          <h3>Close the Case</h3>
-          <div class="muted" style="margin-bottom:6px">Select all suspects you have eliminated from consideration.</div>
-          <div id="suspectList" style="text-align:left">
-            <label><input type="checkbox" value="Jora Tell"> Jora Tell</label><br/>
-            <label><input type="checkbox" value="Nira Vess"> Nira Vess</label><br/>
-            <label><input type="checkbox" value="Gil Dalra"> Gil Dalra</label><br/>
-            <label><input type="checkbox" value="Lorr Vun"> Lorr Vun</label><br/>
-            <label><input type="checkbox" value="Renn Vok"> Renn Vok</label><br/>
-            <label><input type="checkbox" value="Eno Tavik"> Eno Tavik</label>
-          </div>
-          <div class="inline-actions">
-            <button id="solveCancel">Cancel</button>
-            <button id="solveSubmit">Submit</button>
-          </div>
-        </div>
-      `;
-      document.getElementById('solveCancel').addEventListener('click', ()=> host.innerHTML = "");
-      document.getElementById('solveSubmit').addEventListener('click', ()=>{
-        const boxes = [...document.querySelectorAll('#suspectList input[type=checkbox]')];
-        const eliminated = boxes.filter(b=>b.checked).map(b=>b.value);
-        host.innerHTML = "";
-        addTitledResponse("CASE CLOSURE — ELIMINATIONS", "Elimination set recorded: " + (eliminated.length ? eliminated.join(", ") : "none selected") + ". Proceed when ready to present your final accusation.");
-      });
+function showSolveForm(){
+  if (!isAllPhase2Ready()) return;
+  const host = document.getElementById('phase2-form-host');
+  host.innerHTML = `
+    <div class="inline-card">
+      <h3>Close the Case</h3>
+      <div class="muted" style="margin-bottom:6px">Select all suspects you have eliminated from consideration.</div>
+      <div id="suspectList" style="text-align:left">
+        <label><input type="checkbox" value="Jora Tell"> Jora Tell</label><br/>
+        <label><input type="checkbox" value="Nira Vess"> Nira Vess</label><br/>
+        <label><input type="checkbox" value="Gil Dalra"> Gil Dalra</label><br/>
+        <label><input type="checkbox" value="Lorr Vun"> Lorr Vun</label><br/>
+        <label><input type="checkbox" value="Taldare Vok"> Taldare Vok</label><br/>
+        <label><input type="checkbox" value="Eno Tavik"> Eno Tavik</label>
+      </div>
+      <div class="inline-actions">
+        <button id="solveCancel">Cancel</button>
+        <button id="solveSubmit">Submit</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('solveCancel').addEventListener('click', ()=> host.innerHTML = "");
+  document.getElementById('solveSubmit').addEventListener('click', ()=>{
+    const boxes = [...document.querySelectorAll('#suspectList input[type=checkbox]')];
+    const eliminated = boxes.filter(b=>b.checked).map(b=>b.value);
+    host.innerHTML = "";
+
+    // ✅ Correct eliminations = everyone EXCEPT Taldare Vok
+    const allSuspects = ["Jora Tell","Nira Vess","Gil Dalra","Lorr Vun","Taldare Vok","Eno Tavik"];
+    const correct = allSuspects.filter(s => s !== "Taldare Vok");
+
+    if (eliminated.length === correct.length && correct.every(s => eliminated.includes(s))) {
+      addTitledResponse("CASE CLOSURE — SUCCESS", 
+        "You have correctly eliminated every suspect except Taldare Vok. Redirecting to case resolution...");
+      setTimeout(()=> {
+        window.location.href = "presolution.html";
+      }, 3000); // waits 3 seconds so players see the success message
+    } else {
+      addTitledResponse("CASE CLOSURE — REVIEW", 
+        "Your eliminations do not match the evidence. Re-examine the clues and try again.");
     }
+  });
+}
+
 
     // ====== Chat helpers ======
     function addResponse(text) {
@@ -1019,3 +1034,4 @@ Gil Dalra is in his quarters when you confront him about the package.
   </script>
 </body>
 </html>
+
