@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>LCARS • Chemical Analysis: Sequence Match</title>
+<style>
+  :root{
+    --bg:#000; --text:#FFCC66; --panel:#330000; --panel2:#663300; --outline:#FFCC66;
+    --ok:#88FF88; --warn:#FF5555; --muted:#cda96b; --label:#9fd6ff;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:monospace}
+  .wrap{max-width:800px;margin:0 auto;padding:18px}
+  .banner{display:flex;justify-content:space-between;align-items:center;border:2px solid var(--outline);padding:8px 12px;border-radius:12px;background:var(--panel);gap:12px;flex-wrap:wrap}
+  .badge{font-weight:bold}
+  h1,h2{margin:12px 0}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  .panel{border:2px solid var(--outline);background:var(--panel2);border-radius:12px;padding:12px;box-shadow:0 0 12px #ffcc6680}
+  .ai-line{min-height:1.3em;color:#ffa07a;margin-top:8px}
+
+  .terminal{background:#1b0d0d;border:1px solid var(--outline);border-radius:10px;padding:8px;font-size:16px;min-height:120px}
+  .code{font-size:16px;letter-spacing:1px;margin:4px 0}
+  .label{color:var(--label)}
+  .muted{color:var(--muted)}
+  .ok{color:var(--ok);font-weight:bold}
+  .err{color:var(--warn);font-weight:bold}
+
+  .status{min-height:1.2em;margin-top:6px}
+  .progress-wrap{margin-top:8px;background:#1b0d0d;border:1px solid var(--outline);border-radius:10px;height:14px;overflow:hidden}
+  .progress{height:100%;background:linear-gradient(90deg,#FF5555,#FFCC66);width:0%}
+
+  /* Inputs */
+  .grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:12px;opacity:.85;text-align:center}
+  input[type=text]{padding:8px;border-radius:8px;border:2px solid var(--outline);background:#1b0d0d;color:var(--text);font-size:16px;text-align:center}
+  button{background:var(--text);color:#2b1400;border:none;border-radius:20px;padding:8px 14px;font-weight:bold;cursor:pointer}
+  button:hover{filter:brightness(1.1)}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  @media (max-width:820px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner">
+    <div>LCARS • STARBASE SENTINEL • <span class="badge">CHEMICAL ANALYSIS</span></div>
+    <div>Console: <span class="badge">BioChem</span></div>
+    <div>Access Level: <span class="badge">3</span></div>
+  </div>
+
+  <div class="ai-line" id="aiLine">Submit target elements for toxicology correlation.</div>
+
+  <h1>Chemical Analysis — Element Sequencing</h1>
+  <div class="grid">
+    <!-- LEFT: Output -->
+    <div class="panel">
+      <h2>Analysis Output</h2>
+      <div class="terminal" id="terminal">
+        <div class="muted">[Awaiting submission…]</div>
+      </div>
+      <div class="progress-wrap" id="pwrap" style="display:none;"><div class="progress" id="progress"></div></div>
+      <div class="status" id="statusMsg"></div>
+    </div>
+
+    <!-- RIGHT: Inputs -->
+    <div class="panel">
+      <h2>Element Input</h2>
+      <div class="muted" style="margin-bottom:8px;">Enter chemical elements below - one per field for analysis</div>
+      <div class="grid6">
+        <div class="field"><label for="e1">Slot 1</label><input id="e1" type="text" maxlength="3"></div>
+        <div class="field"><label for="e2">Slot 2</label><input id="e2" type="text" maxlength="3"></div>
+        <div class="field"><label for="e3">Slot 3</label><input id="e3" type="text" maxlength="3"></div>
+        <div class="field"><label for="e4">Slot 4</label><input id="e4" type="text" maxlength="3"></div>
+        <div class="field"><label for="e5">Slot 5</label><input id="e5" type="text" maxlength="3"></div>
+        <div class="field"><label for="e6">Slot 6</label><input id="e6" type="text" maxlength="3"></div>
+      </div>
+      <div class="btns">
+        <button id="submit">Submit</button>
+        <button id="reset">Reset</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const EXPECTED = ["C","K","Ne","Ag","Fe","Cl"];
+  const RUN_MS = 8000; // 8 seconds
+
+  const aiLine = document.getElementById('aiLine');
+  const term = document.getElementById('terminal');
+  const pwrap = document.getElementById('pwrap');
+  const progress = document.getElementById('progress');
+  const statusMsg = document.getElementById('statusMsg');
+  const submitBtn = document.getElementById('submit');
+  const resetBtn = document.getElementById('reset');
+  const fields = ["e1","e2","e3","e4","e5","e6"].map(id=>document.getElementById(id));
+
+  let running = false;
+  let rafId = null;
+  let startTs = 0;
+
+  function normalize(tok){
+    if (!tok) return "";
+    tok = tok.trim();
+    return tok ? tok[0].toUpperCase() + tok.slice(1).toLowerCase() : "";
+  }
+
+  function arraysEqual(a,b){ return a.length===b.length && a.every((v,i)=>v===b[i]); }
+
+  function setBusy(b){
+    fields.forEach(f=>f.disabled=b);
+    submitBtn.disabled=b;
+    resetBtn.disabled=b;
+  }
+
+  function logLine(label, text, cls=""){
+    const div = document.createElement('div');
+    div.className = 'code' + (cls ? " " + cls : "");
+    div.innerHTML = `<span class="label">${label}</span> ${text}`;
+    term.appendChild(div);
+    term.scrollTop = term.scrollHeight;
+  }
+
+  function clearTerminal(){
+    term.innerHTML = '<div class="muted">[Awaiting submission…]</div>';
+  }
+
+  function updateStatus(elapsed){
+    const phases = [
+      [0.00, "INITIALIZING ANALYSIS SUBROUTINES…"],
+      [0.28, "PARSING ELEMENT TOKENS…"],
+      [0.56, "CROSS-CHECKING STARFLEET DATABASES…"],
+      [0.96, "FINALIZING REPORT…"]
+    ];
+    const p = elapsed / RUN_MS;
+    let msg = phases[0][1];
+    for (let i=0;i<phases.length;i++){ if (p >= phases[i][0]) msg = phases[i][1]; }
+    statusMsg.textContent = msg;
+  }
+
+  function startProgress(onDone){
+    pwrap.style.display = 'block';
+    progress.style.width = '0%';
+    startTs = performance.now();
+    function step(ts){
+      const elapsed = ts - startTs;
+      const pct = Math.min(1, elapsed / RUN_MS);
+      progress.style.width = (pct*100).toFixed(1) + '%';
+      updateStatus(elapsed);
+      if (elapsed < RUN_MS){
+        rafId = requestAnimationFrame(step);
+      } else { onDone(); }
+    }
+    rafId = requestAnimationFrame(step);
+  }
+
+  function onSubmit(){
+    if (running) return;
+    const tokens = fields.map(f=>normalize(f.value));
+    if (tokens.some(t=>t==="")){
+      statusMsg.innerHTML = '<span class="err">All six slots must be filled.</span>';
+      return;
+    }
+    clearTerminal();
+    logLine("INPUT:", tokens.join(" "));
+    running = true;
+    setBusy(true);
+    aiLine.textContent = ' “Analyzing sequence…”';
+    statusMsg.textContent = 'Starting…';
+    startProgress(() => {
+      const ok = arraysEqual(tokens, EXPECTED);
+      statusMsg.textContent = 'ANALYSIS COMPLETE.';
+      if (ok){
+        logLine("RESULT:", `<span class="ok">Chemical analysis complete. Sequence match: Raciline (rare neurotoxin).</span>`);
+        aiLine.textContent = ' “Sequence match: RACILINE.”';
+      } else {
+        logLine("RESULT:", `<span class="err"><strong>ERROR SEQUENCE FAILED. PLEASE SUBMIT NEW SEQUENCE FOR ANALYISIS</strong></span>`);
+        aiLine.textContent = '“No match. Resubmit when ready.”';
+      }
+      running = false;
+      setBusy(false);
+    });
+  }
+
+  function onReset(){
+    if (running) return;
+    fields.forEach(f=>f.value="");
+    pwrap.style.display = 'none';
+    progress.style.width = '0%';
+    statusMsg.textContent = '';
+    clearTerminal();
+    aiLine.textContent = 'Submit target elements for toxicology correlation.';
+    fields[0].focus();
+  }
+
+  submitBtn.addEventListener('click', onSubmit);
+  resetBtn.addEventListener('click', onReset);
+  fields.forEach((f, idx)=>{
+    f.addEventListener('keydown', e=>{
+      if (e.key === 'Enter'){
+        if (idx < fields.length - 1) fields[idx+1].focus();
+        else onSubmit();
+      }
+    });
+  });
+  setTimeout(()=>fields[0].focus(), 200);
+})();
+</script>
+</body>
+</html>
