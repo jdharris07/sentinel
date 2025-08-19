@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Holodeck Admin Console — Log</title>
+  <style>
+    :root{
+      --fg: #eaf2ff;
+      --muted: #c8d2e8;
+      --bg-glass: rgba(0, 0, 0, 0.58);
+      --ring: rgba(120,170,255,0.45);
+      --shadow: 0 12px 40px rgba(0,0,0,0.55);
+      --radius: 18px;
+      --pad: 18px;
+      --maxw: 820px;
+      --cta-bg: #7fb0ff;
+      --cta-fg: #0b1224;
+    }
+
+    /* Full-page background */
+    html, body {
+      height: 100%;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+      color: var(--fg);
+      background: #000 url("space.png") center / cover no-repeat fixed;
+      display: grid;
+      place-items: center;
+    }
+
+    /* Subtle vignette for readability over space bg */
+    body::before{
+      content:"";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 20%, rgba(0,0,0,0.25), transparent 60%),
+        radial-gradient(ellipse at 50% 120%, rgba(0,0,0,0.55), transparent 65%),
+        linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(0,0,0,0.65));
+      pointer-events: none;
+    }
+
+    main {
+      width: min(92vw, var(--maxw));
+      margin: 32px auto;
+    }
+
+    .card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .media {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 9;
+      object-fit: contain;
+      background: rgba(0,0,0,0.35);
+    }
+
+    .content {
+      padding: clamp(14px, 3.5vw, 28px);
+    }
+
+    h1 {
+      margin: 0 0 10px 0;
+      font-size: clamp(18px, 4.2vw, 26px);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--fg);
+      text-shadow: 0 1px 0 rgba(0,0,0,0.4);
+    }
+
+    p {
+      margin: 0 0 14px 0;
+      line-height: 1.6;
+      font-size: clamp(14px, 3.6vw, 18px);
+      color: var(--muted);
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--ring), transparent);
+      margin: 12px 0 16px 0;
+      opacity: 0.7;
+    }
+
+    .cta {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      background: var(--cta-bg);
+      color: var(--cta-fg);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    }
+    .cta:hover { filter: brightness(1.05); }
+
+    /* Mobile tweaks */
+    @media (max-width: 480px){
+      .card { border-radius: 14px; }
+      .content { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <article class="card" role="article" aria-labelledby="log-title">
+      <img
+        class="media"
+        src="bomb.png"
+        alt="Armed explosive device in a starbase cargo bay"
+      />
+      <div class="content">
+        <h1 id="log-title">Holodeck Admin Console — Access Log</h1>
+        <div class="divider" aria-hidden="true"></div>
+
+        <p><strong>Based on the evidence collected, it appears that the person responsible for Commissioner Vorek Thalen’s murder is none other than his own kinsman — Taldare Vok.</strong> During the council’s discussions on Tandaran membership in the Federation, she was quiet… perhaps too quiet. The silence concealed her secret.</p>
+
+        <p>The central computer locates her in Cargo Bay Two. Grabbing a phaser, you summon a security detail to rendezvous with you there.</p>
+
+        <p>Inside, you find Taldare — standing over a crude but powerful device, its power cells humming with an ominous glow.</p>
+
+        <p>She turns as you approach, eyes filled with a mixture of fury and grief.<br>
+        “Vorek never wanted the Federation. He only wanted to use it. He planned to spy, to steal technology, to strengthen Tandaran chains of tyranny. My people would remain trapped under authoritarian rule, enslaved by the fleet and his vision of control.”</p>
+
+        <p>Her voice grows harder.<br>
+        “But war… war could free us. If the Federation is forced to destroy the fleet, the Tandaran regime collapses. At last, my people would have a chance at freedom.”<br>
+        She gestures sharply at the device.<br>
+        “So I killed him. And now, when the fleet arrives, this detonation will wipe them away. But I cannot allow you to stop me.”</p>
+
+        <p>Her hand suddenly flashes to her side — she draws a phaser and fires at your security team. A bolt strikes one officer, and in the chaos another returns fire. Taldare is hit squarely in the chest and collapses, dead before she can say another word.</p>
+
+        <p>The device, however, is already armed. A piercing tone fills the bay, and a countdown begins to flash across the bomb’s display. With the Tandaran fleet moments from arrival, her final act may still succeed — unless you can stop the bomb before it detonates.</p>
+
+        <a class="cta" href="bomb.html">CLICK HERE TO TRY AND DEFUSE THE BOMB</a>
+      </div>
+    </article>
+  </main>
+</body>
+</html>
