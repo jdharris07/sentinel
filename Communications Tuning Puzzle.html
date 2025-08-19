@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>LCARS • Subspace Scope Intercept</title>
+<style>
+  :root{
+    --bg:#000; --text:#FFCC66; --panel:#330000; --panel2:#663300; --outline:#FFCC66;
+    --ok:#88FF88; --warn:#FF5555; --muted:#cda96b; --accent:#9fd6ff;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:monospace}
+  .wrap{max-width:980px;margin:0 auto;padding:18px}
+  .banner{display:flex;justify-content:space-between;align-items:center;border:2px solid var(--outline);
+    padding:10px 14px;border-radius:12px;background:var(--panel);gap:12px;flex-wrap:wrap}
+  .badge{font-weight:bold}
+  h1,h2{margin:12px 0}
+  .grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}
+  .panel{border:2px solid var(--outline);background:var(--panel2);border-radius:12px;padding:14px;box-shadow:0 0 12px #ffcc6680}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .muted{color:var(--muted)}
+  .ok{color:var(--ok);font-weight:bold}
+  .err{color:var(--warn);font-weight:bold}
+
+  input[type=range]{appearance:none;width:100%;height:16px;border-radius:10px;background:#241010;border:2px solid var(--outline)}
+  input[type=range]::-webkit-slider-thumb{appearance:none;width:24px;height:24px;border-radius:50%;background:#FFCC66;border:2px solid #2b1400}
+  input[type=range]::-moz-range-thumb{width:24px;height:24px;border:none;border-radius:50%;background:#FFCC66}
+
+  .scope-wrap{height:220px;border:2px solid var(--outline);border-radius:10px;background:#0e0a0a;position:relative;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;text-align:center;padding:12px}
+  #scope{width:100%;height:100%}
+
+  .meter{height:16px;border:2px solid var(--outline);border-radius:8px;background:#1b0d0d;overflow:hidden}
+  .bar{height:100%;width:0%;background:linear-gradient(90deg,#5bff8a,#ffd27a,#ff6d6d)}
+  .lockShell{height:20px;border:2px solid var(--outline);border-radius:10px;background:#1b0d0d;overflow:hidden}
+  .lockBar{height:100%;width:0%;background:linear-gradient(90deg,#88ff88,#66ffaa,#33ffaa)}
+
+  .callout{font-weight:bold;letter-spacing:0.5px}
+  .code{display:inline-block;padding:2px 6px;border:2px solid var(--outline);border-radius:8px;background:#1b0d0d}
+
+  /* Start overlay */
+  .start-overlay{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(180deg,rgba(0,0,0,.5),rgba(0,0,0,.3));
+    z-index:2;
+  }
+  .start-btn{
+    font-family:monospace; font-weight:bold; font-size:16px; cursor:pointer;
+    padding:10px 18px; border-radius:12px; border:2px solid var(--outline);
+    background:#402000; color:var(--text); box-shadow:0 0 10px #ffcc6655 inset;
+  }
+  .start-btn:hover{ background:#4b2a00; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner">
+    <div>LCARS • SUBSPACE INTERCEPT • <span class="badge">SCOPE FOLLOW MODE</span></div>
+    <div>Window: <span id="winLabel">±– px</span> • Gain: <span id="gainLabel">–x</span></div>
+  </div>
+
+  <h1>Deep Space Intercept — Horizontal Scope</h1>
+  <div class="grid">
+    <div class="panel">
+      <h2>Receiver Scope</h2>
+      <div class="muted">Use the tuner slider (or ↑/↓ keys) to adjust the receiver so your line stays within the shaded band.</div>
+
+      <div id="scopeWrap" class="scope-wrap">
+        <!-- Start overlay (disappears after click) -->
+        <div id="startOverlay" class="start-overlay">
+          <button id="start" class="start-btn">Start</button>
+        </div>
+        <canvas id="scope"></canvas>
+      </div>
+
+      <div style="margin-top:12px" class="row">
+        <div style="flex:1">
+          <div class="muted">TUNER</div>
+          <input id="tuner" type="range" min="-1" max="1" step="0.01" value="0"/>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="muted">Proximity</div>
+        <div class="meter"><div id="proxBar" class="bar"></div></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="muted">Intercept Progress</div>
+        <div class="lockShell"><div id="lockBar" class="lockBar"></div></div>
+      </div>
+
+      <div id="status" class="muted" style="margin-top:8px">Status: Idle.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== CONFIG ===== */
+const LOCK_WINDOW_PX_BASE = 14;         // base window half-height (px)
+const TIME_GOAL_SECONDS = 50;           // seconds needed in band
+const PROGRESS_PER_SECOND = 100 / TIME_GOAL_SECONDS;
+const DIFF_FIXED = 50;                  // fixed midpoint difficulty (0..100)
+const DIFF_NORM = DIFF_FIXED / 100;     // 0.5
+
+/* ===== STATE ===== */
+let running = false, locked = false;
+let last = 0;
+let timeInSignal = 0;
+let secondCounter = 0;
+
+const scope = document.getElementById('scope');
+const scopeWrap = document.getElementById('scopeWrap');
+const ctx = scope.getContext('2d');
+
+const tuner = document.getElementById('tuner');
+const proxBar = document.getElementById('proxBar');
+const lockBar = document.getElementById('lockBar');
+const gainLabel = document.getElementById('gainLabel');
+const status = document.getElementById('status');
+const startBtn = document.getElementById('start');
+const startOverlay = document.getElementById('startOverlay');
+const winLabel = document.getElementById('winLabel');
+
+let t = 0;
+let tunerY = 0; // normalized -1..1 (top..bottom)
+
+/* ===== AUDIO ===== */
+// Static via WebAudio (looped white noise)
+let audioCtx = null, staticNode = null, staticGain = null;
+// Recording playback (your file must exist alongside the page)
+let recAudio = new Audio('audiorec.mp3');
+recAudio.loop = true;
+recAudio.preload = 'auto';
+recAudio.volume = 0.85;   // sits clearly "over" the static
+let recPlaying = false;
+
+function setupAudio(){
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // Create noise buffer
+  const seconds = 2;
+  const rate = audioCtx.sampleRate;
+  const buffer = audioCtx.createBuffer(1, seconds * rate, rate);
+  const data = buffer.getChannelData(0);
+  for (let i=0; i<data.length; i++){
+    // soft band-limited-ish white noise
+    data[i] = (Math.random()*2 - 1) * 0.35;
+  }
+
+  staticNode = audioCtx.createBufferSource();
+  staticNode.buffer = buffer;
+  staticNode.loop = true;
+
+  staticGain = audioCtx.createGain();
+  staticGain.gain.value = 0.35;  // static sits under the recording
+
+  staticNode.connect(staticGain).connect(audioCtx.destination);
+}
+
+async function startStatic(){
+  if (!audioCtx) setupAudio();
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  // recreate buffer source if it finished
+  if (!staticNode || staticNode.playbackState === staticNode.FINISHED_STATE){
+    setupAudio();
+  }
+  try { staticNode.start(0); } catch(e){ /* already started */ }
+}
+
+async function startRec(){
+  if (!recPlaying){
+    try{
+      await recAudio.play();
+      recPlaying = true;
+    }catch(e){
+      // autoplay might fail; user is already interacting, but just in case
+      console.warn('Could not play audiorec.mp3:', e);
+    }
+  }
+}
+function stopRec(){
+  if (recPlaying){
+    recAudio.pause();
+    recAudio.currentTime = 0;
+    recPlaying = false;
+  }
+}
+function stopAllAudio(){
+  try{
+    stopRec();
+    if (staticNode){
+      staticNode.stop();
+    }
+    if (audioCtx && audioCtx.state !== 'closed'){
+      // leave context; not strictly necessary to close
+    }
+  }catch(e){}
+}
+
+/* ===== SIZING ===== */
+function resize(){
+  scope.width = scope.clientWidth;
+  scope.height = scope.clientHeight;
+}
+window.addEventListener('resize', resize);
+
+/* ===== SIGNAL ===== */
+function signalY(timeN){
+  const yN = 0.5*Math.sin(2*Math.PI*(timeN*0.10))
+           + 0.35*Math.sin(2*Math.PI*(timeN*0.20 + 0.2))
+           + 0.15*Math.sin(2*Math.PI*(timeN*0.04 + 0.6));
+  return yN;
+}
+function currentWindowPx(){
+  const w = LOCK_WINDOW_PX_BASE * (1 - 0.6*DIFF_NORM);
+  return Math.max(6, w);
+}
+function gainFactor(){
+  return 1 + DIFF_NORM*0.8;
+}
+
+/* ===== DRAW ===== */
+function drawScope(dt){
+  const W = scope.width, H = scope.height;
+  ctx.fillStyle = "#0c0a0a"; ctx.fillRect(0,0,W,H);
+
+  // grid
+  ctx.strokeStyle = "#442"; ctx.lineWidth = 1;
+  for (let x=0; x<W; x+=Math.floor(W/12)){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y=0; y<H; y+=Math.floor(H/8)){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  const windowPx = currentWindowPx();
+  const g = gainFactor();
+  const sigYNorm = signalY(t*g);
+  const sigY = H/2 + sigYNorm*(H*0.42);
+  const tunerPx = H/2 + tunerY*(H*0.45);
+
+  // window band
+  ctx.fillStyle = "rgba(255,204,102,0.12)";
+  ctx.fillRect(0, sigY - windowPx, W, windowPx*2);
+
+  // signal trace
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#ffd27a";
+  ctx.beginPath();
+  for (let x=0; x<W; x++){
+    const tt = (t - (W-x)/140);
+    const y = H/2 + signalY(tt*g)*(H*0.42);
+    if (x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // current signal dot
+  ctx.fillStyle = "#88ff88";
+  ctx.beginPath(); ctx.arc(W-6, sigY, 4, 0, Math.PI*2); ctx.fill();
+
+  // tuner line
+  ctx.strokeStyle = locked ? "#7cff7c" : "#9fd6ff";
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, tunerPx); ctx.lineTo(W, tunerPx); ctx.stroke();
+
+  // proximity + in-band detection
+  const delta = Math.abs(tunerPx - sigY);
+  const inBand = delta <= windowPx;
+  const p = Math.max(0, 1 - (delta / Math.max(1, windowPx)));
+  proxBar.style.width = (p*100).toFixed(1) + "%";
+
+  // audio: play/pause recording based on band
+  if (!locked){
+    if (inBand) startRec(); else stopRec();
+  }
+
+  // progress accumulation
+  if (!locked && inBand){
+    // add whole seconds while inside band
+    secondCounter += dt;
+    while (secondCounter >= 1){
+      secondCounter -= 1;
+      timeInSignal += 1;
+      const prog = Math.min(100, timeInSignal * PROGRESS_PER_SECOND);
+      lockBar.style.width = prog.toFixed(1) + "%";
+      if (prog >= 100){
+        doLock();
+        break;
+      }
+    }
+  }
+}
+
+/* ===== LOOP ===== */
+function loop(now){
+  const n = now/1000;
+  const dt = last ? (n - last) : 0;
+  last = n;
+  t += dt;
+  drawScope(dt);
+  if (running && !locked) requestAnimationFrame(loop);
+  if (locked) drawScope(0);
+}
+
+/* ===== ACTIONS ===== */
+async function start(){
+  if (running) return;
+  running = true;
+  // hide overlay
+  startOverlay.style.display = 'none';
+
+  status.textContent = "Receiver online. Keep your tuner inside the shaded window to accumulate progress.";
+  resize(); last = 0; requestAnimationFrame(loop);
+
+  // Kick off audio
+  setupAudio();
+  await startStatic();
+}
+
+function doLock(){
+  locked = true;
+  status.innerHTML = '<span class="ok">Lock acquired.</span>';
+
+  // stop audio
+  stopAllAudio();
+
+  // Replace scope with completion message
+  scopeWrap.innerHTML = `
+    <div class="callout">
+      COMMUNICATIONS LOCKON COMPLETE.<br/>
+      REFERENCE RECALL CODE:
+      <span class="code"><strong>DELTA1701</strong></span>
+      FOR MORE INFORMATION.
+    </div>
+  `;
+
+  // Disable controls
+  tuner.disabled = true;
+}
+
+/* ===== EVENTS ===== */
+startBtn.addEventListener('click', start);
+tuner.addEventListener('input', ()=>{ tunerY = +tuner.value; });
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'ArrowUp'){ tunerY = Math.max(-1, tunerY - 0.02); tuner.value = tunerY.toFixed(2); }
+  if (e.key === 'ArrowDown'){ tunerY = Math.min( 1, tunerY + 0.02); tuner.value = tunerY.toFixed(2); }
+});
+
+/* ===== INIT ===== */
+window.addEventListener('load', ()=>{
+  resize();
+  winLabel.textContent = "±" + currentWindowPx().toFixed(0) + " px";
+  gainLabel.textContent = gainFactor().toFixed(1) + "x";
+});
+</script>
+</body>
+</html>
