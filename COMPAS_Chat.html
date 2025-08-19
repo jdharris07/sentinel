@@ -70,7 +70,7 @@
     /* Phase 2 layout */
     .phase2{
       max-width: 700px; margin: 30px auto 10px auto; background:#331a00; border-radius: 20px; padding:20px;
-      color:#FFCC66; box-shadow:0 0 15px #FFCC66AA;
+      color:#FFCC66; box-shadow: 0 0 15px #FFCC66AA;
       text-align:center;
     }
     .phase2 h2{ margin-top:0; }
@@ -149,7 +149,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
     let voiceEnabled = true;
 
     // ====== Persistent state ======
-    const LS_KEY = "compas_progress_v9";
+    const LS_KEY = "compas_progress_v9"; // keep same key; we just add fields
     const stateDefault = {
       timelineDone:false,
       causeDone:false,
@@ -157,7 +157,10 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       utDone:false,       // Universal Translator Code
       wiringDone:false,   // Wiring the Dabo Wheel
       commsDone:false,    // Unauthorized Deep Space Communication
-      phase2GateAck:false // Player clicked through the "SEE DEREK FOR MORE" gate
+      phase2GateAck:false, // Player clicked through the "SEE DEREK FOR MORE" gate
+      // Hints:
+      hintSteps:{},        // per-topic index
+      lastHintTopic:null   // name of the last topic used (for "more")
     };
     let progress = loadProgress();
 
@@ -195,6 +198,66 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       "When correctly placed, the message will read clearly across the points in order. You are seeking something that resembles a passcode for Taldare."
     ];
 
+    // ====== HINT ENGINE: topics, aliases, content ======
+    const HINTS = {
+      cause: [
+        "Examine the available evidence, including the plate found in the victim’s room.",
+        "Try a multi‑spectrum check — the provided flashlight emits ultraviolet.",
+        "Shine the UV light on the plate to reveal chemical symbols.",
+        "Those symbols match items on the chemical analysis paper.",
+        "Use the paper’s rules to determine the correct order and submit that sequence.",
+        "The first chemical in the sequence is “C”."
+      ],
+      timeline: [
+        "Check all of the medical tricorder readouts for time markers.",
+        "Write down each time mentioned to keep track of the window.",
+        "The timeline begins at 1300."
+      ],
+      wiring: [
+        "Revisit Nodor’s Dabo wheel hardware — the wiring solution is hidden in plain sight.",
+        "Focus on a numeric ordering pattern rather than colors or letters.",
+        "Enter the result as one uninterrupted sequence of digits when you think you have it."
+      ],
+      comms: [
+        "Use the radio scope to keep the tuner line inside the shaded band.",
+        "Staying in-band steadily fills the intercept progress meter.",
+        "After lock-on, read the recall code carefully — you’ll need it later."
+      ]
+    };
+
+    // Aliases map: keyword => topic key in HINTS
+    const HINT_ALIASES = [
+      {rx: /(cause|weapon|weapon used|chemical|chem|analysis)/, topic: "cause"},
+      {rx: /(timeline|time window|time-line)/, topic: "timeline"},
+      {rx: /(wiring|dabo|dabo wheel|nodor|wheel)/, topic: "wiring"},
+      {rx: /(comms|communication|radio|intercept|scope)/, topic: "comms"}
+    ];
+
+    function normalizeTopic(msg){
+      for (const a of HINT_ALIASES){
+        if (a.rx.test(msg)) return a.topic;
+      }
+      return null;
+    }
+
+    function hintHelpText(){
+      return `Hint protocol online. To request: type “hint <puzzle>” — e.g., “hint cause of death”, “wiring hint”, “hint timeline”, or “hint comms”. After I give a hint, type “more” for the next one.`;
+    }
+
+    function deliverHint(topic){
+      const list = HINTS[topic] || [];
+      const idx = (progress.hintSteps[topic] || 0);
+      if (idx >= list.length){
+        addResponse("No further hints available for that topic.");
+        return;
+      }
+      const text = list[idx];
+      progress.hintSteps[topic] = idx + 1;
+      progress.lastHintTopic = topic;
+      saveProgress();
+      addTitledResponse("HINT — " + topic.toUpperCase(), text);
+    }
+
     const responses = {
       "help": "I recommend beginning by interviewing each suspect carefully. Observe their statements for inconsistencies or hidden motives.\n\nAdditionally, look for secured data modules and encoded documents hidden throughout the station. These may contain vital clues when properly decoded.\n\nReturn to me anytime for further guidance.",
       "janeway": "Kathryn Janeway commanded the USS Voyager during its Delta Quadrant odyssey, later becoming a respected figure in Starfleet command and strategy circles.",
@@ -210,7 +273,9 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       "hello": "Hello, investigator. How may I help you?",
       "dragon con": "I have heard of this gathering that occurs annually on Earth. Rumor has it the best track there is the Trek track.",
       "submit cause of death": "Acknowledged. Please submit the cause of death.",
-      "submit timeline": "Acknowledged. Please enter the start time (e.g., 1300). You may also enter both as 1300-1440."
+      "submit timeline": "Acknowledged. Please enter the start time (e.g., 1300). You may also enter both as 1300-1440.",
+      // new: plain "hint" helper text
+      "hint": hintHelpText()
     };
 
     const suspectKeywords = {
@@ -493,7 +558,6 @@ So, cross them off your list. They may be a poor gambler, but they’re no kille
           host.innerHTML = "";
           updatePills();
 
-          // >>> Your supplied narrative plugged in here <<<
           addTitledResponse("UNAUTHORIZED DEEP SPACE COMMUNICATION", `With the transmission locked in you enter the decryption key into the computer and are then able to easily decode the message that was sent:
 
 “Dalra here...checking in on the package...was it received?...any word on it?...damn...any word? damn...i have to go...dalra out.”
@@ -746,6 +810,28 @@ Gil Dalra is in his quarters when you confront him about the package.
       chat.scrollTop = chat.scrollHeight;
       input.value = "";
 
+      // ===== HINT HANDLING =====
+      // 1) "more" continues last topic
+      if (message === "more" || message === "hint more"){
+        if (progress.lastHintTopic){
+          deliverHint(progress.lastHintTopic);
+        } else {
+          addResponse("No active hint thread. Try “hint cause of death”, “wiring hint”, “hint timeline”, or “hint comms”.");
+        }
+        return;
+      }
+      // 2) explicit hint requests: "hint <topic>" or "<topic> hint" or "hint for <topic>"
+      if (/^hint\b/.test(message) || /\bhint\b/.test(message)){
+        const topic = normalizeTopic(message);
+        if (!topic){
+          // plain "hint" or unknown topic
+          addResponse(hintHelpText());
+          return;
+        }
+        deliverHint(topic);
+        return;
+      }
+
       // TIMELINE MODE (chat)
       if (timelineMode > 0) {
         const oneLine = (message.replace(/\s+/g,'').match(/^(\d{3,4})-(\d{3,4})$/));
@@ -849,8 +935,8 @@ Gil Dalra is in his quarters when you confront him about the package.
         return;
       }
 
-      // PATCH HINTS
-      if (message.includes("patch") || message.includes("hint") || message.includes("paper") ||
+      // PATCH HINTS (tighter: only when explicitly about patch/paper)
+      if (message.includes("patch") || message.includes("paper") ||
           message.includes("letterhead") || message.includes("tandaran paper")) {
         addResponse(getPatchHint());
         return;
