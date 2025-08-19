@@ -149,18 +149,19 @@ That said, low odds are still odds. Ask, and I will provide what information I c
     let voiceEnabled = true;
 
     // ====== Persistent state ======
-    const LS_KEY = "compas_progress_v9"; // keep same key; we just add fields
+    const LS_KEY = "compas_progress_v9"; // same key; we add a field
     const stateDefault = {
       timelineDone:false,
       causeDone:false,
-      // Phase 2:
+      // Phase 2 objectives:
       utDone:false,       // Universal Translator Code
       wiringDone:false,   // Wiring the Dabo Wheel
       commsDone:false,    // Unauthorized Deep Space Communication
-      phase2GateAck:false, // Player clicked through the "SEE DEREK FOR MORE" gate
+      codedDone:false,    // NEW: Who wrote the coded message?
+      phase2GateAck:false,
       // Hints:
-      hintSteps:{},        // per-topic index
-      lastHintTopic:null   // name of the last topic used (for "more")
+      hintSteps:{},
+      lastHintTopic:null
     };
     let progress = loadProgress();
 
@@ -178,12 +179,11 @@ That said, low odds are still odds. Ask, and I will provide what information I c
     let phase2Rendered = false;
 
     // Chat state features
-    let patchHintStep = 0;
+    let patchHintStep = 0; // legacy patch hints (kept)
     let submissionStep = 0;
     let submittedCause = "";
     let submittedStart = "";
     let submittedEnd = "";
-
     let causeSubmitMode = false;
 
     // Chat-only timeline stepper (still supported)
@@ -198,11 +198,11 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       "When correctly placed, the message will read clearly across the points in order. You are seeking something that resembles a passcode for Taldare."
     ];
 
-    // ====== HINT ENGINE: topics, aliases, content ======
+    // ====== HINT ENGINE ======
     const HINTS = {
       cause: [
         "Examine the available evidence, including the plate found in the victim’s room.",
-        "Try a multi‑spectrum check — the provided flashlight emits ultraviolet.",
+        "Try a multi-spectrum check — the provided flashlight emits ultraviolet.",
         "Shine the UV light on the plate to reveal chemical symbols.",
         "Those symbols match items on the chemical analysis paper.",
         "Use the paper’s rules to determine the correct order and submit that sequence.",
@@ -215,13 +215,22 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       ],
       wiring: [
         "Revisit Nodor’s Dabo wheel hardware — the wiring solution is hidden in plain sight.",
-        "Focus on a numeric ordering pattern rather than colors or letters.",
-        "Enter the result as one uninterrupted sequence of digits when you think you have it."
+        "Focus on connecting the wires, ignore the numbers.",
+        "Enter the result as one uninterrupted sequence of digits when you think you have it. The sequence begins with 2 then 8."
       ],
       comms: [
         "Use the radio scope to keep the tuner line inside the shaded band.",
         "Staying in-band steadily fills the intercept progress meter.",
         "After lock-on, read the recall code carefully — you’ll need it later."
+      ],
+      // NEW: coded-message / patch hints
+      coded: [
+        "The delta patch was found with the coded message.",
+        "The star symbol on the message is similar to the one in the center of the patch.",
+        "Place the patch onto the star and note how the points on the patch line up with the letters.",
+        "Read them in the order of the numbers 1–3.",
+        "Move the patch left to right / top to bottom across the page to reveal the hidden message.",
+        "The message begins with “KYR MEET”…"
       ]
     };
 
@@ -230,7 +239,8 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       {rx: /(cause|weapon|weapon used|chemical|chem|analysis)/, topic: "cause"},
       {rx: /(timeline|time window|time-line)/, topic: "timeline"},
       {rx: /(wiring|dabo|dabo wheel|nodor|wheel)/, topic: "wiring"},
-      {rx: /(comms|communication|radio|intercept|scope)/, topic: "comms"}
+      {rx: /(comms|communication|radio|intercept|scope)/, topic: "comms"},
+      {rx: /(coded|message|coded message|patch|delta patch|paper|letterhead|star)/, topic: "coded"} // NEW
     ];
 
     function normalizeTopic(msg){
@@ -241,7 +251,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
     }
 
     function hintHelpText(){
-      return `Hint protocol online. To request: type “hint <puzzle>” — e.g., “hint cause of death”, “wiring hint”, “hint timeline”, or “hint comms”. After I give a hint, type “more” for the next one.`;
+      return `Hint protocol online. To request: type “hint <puzzle>” — e.g., “hint cause of death”, “wiring hint”, “hint timeline”, “hint comms”, or “hint coded message”. After I give a hint, type “more” for the next one.`;
     }
 
     function deliverHint(topic){
@@ -274,7 +284,6 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       "dragon con": "I have heard of this gathering that occurs annually on Earth. Rumor has it the best track there is the Trek track.",
       "submit cause of death": "Acknowledged. Please submit the cause of death.",
       "submit timeline": "Acknowledged. Please enter the start time (e.g., 1300). You may also enter both as 1300-1440.",
-      // new: plain "hint" helper text
       "hint": hintHelpText()
     };
 
@@ -331,7 +340,6 @@ That said, low odds are still odds. Ask, and I will provide what information I c
     }
 
     function postPhase2GateMessage(){
-      // Avoid posting multiple gate messages
       if (document.getElementById('gate-proceed')) return;
 
       const wrap = document.createElement("div");
@@ -347,24 +355,19 @@ SEE DEREK FOR MORE
 
       document.getElementById('gate-proceed').addEventListener('click', ()=>{
         progress.phase2GateAck = true; saveProgress();
-
-        // ---- Wipe chat between sections ----
         chat.innerHTML = "";
-
         renderPhase2();
       });
     }
 
     function renderPhase2(){
-      if (phase2Rendered) return; // guard against duplicates
+      if (phase2Rendered) return;
       phase2Rendered = true;
 
-      // Hide Phase 1 controls (keep chat visible)
       const actions = document.getElementById('actions');
       if (actions) actions.style.display = 'none';
       clearForm();
 
-      // Create Phase 2 panel above the existing chat box
       if (!document.getElementById('phase2-panel')){
         const panel = document.createElement('div');
         panel.id = 'phase2-panel';
@@ -378,12 +381,14 @@ SEE DEREK FOR MORE
             <span class="pill ${progress.utDone ? 'ok':''}" id="pillUT">Universal Translator Code</span>
             <span class="pill ${progress.wiringDone ? 'ok':''}" id="pillWiring">Wiring the Dabo Wheel</span>
             <span class="pill ${progress.commsDone ? 'ok':''}" id="pillComms">Unauthorized Deep Space Communication</span>
+            <span class="pill ${progress.codedDone ? 'ok':''}" id="pillCoded">Coded Message Author</span>
           </div>
 
           <div class="task-grid">
             <button id="btnUT" class="task-btn"${progress.utDone?' disabled':''}>Universal Translator Code</button>
             <button id="btnWiring" class="task-btn"${progress.wiringDone?' disabled':''}>Wiring the Dabo Wheel</button>
             <button id="btnComms" class="task-btn"${progress.commsDone?' disabled':''}>Unauthorized Deep Space Communication</button>
+            <button id="btnCoded" class="task-btn"${progress.codedDone?' disabled':''}>Who wrote the coded message?</button>
           </div>
 
           <div id="phase2-form-host" style="max-width:600px;margin:0 auto 12px auto;"></div>
@@ -393,17 +398,16 @@ SEE DEREK FOR MORE
           <button id="btnSolve" class="task-btn" ${isAllPhase2Ready() ? '' : 'disabled'}>Solved the Mystery & ready to close the case?</button>
           <div class="note" id="solveNote">${isAllPhase2Ready()
             ? 'All objectives complete. Click to proceed.'
-            : 'This will unlock once Phase 1 and the three objectives above are completed.'}</div>
+            : 'This will unlock once Phase 1 and the four objectives above are completed.'}</div>
         `;
-        // Insert panel before chat-box so chat remains visible beneath
         const chatBox = document.getElementById('chat-box');
         mainRoot.insertBefore(panel, chatBox);
       }
 
-      // Wire up Phase 2 buttons
       document.getElementById('btnUT').addEventListener('click', showUTForm);
       document.getElementById('btnWiring').addEventListener('click', showWiringForm);
       document.getElementById('btnComms').addEventListener('click', showCommsForm);
+      document.getElementById('btnCoded').addEventListener('click', showCodedForm);
       document.getElementById('btnSolve').addEventListener('click', showSolveForm);
     }
 
@@ -412,10 +416,12 @@ SEE DEREK FOR MORE
       const ut = document.getElementById('pillUT');
       const wi = document.getElementById('pillWiring');
       const co = document.getElementById('pillComms');
+      const cm = document.getElementById('pillCoded');
       if (p1) p1.classList.toggle('ok', progress.timelineDone && progress.causeDone);
       if (ut) ut.classList.toggle('ok', progress.utDone);
       if (wi) wi.classList.toggle('ok', progress.wiringDone);
       if (co) co.classList.toggle('ok', progress.commsDone);
+      if (cm) cm.classList.toggle('ok', progress.codedDone);
 
       const solve = document.getElementById('btnSolve');
       const note = document.getElementById('solveNote');
@@ -424,12 +430,14 @@ SEE DEREK FOR MORE
         solve.disabled = !ready;
         note.textContent = ready
           ? 'All objectives complete. Click to proceed.'
-          : 'This will unlock once Phase 1 and the three objectives above are completed.';
+          : 'This will unlock once Phase 1 and the four objectives above are completed.';
       }
     }
 
     function isAllPhase2Ready(){
-      return progress.timelineDone && progress.causeDone && progress.utDone && progress.wiringDone && progress.commsDone;
+      return progress.timelineDone && progress.causeDone &&
+             progress.utDone && progress.wiringDone &&
+             progress.commsDone && progress.codedDone;
     }
 
     // ====== PHASE 2 FORMS ======
@@ -573,50 +581,92 @@ Gil Dalra is in his quarters when you confront him about the package.
       }
     }
 
-function showSolveForm(){
-  if (!isAllPhase2Ready()) return;
-  const host = document.getElementById('phase2-form-host');
-  host.innerHTML = `
-    <div class="inline-card">
-      <h3>Close the Case</h3>
-      <div class="muted" style="margin-bottom:6px">Select all suspects you have eliminated from consideration.</div>
-      <div id="suspectList" style="text-align:left">
-        <label><input type="checkbox" value="Jora Tell"> Jora Tell</label><br/>
-        <label><input type="checkbox" value="Nira Vess"> Nira Vess</label><br/>
-        <label><input type="checkbox" value="Gil Dalra"> Gil Dalra</label><br/>
-        <label><input type="checkbox" value="Lorr Vun"> Lorr Vun</label><br/>
-        <label><input type="checkbox" value="Taldare Vok"> Taldare Vok</label><br/>
-        <label><input type="checkbox" value="Eno Tavik"> Eno Tavik</label>
-      </div>
-      <div class="inline-actions">
-        <button id="solveCancel">Cancel</button>
-        <button id="solveSubmit">Submit</button>
-      </div>
-    </div>
-  `;
-  document.getElementById('solveCancel').addEventListener('click', ()=> host.innerHTML = "");
-  document.getElementById('solveSubmit').addEventListener('click', ()=>{
-    const boxes = [...document.querySelectorAll('#suspectList input[type=checkbox]')];
-    const eliminated = boxes.filter(b=>b.checked).map(b=>b.value);
-    host.innerHTML = "";
+    // NEW: coded message author form
+    function showCodedForm(){
+      if (progress.codedDone) return;
+      const host = document.getElementById('phase2-form-host');
+      host.innerHTML = `
+        <div class="inline-card">
+          <h3>Who wrote the coded message?</h3>
+          <label for="codedAnswer">Enter name</label>
+          <input id="codedAnswer" type="text" placeholder="">
+          <div class="feedback" id="codedFb"></div>
+          <div class="inline-actions">
+            <button id="codedCancel">Cancel</button>
+            <button id="codedSubmit">Submit</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('codedCancel').addEventListener('click', ()=> host.innerHTML = "");
+      document.getElementById('codedSubmit').addEventListener('click', submitCoded);
+      document.getElementById('codedAnswer').addEventListener('keydown', e=>{ if(e.key==='Enter') submitCoded(); });
 
-    // ✅ Correct eliminations = everyone EXCEPT Taldare Vok
-    const allSuspects = ["Jora Tell","Nira Vess","Gil Dalra","Lorr Vun","Taldare Vok","Eno Tavik"];
-    const correct = allSuspects.filter(s => s !== "Taldare Vok");
+      function submitCoded(){
+        const val = (document.getElementById('codedAnswer').value||"").trim().toLowerCase();
+        const fb = document.getElementById('codedFb');
+        if (val === "eno"){
+          progress.codedDone = true; saveProgress();
+          const btn = document.getElementById('btnCoded'); if (btn){ btn.disabled = true; btn.textContent = "COMPLETED"; }
+          host.innerHTML = "";
+          updatePills();
 
-    if (eliminated.length === correct.length && correct.every(s => eliminated.includes(s))) {
-      addTitledResponse("CASE CLOSURE — SUCCESS", 
-        "You have correctly eliminated every suspect except Taldare Vok. Redirecting to case resolution...");
-      setTimeout(()=> {
-        window.location.href = "presolution.html";
-      }, 3000); // waits 3 seconds so players see the success message
-    } else {
-      addTitledResponse("CASE CLOSURE — REVIEW", 
-        "Your eliminations do not match the evidence. Re-examine the clues and try again.");
+          addTitledResponse("CODED MESSAGE — AUTHOR CONFIRMED", 
+`“So… you solved my little ‘cutout’ message? Hmph. I suppose I should be impressed. Yes, I made it myself. An old Denobulan espionage trick, a crude method for discretion. The message wasn’t about murder — it was about a private meeting. One that, frankly, would have caused far more trouble for me diplomatically than admitting this to you.”
+
+“I met a certain ensign in Docking Ring C, Compartment 7, from 1313 until 1442. We were… discussing matters of a personal nature — and if you know anything about Denobulan relationships, you’ll understand why I wished to keep it private.”
+
+“But here’s something you can check for yourself: I am the only Denobulan female on this station. The compartment’s environmental monitors automatically track species-specific respiration and pheromone levels for safety compliance. The records will show one Denobulan female and one Betazoid male, who was officially assigned to that docking compartment for the entire duration. Which means, Investigator… whoever committed your murder, it wasn’t me. I also trust you to not let this information pass to anyone else. 
+
+“Now, if you’ll excuse me, I have station preparations to oversee before the Tandaran fleet arrives.”`);
+        } else {
+          fb.innerHTML = '<span class="err">That does not match the records.</span>';
+        }
+      }
     }
-  });
-}
 
+    function showSolveForm(){
+      if (!isAllPhase2Ready()) return;
+      const host = document.getElementById('phase2-form-host');
+      host.innerHTML = `
+        <div class="inline-card">
+          <h3>Close the Case</h3>
+          <div class="muted" style="margin-bottom:6px">Select all suspects you have eliminated from consideration.</div>
+          <div id="suspectList" style="text-align:left">
+            <label><input type="checkbox" value="Jora Tell"> Jora Tell</label><br/>
+            <label><input type="checkbox" value="Nira Vess"> Nira Vess</label><br/>
+            <label><input type="checkbox" value="Gil Dalra"> Gil Dalra</label><br/>
+            <label><input type="checkbox" value="Lorr Vun"> Lorr Vun</label><br/>
+            <label><input type="checkbox" value="Taldare Vok"> Taldare Vok</label><br/>
+            <label><input type="checkbox" value="Eno Tavik"> Eno Tavik</label>
+          </div>
+          <div class="inline-actions">
+            <button id="solveCancel">Cancel</button>
+            <button id="solveSubmit">Submit</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('solveCancel').addEventListener('click', ()=> host.innerHTML = "");
+      document.getElementById('solveSubmit').addEventListener('click', ()=>{
+        const boxes = [...document.querySelectorAll('#suspectList input[type=checkbox]')];
+        const eliminated = boxes.filter(b=>b.checked).map(b=>b.value);
+        host.innerHTML = "";
+
+        // Correct eliminations = everyone EXCEPT Taldare Vok
+        const allSuspects = ["Jora Tell","Nira Vess","Gil Dalra","Lorr Vun","Taldare Vok","Eno Tavik"];
+        const correct = allSuspects.filter(s => s !== "Taldare Vok");
+
+        if (eliminated.length === correct.length && correct.every(s => eliminated.includes(s))) {
+          addTitledResponse("CASE CLOSURE — SUCCESS", 
+            "You have correctly eliminated every suspect except Taldare Vok. Redirecting to case resolution...");
+          setTimeout(()=> {
+            window.location.href = "presolution.html";
+          }, 3000);
+        } else {
+          addTitledResponse("CASE CLOSURE — REVIEW", 
+            "Your eliminations do not match the evidence. Re-examine the clues and try again.");
+        }
+      });
+    }
 
     // ====== Chat helpers ======
     function addResponse(text) {
@@ -628,7 +678,6 @@ function showSolveForm(){
       if (voiceEnabled && text) { speakText(text); }
     }
 
-    // Titled response (bold, all-caps title + typed body)
     function addTitledResponse(title, body){
       const div = document.createElement("div");
       div.classList.add("entry","compas");
@@ -811,7 +860,7 @@ function showSolveForm(){
       showCauseForm();
     });
 
-    // ====== Original chat logic (kept; still supports type-based submissions) ======
+    // ====== Original chat logic ======
     function handleInput() {
       const input = document.getElementById("user-input");
       const raw = input.value;
@@ -825,24 +874,18 @@ function showSolveForm(){
       chat.scrollTop = chat.scrollHeight;
       input.value = "";
 
-      // ===== HINT HANDLING =====
-      // 1) "more" continues last topic
+      // HINT handling
       if (message === "more" || message === "hint more"){
         if (progress.lastHintTopic){
           deliverHint(progress.lastHintTopic);
         } else {
-          addResponse("No active hint thread. Try “hint cause of death”, “wiring hint”, “hint timeline”, or “hint comms”.");
+          addResponse("No active hint thread. Try “hint cause of death”, “wiring hint”, “hint timeline”, “hint comms”, or “hint coded message”.");
         }
         return;
       }
-      // 2) explicit hint requests: "hint <topic>" or "<topic> hint" or "hint for <topic>"
       if (/^hint\b/.test(message) || /\bhint\b/.test(message)){
         const topic = normalizeTopic(message);
-        if (!topic){
-          // plain "hint" or unknown topic
-          addResponse(hintHelpText());
-          return;
-        }
+        if (!topic){ addResponse(hintHelpText()); return; }
         deliverHint(topic);
         return;
       }
@@ -918,7 +961,7 @@ function showSolveForm(){
         return;
       }
 
-      // OLD multi-step (cause -> start -> end) kept for compatibility
+      // Legacy multi-step kept for compatibility
       if (submissionStep === 1) {
         submittedCause = message;
         if (["poison","poisoning","food poisoning"].some(c => submittedCause.includes(c))) {
@@ -950,14 +993,14 @@ function showSolveForm(){
         return;
       }
 
-      // PATCH HINTS (tighter: only when explicitly about patch/paper)
+      // Legacy patch hint quick path
       if (message.includes("patch") || message.includes("paper") ||
           message.includes("letterhead") || message.includes("tandaran paper")) {
         addResponse(getPatchHint());
         return;
       }
 
-      // NEW TRIGGERS
+      // New triggers
       if (message.includes("submit cause of death")) {
         addResponse(responses["submit cause of death"]);
         causeSubmitMode = true;
@@ -970,7 +1013,7 @@ function showSolveForm(){
         return;
       }
 
-      // EXISTING TRIGGER
+      // Existing trigger
       if (message.includes("submit forensic info")) {
         addResponse(responses["submit forensic info"]);
         submissionStep = 1;
@@ -991,7 +1034,7 @@ function showSolveForm(){
       ];
       for (const phrase of killerPhrases) {
         if (message.includes(phrase)) {
-          addResponse("I am still analyzing the data, but I believe the answer lies within the inconsistencies in their statements and timelines. Trust your instincts, investigator.");
+          addResponse("I am still analyzing the data, but I believe the answer lies within the inconsistencies in their statements and timelines. Examine the evidence. Trust your instincts, investigator.");
           return;
         }
       }
@@ -1017,15 +1060,9 @@ function showSolveForm(){
 
     window.addEventListener("load", function() {
       setButtonState();
-
-      // If Phase 1 already done when loading:
       if (progress.timelineDone && progress.causeDone){
-        if (progress.phase2GateAck){
-          renderPhase2();
-        } else {
-          // Stay on page 1 with chat, and post the gate message once
-          postPhase2GateMessage();
-        }
+        if (progress.phase2GateAck){ renderPhase2(); }
+        else { postPhase2GateMessage(); }
       } else {
         const introText = document.getElementById("intro-text").innerText;
         if (voiceEnabled) { speakText(introText); }
@@ -1034,4 +1071,3 @@ function showSolveForm(){
   </script>
 </body>
 </html>
-
