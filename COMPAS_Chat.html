@@ -157,7 +157,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       utDone:false,       // Universal Translator Code
       wiringDone:false,   // Wiring the Dabo Wheel
       commsDone:false,    // Unauthorized Deep Space Communication
-      codedDone:false,    // NEW: Who wrote the coded message?
+      codedDone:false,    // Who wrote the coded message?
       phase2GateAck:false,
       // Hints:
       hintSteps:{},
@@ -223,7 +223,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
         "Staying in-band steadily fills the intercept progress meter.",
         "After lock-on, read the recall code carefully — you’ll need it later."
       ],
-      // NEW: coded-message / patch hints
+      // coded-message / patch hints
       coded: [
         "The delta patch was found with the coded message.",
         "The star symbol on the message is similar to the one in the center of the patch.",
@@ -240,7 +240,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       {rx: /(timeline|time window|time-line)/, topic: "timeline"},
       {rx: /(wiring|dabo|dabo wheel|nodor|wheel)/, topic: "wiring"},
       {rx: /(comms|communication|radio|intercept|scope)/, topic: "comms"},
-      {rx: /(coded|message|coded message|patch|delta patch|paper|letterhead|star)/, topic: "coded"} // NEW
+      {rx: /(coded|message|coded message|patch|delta patch|paper|letterhead|star)/, topic: "coded"}
     ];
 
     function normalizeTopic(msg){
@@ -398,7 +398,7 @@ SEE DEREK FOR MORE
           <button id="btnSolve" class="task-btn" ${isAllPhase2Ready() ? '' : 'disabled'}>Solved the Mystery & ready to close the case?</button>
           <div class="note" id="solveNote">${isAllPhase2Ready()
             ? 'All objectives complete. Click to proceed.'
-            : 'This will unlock once Phase 1 and the four objectives above are completed.'}</div>
+            : 'This will unlock once the four objectives above are completed.'}</div>
         `;
         const chatBox = document.getElementById('chat-box');
         mainRoot.insertBefore(panel, chatBox);
@@ -430,14 +430,13 @@ SEE DEREK FOR MORE
         solve.disabled = !ready;
         note.textContent = ready
           ? 'All objectives complete. Click to proceed.'
-          : 'This will unlock once Phase 1 and the four objectives above are completed.';
+          : 'This will unlock once the four objectives above are completed.';
       }
     }
 
+    // === Unlock condition: ONLY the four Phase 2 objectives ===
     function isAllPhase2Ready(){
-      return progress.timelineDone && progress.causeDone &&
-             progress.utDone && progress.wiringDone &&
-             progress.commsDone && progress.codedDone;
+      return progress.utDone && progress.wiringDone && progress.commsDone && progress.codedDone;
     }
 
     // ====== PHASE 2 FORMS ======
@@ -932,7 +931,7 @@ Gil Dalra is in his quarters when you confront him about the package.
               addResponse("Timeline accepted: 13:00–14:40. Proceeding with correlation to access logs.");
               timelineMode = 0; timelineStart = "";
               progress.timelineDone = true; saveProgress(); setButtonState(); clearForm(); maybeAdvanceToPhase2();
-            } else if (!startOk && !endOk) {
+            } else if (!startOk && !EndOk) {
               addResponse("Neither the start nor end time matches the available data.");
               timelineMode = 0; timelineStart = "";
             } else if (!startOk) {
