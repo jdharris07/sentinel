@@ -120,8 +120,6 @@
         <!-- Inline form host -->
         <div id="form-host"></div>
 
-        <!-- Phase 2 panel will be inserted here above the chat -->
-
         <!-- CHAT stays on both phases -->
         <div id="chat-box">
           <div class="entry compas" id="intro-text">Greetings. I am the Federation’s Central Operations Management and Protocol Assistance System — COMPAS. My primary functions aboard this station include coordinating critical systems, monitoring compliance with Starfleet protocols, and providing operational support to personnel… and occasionally reminding the Captain to hydrate.
@@ -453,7 +451,6 @@ A quick look in her quarters confirms she has been taking things from the statio
           host.innerHTML = "";
           updatePills();
 
-          // ===== FIXED: Single addTitledResponse call with a single template string =====
           addTitledResponse("WIRING THE DABO WHEEL", `Ahhh, music to my lobes! Profit restored, and the Dabo wheel sings once more. You’ve done excellent work — far better than my cousin, who still thinks a power coupling is something you order at a bar. Now, about our little… arrangement.
 
 Nearly everyone on this station was at that blasted concert between 1300 and 1450. But not everyone. Your suspect, Lorr Vun? He wasn’t anywhere near the music hall. He was here, in my private gaming room — trying very hard to win back a rather embarrassing debt he owed me. And losing. Badly.
@@ -495,7 +492,17 @@ So, cross them off your list. They may be a poor gambler, but they’re no kille
           const btn = document.getElementById('btnComms'); if (btn){ btn.disabled = true; btn.textContent = "COMPLETED"; }
           host.innerHTML = "";
           updatePills();
-          addTitledResponse("UNAUTHORIZED DEEP SPACE COMMUNICATION", "insert unlock text for button Unauthorized Deep Space Communication");
+
+          // >>> Your supplied narrative plugged in here <<<
+          addTitledResponse("UNAUTHORIZED DEEP SPACE COMMUNICATION", `With the transmission locked in you enter the decryption key into the computer and are then able to easily decode the message that was sent:
+
+“Dalra here...checking in on the package...was it received?...any word on it?...damn...any word? damn...i have to go...dalra out.”
+
+Gil Dalra is in his quarters when you confront him about the package.
+
+“What is it? Make it quick, I am trying to get off this damned station before it is blown apart.” he says before you interrupt him.
+
+“Did you say ‘package’?!? How do you...you must have... okay, fine. I was using an unofficial method to send a message to a Cardassian vessel but sorry to spoil your grand thoughts of uncovering a conspiracy. The package in question was my audition tape for Cardassia’s Got Talent. I happen to be quite the accomplished singer and once those judges hear my audition I will be able to leave this miserable political career behind. Now if you will excuse me, I want to get off this station before my chance at stardom is crushed.`);
         } else {
           fb.innerHTML = '<span class="err">Access key rejected.</span>';
         }
