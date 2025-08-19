@@ -184,7 +184,7 @@
     </p>
     <div class="meta">
       <div>
-        <div class="timer ok" id="timer">03:00</div>
+        <div class="timer ok" id="timer">01:00</div>
         <span class="tag" id="timerTag">Countdown paused</span>
       </div>
       <!-- Small visible font test (decorative) -->
@@ -203,10 +203,10 @@
         </h2>
         <p>Six colored indicators are locked <strong>ON</strong>. Remove circuits in the correct order to switch indicators <strong>OFF</strong> from <em>1 → 6</em>. A wrong circuit resets the board.</p>
         <div class="hint">
-          “Each circuit’s pilot lamp pulses in <strong>N bursts per cycle</strong> — that <em>N</em> is the indicator it disables.
+          “Each circuit’s light shows if it is on or off<strong>you must turn them all off to disarm the bomb</strong> <em></em> 
           Power-down must proceed in order: <strong>1, 2, 3, 4, 5, 6</strong>. <em>Tap the correct circuit to remove it.</em>”
           <span class="tandaran deco-sub" aria-hidden="true">
-            Each circuit’s pilot lamp pulses in N bursts per cycle. Power-down must proceed in order.
+            Power-down must proceed in order.
           </span>
         </div>
 
@@ -274,7 +274,7 @@
           Ready to Attempt Disarm?
           <span class="tandaran deco-sub" aria-hidden="true">Ready to Attempt Disarm?</span>
         </h2>
-        <p>This device will detonate on a tight window. Once you begin, you’ll have only a few minutes to complete the procedure.</p>
+        <p>This device will detonate in 60 seconds. Once you begin, you’ll have only <strong>one minute</strong> to complete the procedure.</p>
         <p><em>Proceed only if your team is prepared.</em></p>
         <div style="margin-top:10px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap">
           <button class="btn" id="beginBtn">Ready — Start Countdown</button>
@@ -289,7 +289,7 @@
       LCARS Subroutine: <strong>DEFUSE-GAMMA</strong>
       <span class="tandaran deco-sub" aria-hidden="true">DEFUSE-GAMMA</span>
     </span>
-    <button class="btn" id="restart">Restart</button>
+    <!-- Restart button removed per request -->
   </footer>
 </div>
 
@@ -306,23 +306,26 @@
   <div class="modal fail">
     <h2>Detonation</h2>
     <p>Antimatter breach propagates through the EPS lattice. The cargo bay flashes white as the core overloads.</p>
-    <p style="margin-top:8px; font-style:italic;">Well… boom. Try not to vaporize us all this time.</p>
+    <p style="margin-top:8px; font-style:italic;">Surviving that would be about as likely as surviving more than one away mission as a red shirt with Kirk.</p>
     <div style="margin-top:12px"><button class="btn warn" onclick="location.reload()">Retry</button></div>
   </div>
 </div>
 
 <script>
-  // ===== Timer (3 minutes, constant) =====
+  // ===== Timer (60 seconds, constant) =====
   const timerEl = document.getElementById('timer');
   const timerTag = document.getElementById('timerTag');
-  let total = 180; // seconds
+  let total = 60; // seconds
   let timerId = null;
   const pad = n => String(n).padStart(2,'0');
   function renderTime(){
     const m = Math.floor(total/60), s = total%60;
     timerEl.textContent = `${pad(m)}:${pad(s)}`;
     timerEl.classList.remove('ok','mid','low');
-    if(total > 60) timerEl.classList.add('ok'); else if(total > 20) timerEl.classList.add('mid'); else timerEl.classList.add('low');
+    // Thresholds tuned for a 60s timer
+    if(total > 30) timerEl.classList.add('ok');
+    else if(total > 15) timerEl.classList.add('mid');
+    else timerEl.classList.add('low');
   }
   function tick(){
     total--;
@@ -371,7 +374,6 @@
     if(el){ el.classList.add('target'); }
     const text = `Target: Indicator ${id} — ${colorName[id]}`;
     targetTag.textContent = text;
-    // re-append the alien echo
     const echo = document.createElement('span');
     echo.className = 'tandaran deco-sub';
     echo.setAttribute('aria-hidden','true');
@@ -441,4 +443,3 @@
 </script>
 </body>
 </html>
-
