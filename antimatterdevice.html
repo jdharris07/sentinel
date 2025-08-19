@@ -10,7 +10,6 @@
     --text:#eaf2ff; --muted:#bcd0f2; --ok:#4be38f; --warn:#ff6b6b;
     --accent:#ffb84d; --accent2:#6bdcff; --glass:rgba(255,255,255,.05);
     --rad:16px; --shadow:0 10px 30px rgba(0,0,0,.45);
-    --greenBand:#15351f;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -28,7 +27,7 @@
   header, .card{
     background:linear-gradient(180deg,var(--panel),var(--panel2));
     border:1px solid rgba(255,255,255,.06);
-    border-radius:var(--rad);
+    border-radius:16px;
     box-shadow:var(--shadow);
     padding:14px; margin-bottom:12px;
   }
@@ -75,7 +74,7 @@
     background:rgba(255,184,77,.08); color:#ffe9cb; border-radius:8px; font-size:.95em;
   }
 
-  /* Indicators (Lights 1–6 with colors) */
+  /* Indicators */
   .indicators{
     display:grid; grid-template-columns: repeat(3, 1fr);
     gap:10px; margin-top:10px;
@@ -91,8 +90,6 @@
   .light .small{ font-size:.75em; opacity:.9; margin-top:2px; color:#0b1220 }
   .light.on{ filter:none }
   .light.off{ opacity:.35; filter:grayscale(.8); text-decoration:line-through }
-
-  /* Color fills + glow */
   .c-red{    background:linear-gradient(180deg,#ff5a5a,#b93333); box-shadow:0 0 18px #ff5a5a77, inset 0 0 12px #ffffff22 }
   .c-green{  background:linear-gradient(180deg,#66e186,#2b8b4a); box-shadow:0 0 18px #66e18677, inset 0 0 12px #ffffff22 }
   .c-blue{   background:linear-gradient(180deg,#6bdcff,#2f92b0); box-shadow:0 0 18px #6bdcff77, inset 0 0 12px #ffffff22 }
@@ -100,14 +97,13 @@
   .c-orange{ background:linear-gradient(180deg,#ffb84d,#b3771c); box-shadow:0 0 18px #ffb84d77, inset 0 0 12px #ffffff22 }
   .c-purple{ background:linear-gradient(180deg,#c792ea,#7e4bb0); box-shadow:0 0 18px #c792ea77, inset 0 0 12px #ffffff22 }
 
-  /* Target pulse */
   .light.target{
     outline:3px solid #eaf2ff; outline-offset:2px;
     animation: pulseTarget 1.2s infinite;
   }
   @keyframes pulseTarget{ 0%,100%{ transform:none } 50%{ transform: scale(1.03) } }
 
-  /* Circuits (chips) */
+  /* Circuits */
   .chips{ display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-top:10px }
   @media(min-width:520px){ .chips{grid-template-columns: repeat(6, 1fr);} }
   .chip{
@@ -121,7 +117,6 @@
     width:22px; height:22px; border-radius:50%; background:#263a5a; border:2px solid rgba(255,255,255,.18);
     position: relative; overflow: hidden;
   }
-  /* Blink N times per cycle to hint which light it controls */
   .chip .lamp::after{
     content:"";
     position:absolute; inset:0;
@@ -138,7 +133,7 @@
 
   .hidden{ display:none !important; }
 
-  /* Success/Fail overlays */
+  /* Overlays */
   .overlayFinal{
     position:fixed; inset:0; background:rgba(0,0,0,.75);
     display:none; align-items:center; justify-content:center; padding:16px; z-index:999;
@@ -154,7 +149,6 @@
   .modal.success h2{ color:var(--ok) }
   .modal.fail h2{ color:var(--warn) }
 
-  /* === Tandaran font + decorative echoes === */
   @font-face{
     font-family: "Tandaran";
     src: url("Andarion-Regular.ttf") format("truetype");
@@ -169,7 +163,6 @@
 <body>
 <div class="wrap" id="app">
 
-  <!-- In-universe explanation -->
   <header>
     <h1>
       Emergency Ordnance: Antimatter Breach Device
@@ -187,15 +180,12 @@
         <div class="timer ok" id="timer">01:00</div>
         <span class="tag" id="timerTag">Countdown paused</span>
       </div>
-      <!-- Small visible font test (decorative) -->
       <span class="tag tandaran" aria-hidden="true"></span>
     </div>
   </header>
 
-  <!-- Gated puzzle area -->
   <section class="card gate" id="gate">
     <div id="puzzleShell" class="blurred" aria-hidden="true">
-      <!-- STAGE 1 ONLY -->
       <section class="card" id="stage1" aria-labelledby="s1title">
         <h2 class="title" id="s1title">
           Isolinear Circuit Order
@@ -203,20 +193,18 @@
         </h2>
         <p>Six colored indicators are locked <strong>ON</strong>. Remove circuits in the correct order to switch indicators <strong>OFF</strong> from <em>1 → 6</em>. A wrong circuit resets the board.</p>
         <div class="hint">
-          “Each circuit’s light shows if it is on or off<strong>you must turn them all off to disarm the bomb</strong> <em></em> 
+          “Each circuit’s light shows if it is on or off <strong>— you must turn them all off to disarm the bomb.</strong>
           Power-down must proceed in order: <strong>1, 2, 3, 4, 5, 6</strong>. <em>Tap the correct circuit to remove it.</em>”
           <span class="tandaran deco-sub" aria-hidden="true">
             Power-down must proceed in order.
           </span>
         </div>
 
-        <!-- Target banner -->
         <p class="tag" id="targetTag" style="display:inline-block;margin-top:8px;">
           Target: Indicator 1 — Red
           <span class="tandaran deco-sub" id="targetTagAlien" aria-hidden="true">Target: Indicator 1 — Red</span>
         </p>
 
-        <!-- Indicators (1–6 colors) -->
         <div class="indicators" id="indicators">
           <div class="light on c-red target"    data-id="1"><div>Indicator 1</div><div class="small">Red</div></div>
           <div class="light on c-green"  data-id="2"><div>Indicator 2</div><div class="small">Green</div></div>
@@ -226,7 +214,6 @@
           <div class="light on c-purple" data-id="6"><div>Indicator 6</div><div class="small">Purple</div></div>
         </div>
 
-        <!-- Circuits -->
         <div class="chips" id="chips">
           <!-- Mapping: 1→3, 2→5, 3→1, 4→6, 5→2, 6→4 ; required circuit order: 3,5,1,6,2,4 -->
           <button class="chip" data-circuit="1" data-disables="3">
@@ -289,7 +276,7 @@
       LCARS Subroutine: <strong>DEFUSE-GAMMA</strong>
       <span class="tandaran deco-sub" aria-hidden="true">DEFUSE-GAMMA</span>
     </span>
-    <!-- Restart button removed per request -->
+    <!-- Restart button removed -->
   </footer>
 </div>
 
@@ -298,7 +285,6 @@
   <div class="modal success">
     <h2>Bomb Disarmed</h2>
     <p>Countdown frozen at <strong id="freezeAt">00:07</strong>. Antimatter flow collapsed, EPS grid stabilized, docking perimeter secure.</p>
-    <div style="margin-top:12px"><button class="btn" onclick="location.reload()">Play Again</button></div>
   </div>
 </div>
 
@@ -312,7 +298,7 @@
 </div>
 
 <script>
-  // ===== Timer (60 seconds, constant) =====
+  // ===== Timer (60 seconds) =====
   const timerEl = document.getElementById('timer');
   const timerTag = document.getElementById('timerTag');
   let total = 60; // seconds
@@ -322,7 +308,6 @@
     const m = Math.floor(total/60), s = total%60;
     timerEl.textContent = `${pad(m)}:${pad(s)}`;
     timerEl.classList.remove('ok','mid','low');
-    // Thresholds tuned for a 60s timer
     if(total > 30) timerEl.classList.add('ok');
     else if(total > 15) timerEl.classList.add('mid');
     else timerEl.classList.add('low');
@@ -401,10 +386,11 @@
     fail.classList.add('show');
   }
   function disarm(){
+    // On success, jump to the final story page
     freezeTimer();
-    freezeAt.textContent = timerEl.textContent;
-    document.getElementById('app').setAttribute('aria-hidden','true');
+    // (Optional: flash success quickly)
     success.classList.add('show');
+    setTimeout(()=>{ window.location.href = "solution.html"; }, 800);
   }
 
   chips.forEach(btn=>{
@@ -427,7 +413,6 @@
         s1msg.textContent = 'Indicator sequence collapsed. Containment interlock exposed.';
         s1msg.style.color = 'var(--ok)';
         chips.forEach(c=> c.disabled = true);
-        // No Stage 2 — directly disarm!
         disarm();
       } else {
         s1msg.textContent = `Accepted. Next: disable Indicator ${nextIndicator} (${colorName[nextIndicator]}).`;
