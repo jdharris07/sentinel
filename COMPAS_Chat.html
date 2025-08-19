@@ -67,14 +67,30 @@
     .warn{ color:#ffe28f }
     .err{ color:#ffd0d0 }
 
-    /* Phase 2 simple layout */
+    /* Phase 2 layout */
     .phase2{
-      max-width: 700px; margin: 30px auto; background:#331a00; border-radius: 20px; padding:20px;
+      max-width: 700px; margin: 30px auto 10px auto; background:#331a00; border-radius: 20px; padding:20px;
       color:#FFCC66; box-shadow:0 0 15px #FFCC66AA;
       text-align:center;
     }
     .phase2 h2{ margin-top:0; }
+    .pill{
+      display:inline-block; padding:6px 10px; border-radius:999px; border:1px solid #FFCC66; margin:4px;
+      background:#402000;
+    }
+    .pill.ok{ background:#153a25; border-color:#7cffb6; color:#b6ffd9; }
+    .task-grid{
+      display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:10px; margin:12px 0 8px 0;
+    }
+    .note { font-size: 13px; opacity:.9; }
 
+    /* Gate message button inside chat */
+    .gate-wrap{ margin-top:8px; text-align:right; }
+    .gate-btn{
+      border-radius: 12px; padding:6px 10px; border: 2px solid #FFCC66;
+      background:#402000; color:#FFCC66; cursor:pointer;
+    }
+    .gate-btn:hover{ background:#4b2a00; }
   </style>
 </head>
 <body>
@@ -95,7 +111,7 @@
       <main id="main-root">
         <h1>COMPAS Assistance Console</h1>
 
-        <!-- Action buttons -->
+        <!-- Phase 1 Action buttons -->
         <div class="actions-row" id="actions">
           <button id="btnTimeline" class="task-btn">Submit the timeline of the murder</button>
           <button id="btnCause" class="task-btn">Submit Cause of Death</button>
@@ -104,6 +120,9 @@
         <!-- Inline form host -->
         <div id="form-host"></div>
 
+        <!-- Phase 2 panel will be inserted here above the chat -->
+
+        <!-- CHAT stays on both phases -->
         <div id="chat-box">
           <div class="entry compas" id="intro-text">Greetings. I am the Federation’s Central Operations Management and Protocol Assistance System — COMPAS. My primary functions aboard this station include coordinating critical systems, monitoring compliance with Starfleet protocols, and providing operational support to personnel… and occasionally reminding the Captain to hydrate.
 
@@ -111,6 +130,7 @@ I will assist you in your investigation to the best of my capacity, though based
 
 That said, low odds are still odds. Ask, and I will provide what information I can, but please note my responses may be limited as the station is preparing for the Tandaran fleet's arrival. It appears the logical next step is for you to determine the murder weapon as well as the timeline it could have occured.</div>
         </div>
+
         <div id="input-area">
           <input type="text" id="user-input" placeholder="Type your message here..." />
           <button onclick="handleInput()">Send</button>
@@ -131,8 +151,16 @@ That said, low odds are still odds. Ask, and I will provide what information I c
     let voiceEnabled = true;
 
     // ====== Persistent state ======
-    const LS_KEY = "compas_progress_v4";
-    const stateDefault = { timelineDone:false, causeDone:false };
+    const LS_KEY = "compas_progress_v9";
+    const stateDefault = {
+      timelineDone:false,
+      causeDone:false,
+      // Phase 2:
+      utDone:false,       // Universal Translator Code
+      wiringDone:false,   // Wiring the Dabo Wheel
+      commsDone:false,    // Unauthorized Deep Space Communication
+      phase2GateAck:false // Player clicked through the "SEE DEREK FOR MORE" gate
+    };
     let progress = loadProgress();
 
     function loadProgress(){
@@ -145,7 +173,10 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       localStorage.setItem(LS_KEY, JSON.stringify(progress));
     }
 
-    // Keep chat state features from previous build
+    // Render guard to prevent duplicate Phase 2 UI
+    let phase2Rendered = false;
+
+    // Chat state features
     let patchHintStep = 0;
     let submissionStep = 0;
     let submittedCause = "";
@@ -157,8 +188,6 @@ That said, low odds are still odds. Ask, and I will provide what information I c
     // Chat-only timeline stepper (still supported)
     let timelineMode = 0;
     let timelineStart = "";
-
-    const validCauses = ["poison", "poisoning", "food poisoning"];
 
     const patchHints = [
       "The Tandaran insignia is not just decorative; it may serve as a key overlay to hidden information.",
@@ -180,7 +209,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       "station": "Starbase Sentinel is a highly advanced modular station, featuring diplomatic suites, tactical command centers, and research facilities. It serves as the focal point for Federation–Tandaran negotiations.",
       "starbase sentinel": "Starbase Sentinel is positioned just outside Tandaran space, serving as a diplomatic and tactical outpost on the edge of the Alpha Quadrant.",
       "submit forensic info": "Understood. Please enter the suspected cause of death first (e.g., poisoning or food poisoning).",
-      "hello": "Hello, investiagtor. How may I help you?",
+      "hello": "Hello, investigator. How may I help you?",
       "dragon con": "I have heard of this gathering that occurs annually on Earth. Rumor has it the best track there is the Trek track.",
       "submit cause of death": "Acknowledged. Please submit the cause of death.",
       "submit timeline": "Acknowledged. Please enter the start time (e.g., 1300). You may also enter both as 1300-1440."
@@ -227,32 +256,326 @@ That said, low odds are still odds. Ask, and I will provide what information I c
 
     function clearForm(){ formHost.innerHTML = ""; }
 
+    // ====== PHASE 2 GATE & RENDER ======
     function maybeAdvanceToPhase2(){
       if (progress.timelineDone && progress.causeDone){
-        mainRoot.innerHTML = `
-          <h1>COMPAS — Phase 2</h1>
-          <div class="phase2">
-            <h2>Elimination Protocol</h2>
-            <p class="muted">Preliminary objectives complete. Proceed to submit your elimination decision.</p>
-            <button id="btnElimination" class="task-btn">Submit Elimination</button>
-            <p class="muted" style="margin-top:14px">This is a placeholder action — wire it into your final logic when ready.</p>
-          </div>
-        `;
-        const btnElim = document.getElementById('btnElimination');
-        btnElim.addEventListener('click', ()=>{
-          const who = prompt("Who would you like to eliminate (enter a name)?");
-          if (!who) return;
-          alert("Received. Logging elimination submission for: " + who + ". COMPAS will evaluate this in the final build.");
-        });
+        if (!progress.phase2GateAck){
+          postPhase2GateMessage();
+        } else {
+          renderPhase2();
+        }
       }
     }
 
-    // ====== Time parsing helpers (accepts HHMM, HH:MM, and AM/PM) ======
+    function postPhase2GateMessage(){
+      // Avoid posting multiple gate messages
+      if (document.getElementById('gate-proceed')) return;
+
+      const wrap = document.createElement("div");
+      wrap.classList.add("entry","compas");
+      wrap.innerHTML = `
+SEE DEREK FOR MORE
+<div class="gate-wrap"><button id="gate-proceed" class="gate-btn">Proceed</button></div>
+      `;
+      chat.appendChild(wrap);
+      chat.scrollTop = chat.scrollHeight;
+
+      if (voiceEnabled){ speakText("SEE DEREK FOR MORE"); }
+
+      document.getElementById('gate-proceed').addEventListener('click', ()=>{
+        progress.phase2GateAck = true; saveProgress();
+
+        // ---- Wipe chat between sections ----
+        chat.innerHTML = "";
+
+        renderPhase2();
+      });
+    }
+
+    function renderPhase2(){
+      if (phase2Rendered) return; // guard against duplicates
+      phase2Rendered = true;
+
+      // Hide Phase 1 controls (keep chat visible)
+      const actions = document.getElementById('actions');
+      if (actions) actions.style.display = 'none';
+      clearForm();
+
+      // Create Phase 2 panel above the existing chat box
+      if (!document.getElementById('phase2-panel')){
+        const panel = document.createElement('div');
+        panel.id = 'phase2-panel';
+        panel.className = 'phase2';
+        panel.innerHTML = `
+          <h2>Secondary Objectives</h2>
+          <div class="note">Complete each objective. When all are complete, you may close the case.</div>
+
+          <div style="margin:10px 0 6px 0">
+            <span class="pill ${progress.timelineDone && progress.causeDone ? 'ok':''}" id="pillP1">Phase 1 (Timeline & Cause)</span>
+            <span class="pill ${progress.utDone ? 'ok':''}" id="pillUT">Universal Translator Code</span>
+            <span class="pill ${progress.wiringDone ? 'ok':''}" id="pillWiring">Wiring the Dabo Wheel</span>
+            <span class="pill ${progress.commsDone ? 'ok':''}" id="pillComms">Unauthorized Deep Space Communication</span>
+          </div>
+
+          <div class="task-grid">
+            <button id="btnUT" class="task-btn"${progress.utDone?' disabled':''}>Universal Translator Code</button>
+            <button id="btnWiring" class="task-btn"${progress.wiringDone?' disabled':''}>Wiring the Dabo Wheel</button>
+            <button id="btnComms" class="task-btn"${progress.commsDone?' disabled':''}>Unauthorized Deep Space Communication</button>
+          </div>
+
+          <div id="phase2-form-host" style="max-width:600px;margin:0 auto 12px auto;"></div>
+
+          <hr style="border:none;border-top:1px solid #FFCC66;opacity:.35;margin:16px 0 10px 0" />
+
+          <button id="btnSolve" class="task-btn" ${isAllPhase2Ready() ? '' : 'disabled'}>Solved the Mystery & ready to close the case?</button>
+          <div class="note" id="solveNote">${isAllPhase2Ready()
+            ? 'All objectives complete. Click to proceed.'
+            : 'This will unlock once Phase 1 and the three objectives above are completed.'}</div>
+        `;
+        // Insert panel before chat-box so chat remains visible beneath
+        const chatBox = document.getElementById('chat-box');
+        mainRoot.insertBefore(panel, chatBox);
+      }
+
+      // Wire up Phase 2 buttons
+      document.getElementById('btnUT').addEventListener('click', showUTForm);
+      document.getElementById('btnWiring').addEventListener('click', showWiringForm);
+      document.getElementById('btnComms').addEventListener('click', showCommsForm);
+      document.getElementById('btnSolve').addEventListener('click', showSolveForm);
+    }
+
+    function updatePills(){
+      const p1 = document.getElementById('pillP1');
+      const ut = document.getElementById('pillUT');
+      const wi = document.getElementById('pillWiring');
+      const co = document.getElementById('pillComms');
+      if (p1) p1.classList.toggle('ok', progress.timelineDone && progress.causeDone);
+      if (ut) ut.classList.toggle('ok', progress.utDone);
+      if (wi) wi.classList.toggle('ok', progress.wiringDone);
+      if (co) co.classList.toggle('ok', progress.commsDone);
+
+      const solve = document.getElementById('btnSolve');
+      const note = document.getElementById('solveNote');
+      if (solve && note){
+        const ready = isAllPhase2Ready();
+        solve.disabled = !ready;
+        note.textContent = ready
+          ? 'All objectives complete. Click to proceed.'
+          : 'This will unlock once Phase 1 and the three objectives above are completed.';
+      }
+    }
+
+    function isAllPhase2Ready(){
+      return progress.timelineDone && progress.causeDone && progress.utDone && progress.wiringDone && progress.commsDone;
+    }
+
+    // ====== PHASE 2 FORMS ======
+    function showUTForm(){
+      if (progress.utDone) return;
+      const host = document.getElementById('phase2-form-host');
+      host.innerHTML = `
+        <div class="inline-card">
+          <h3>Universal Translator Code</h3>
+          <div class="inline-row">
+            <div><label>Word 1</label><input id="ut1" type="text" placeholder="word 1"></div>
+            <div><label>Word 2</label><input id="ut2" type="text" placeholder="word 2"></div>
+            <div><label>Word 3</label><input id="ut3" type="text" placeholder="word 3"></div>
+          </div>
+          <div class="muted" style="margin-top:6px">Enter the three keywords. Capitalization doesn’t matter.</div>
+          <div class="feedback" id="utFeedback"></div>
+          <div class="inline-actions">
+            <button id="utCancel">Cancel</button>
+            <button id="utSubmit">Submit</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('utCancel').addEventListener('click', ()=> host.innerHTML = "");
+      document.getElementById('utSubmit').addEventListener('click', submitUT);
+
+      function submitUT(){
+        const w1 = (document.getElementById('ut1').value||"").trim().toLowerCase();
+        const w2 = (document.getElementById('ut2').value||"").trim().toLowerCase();
+        const w3 = (document.getElementById('ut3').value||"").trim().toLowerCase();
+
+        const exp1 = "trill", exp2 = "bolts", exp3 = "engineering";
+        const fb = document.getElementById('utFeedback');
+
+        if (w1 !== exp1 || w2 !== exp2 || w3 !== exp3){
+          let errs = [];
+          if (w1 !== exp1) errs.push("Word 1 is incorrect");
+          if (w2 !== exp2) errs.push("Word 2 is incorrect");
+          if (w3 !== exp3) errs.push("Word 3 is incorrect");
+          fb.innerHTML = '<span class="err">' + errs.join("; ") + '.</span>';
+          return;
+        }
+
+        progress.utDone = true; saveProgress();
+        const btn = document.getElementById('btnUT'); if (btn){ btn.disabled = true; btn.textContent = "COMPLETED"; }
+        host.innerHTML = "";
+        updatePills();
+
+        addTitledResponse("UNIVERSAL TRANSLATOR CODE", `With the message translated, you feed the keywords into the universal translator to get it working.
+With that done you decide to ask Jora Tell about the allegation. After doing some looking around you find the ambassador…in your quarters. Bursting into the room, you are surprised to see Jora Tell holding the award that was bestowed upon you by Starfleet for busting an illegal tribble fighting ring.
+“ Oh, I can explain… I was just… okay you caught me. Look, it’s not me—it’s the symbiont. Ever since Tell joined with me, it’s had these… urges. Some people inherit memories of great warriors or scientists. I inherited a kleptomaniac slug with sticky pseudopods. I don’t even want half the things I take!
+
+ Last week it made me pocket a Bolian soap dish. Yesterday—three spoons from the mess hall. And now apparently it thinks this”—she shakes the award guiltily—“is irresistible.
+I swear, if you check my quarters, you’ll find a collection of random junk that would embarrass even a Ferengi junk dealer. Please don’t hold it against me. I’m just along for the ride… and the shoplifting. I should be worried about the Tandaran fleet but here i am. I’m sorry, I will see myself out. good luck with your investifation.”
+
+A quick look in her quarters confirms she has been taking things from the station, including a turbolift control node logged as missing between 1320 and 1455, when that system went offline, proving her presence elsewhere on the station.`);
+      }
+    }
+
+    function showWiringForm(){
+      if (progress.wiringDone) return;
+      const host = document.getElementById('phase2-form-host');
+      host.innerHTML = `
+        <div class="inline-card">
+          <h3>Wiring the Dabo Wheel</h3>
+          <label for="wireCode">Enter sequence</label>
+          <input id="wireCode" type="text" placeholder="Sequence">
+          <div class="feedback" id="wireFb"></div>
+          <div class="inline-actions">
+            <button id="wireCancel">Cancel</button>
+            <button id="wireSubmit">Submit</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('wireCancel').addEventListener('click', ()=> host.innerHTML = "");
+      document.getElementById('wireSubmit').addEventListener('click', submitWiring);
+      document.getElementById('wireCode').addEventListener('keydown', (e)=>{ if(e.key==='Enter') submitWiring(); });
+
+      function submitWiring(){
+        const val = (document.getElementById('wireCode').value||"").trim();
+        const fb = document.getElementById('wireFb');
+        if (val === "289514711612310"){
+          progress.wiringDone = true; saveProgress();
+          const btn = document.getElementById('btnWiring'); if (btn){ btn.disabled = true; btn.textContent = "COMPLETED"; }
+          host.innerHTML = "";
+          updatePills();
+
+          // ===== FIXED: Single addTitledResponse call with a single template string =====
+          addTitledResponse("WIRING THE DABO WHEEL", `Ahhh, music to my lobes! Profit restored, and the Dabo wheel sings once more. You’ve done excellent work — far better than my cousin, who still thinks a power coupling is something you order at a bar. Now, about our little… arrangement.
+
+Nearly everyone on this station was at that blasted concert between 1300 and 1450. But not everyone. Your suspect, Lorr Vun? He wasn’t anywhere near the music hall. He was here, in my private gaming room — trying very hard to win back a rather embarrassing debt he owed me. And losing. Badly.
+
+At first, I wasn’t going to mention it — the 33rd Rule of Acquisition says: It never hurts to suck up to the boss, and debts are leverage. But you’ve done me a favor, so I’ll do you one: I had them in my company the entire time the murder happened. The only thing they killed that night was their credit rating. If you could avoid mentioning to Vun I told you this, I would appreciate it. He has some tasty profits I would like to relieve him of still.
+
+So, cross them off your list. They may be a poor gambler, but they’re no killer. Now… shall we talk about doubling the house cut on that wheel?`);
+        } else {
+          fb.innerHTML = '<span class="err">Incorrect sequence.</span>';
+        }
+      }
+    }
+
+    function showCommsForm(){
+      if (progress.commsDone) return;
+      const host = document.getElementById('phase2-form-host');
+      host.innerHTML = `
+        <div class="inline-card">
+          <h3>Unauthorized Deep Space Communication</h3>
+          <label for="commsCode">Enter access key</label>
+          <input id="commsCode" type="text" placeholder="e.g., delta1701 or delta 1701">
+          <div class="muted" style="margin-top:6px">Capitalization and spacing do not matter.</div>
+          <div class="feedback" id="commsFb"></div>
+          <div class="inline-actions">
+            <button id="commsCancel">Cancel</button>
+            <button id="commsSubmit">Submit</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('commsCancel').addEventListener('click', ()=> host.innerHTML = "");
+      document.getElementById('commsSubmit').addEventListener('click', submitComms);
+      document.getElementById('commsCode').addEventListener('keydown', (e)=>{ if(e.key==='Enter') submitComms(); });
+
+      function submitComms(){
+        const raw = (document.getElementById('commsCode').value||"").toLowerCase().replace(/\s+/g,'');
+        const fb = document.getElementById('commsFb');
+        if (raw === "delta1701"){
+          progress.commsDone = true; saveProgress();
+          const btn = document.getElementById('btnComms'); if (btn){ btn.disabled = true; btn.textContent = "COMPLETED"; }
+          host.innerHTML = "";
+          updatePills();
+          addTitledResponse("UNAUTHORIZED DEEP SPACE COMMUNICATION", "insert unlock text for button Unauthorized Deep Space Communication");
+        } else {
+          fb.innerHTML = '<span class="err">Access key rejected.</span>';
+        }
+      }
+    }
+
+    function showSolveForm(){
+      if (!isAllPhase2Ready()) return;
+      const host = document.getElementById('phase2-form-host');
+      host.innerHTML = `
+        <div class="inline-card">
+          <h3>Close the Case</h3>
+          <div class="muted" style="margin-bottom:6px">Select all suspects you have eliminated from consideration.</div>
+          <div id="suspectList" style="text-align:left">
+            <label><input type="checkbox" value="Jora Tell"> Jora Tell</label><br/>
+            <label><input type="checkbox" value="Nira Vess"> Nira Vess</label><br/>
+            <label><input type="checkbox" value="Gil Dalra"> Gil Dalra</label><br/>
+            <label><input type="checkbox" value="Lorr Vun"> Lorr Vun</label><br/>
+            <label><input type="checkbox" value="Renn Vok"> Renn Vok</label><br/>
+            <label><input type="checkbox" value="Eno Tavik"> Eno Tavik</label>
+          </div>
+          <div class="inline-actions">
+            <button id="solveCancel">Cancel</button>
+            <button id="solveSubmit">Submit</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('solveCancel').addEventListener('click', ()=> host.innerHTML = "");
+      document.getElementById('solveSubmit').addEventListener('click', ()=>{
+        const boxes = [...document.querySelectorAll('#suspectList input[type=checkbox]')];
+        const eliminated = boxes.filter(b=>b.checked).map(b=>b.value);
+        host.innerHTML = "";
+        addTitledResponse("CASE CLOSURE — ELIMINATIONS", "Elimination set recorded: " + (eliminated.length ? eliminated.join(", ") : "none selected") + ". Proceed when ready to present your final accusation.");
+      });
+    }
+
+    // ====== Chat helpers ======
+    function addResponse(text) {
+      const div = document.createElement("div");
+      div.classList.add("entry", "compas");
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+      typeText(div, text, 20);
+      if (voiceEnabled && text) { speakText(text); }
+    }
+
+    // Titled response (bold, all-caps title + typed body)
+    function addTitledResponse(title, body){
+      const div = document.createElement("div");
+      div.classList.add("entry","compas");
+      div.innerHTML = `<b>${(title||"").toUpperCase()}</b>\n`;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+      typeText(div, body ? "\n"+body : "", 20);
+      if (voiceEnabled && body) { speakText(title + ". " + body); }
+    }
+
+    function typeText(element, text, speed) {
+      let i = 0;
+      (function typing(){
+        if (i < text.length) {
+          element.append(document.createTextNode(text.charAt(i++)));
+          chat.scrollTop = chat.scrollHeight;
+          setTimeout(typing, speed);
+        }
+      })();
+    }
+
+    function speakText(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = speechSynthesis.getVoices().find(voice => voice.lang && voice.lang.includes('en')) || null;
+      utterance.rate = 0.95;
+      speechSynthesis.speak(utterance);
+    }
+
+    // ====== Time parsing helpers ======
     function parseTime(input){
       if(!input) return null;
       let s = input.trim().toUpperCase();
 
-      // "HH:MM AM/PM" or "H:MM AM/PM" or "HH AM/PM"
       const ampm = s.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
       if(ampm){
         let h = parseInt(ampm[1],10);
@@ -263,16 +586,12 @@ That said, low odds are still odds. Ask, and I will provide what information I c
         if(h<0||h>23||m<0||m>59) return null;
         return String(h).padStart(2,'0') + String(m).padStart(2,'0');
       }
-
-      // "HH:MM" 24h
       const hm = s.match(/^(\d{1,2}):(\d{2})$/);
       if(hm){
         let h = parseInt(hm[1],10), m=parseInt(hm[2],10);
         if(h<0||h>23||m<0||m>59) return null;
         return String(h).padStart(2,'0') + String(m).padStart(2,'0');
       }
-
-      // "HHMM"
       const d = s.match(/^(\d{3,4})$/);
       if(d){
         let v = d[1].padStart(4,'0');
@@ -288,7 +607,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       return `${String(h).padStart(2,'0')}:${m}`;
     }
 
-    // ====== Inline forms ======
+    // ====== Phase 1 INLINE FORMS ======
     function showTimelineForm(){
       if (btnTimeline.disabled) return;
       formHost.innerHTML = `
@@ -323,7 +642,6 @@ That said, low odds are still odds. Ask, and I will provide what information I c
         const startVal = (tlStart.value||"").trim();
         const endVal = (tlEnd.value||"").trim();
 
-        // Range allowed in start field
         const range = startVal.replace(/\s+/g,'').match(/^(\d{3,4})-(\d{3,4})$/);
         let startParsed, endParsed;
 
@@ -356,7 +674,6 @@ That said, low odds are still odds. Ask, and I will provide what information I c
         }
       }
 
-      // Enter to submit from either input
       tlStart.addEventListener('keydown', (e)=>{ if(e.key==='Enter') submitTimelineInline(); });
       tlEnd.addEventListener('keydown', (e)=>{ if(e.key==='Enter') submitTimelineInline(); });
     }
@@ -407,34 +724,6 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       if (btnCause.disabled) return;
       showCauseForm();
     });
-
-    // ====== Chat helpers ======
-    function addResponse(text) {
-      const div = document.createElement("div");
-      div.classList.add("entry", "compas");
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-      typeText(div, text, 20);
-      if (voiceEnabled && text) { speakText(text); }
-    }
-
-    function typeText(element, text, speed) {
-      let i = 0;
-      (function typing(){
-        if (i < text.length) {
-          element.innerText += text.charAt(i++);
-          chat.scrollTop = chat.scrollHeight;
-          setTimeout(typing, speed);
-        }
-      })();
-    }
-
-    function speakText(text) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.voice = speechSynthesis.getVoices().find(voice => voice.lang && voice.lang.includes('en')) || null;
-      utterance.rate = 0.95;
-      speechSynthesis.speak(utterance);
-    }
 
     // ====== Original chat logic (kept; still supports type-based submissions) ======
     function handleInput() {
@@ -524,7 +813,7 @@ That said, low odds are still odds. Ask, and I will provide what information I c
       // OLD multi-step (cause -> start -> end) kept for compatibility
       if (submissionStep === 1) {
         submittedCause = message;
-        if (validCauses.some(c => submittedCause.includes(c))) {
+        if (["poison","poisoning","food poisoning"].some(c => submittedCause.includes(c))) {
           addResponse("Cause accepted. Now enter the start time:");
           submissionStep = 2;
         } else {
@@ -620,8 +909,15 @@ That said, low odds are still odds. Ask, and I will provide what information I c
 
     window.addEventListener("load", function() {
       setButtonState();
+
+      // If Phase 1 already done when loading:
       if (progress.timelineDone && progress.causeDone){
-        maybeAdvanceToPhase2();
+        if (progress.phase2GateAck){
+          renderPhase2();
+        } else {
+          // Stay on page 1 with chat, and post the gate message once
+          postPhase2GateMessage();
+        }
       } else {
         const introText = document.getElementById("intro-text").innerText;
         if (voiceEnabled) { speakText(introText); }
@@ -630,8 +926,3 @@ That said, low odds are still odds. Ask, and I will provide what information I c
   </script>
 </body>
 </html>
-
-
-
-
-
