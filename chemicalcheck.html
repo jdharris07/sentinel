@@ -84,7 +84,11 @@
 
 <script>
 (() => {
-  const EXPECTED = ["K","Ag","C","Fe","Cl","Ne"];
+  // Accept either of these sequences:
+  const ACCEPTED = [
+    ["K","Ag","C","Fe","Cl","Ne"],
+    ["K","C","Ag","Fe","Cl","Ne"] // <- added alt valid order
+  ];
   const RUN_MS = 8000; // 8 seconds
 
   const aiLine = document.getElementById('aiLine');
@@ -169,13 +173,13 @@
     aiLine.textContent = ' “Analyzing sequence…”';
     statusMsg.textContent = 'Starting…';
     startProgress(() => {
-      const ok = arraysEqual(tokens, EXPECTED);
+      const ok = ACCEPTED.some(seq => arraysEqual(tokens, seq));
       statusMsg.textContent = 'ANALYSIS COMPLETE.';
       if (ok){
         logLine("RESULT:", `<span class="ok">Chemical analysis complete. Sequence match: Raciline (rare neurotoxin).</span>`);
         aiLine.textContent = ' “Sequence match: RACILINE.”';
       } else {
-        logLine("RESULT:", `<span class="err"><strong>ERROR SEQUENCE FAILED. PLEASE SUBMIT NEW SEQUENCE FOR ANALYISIS</strong></span>`);
+        logLine("RESULT:", `<span class="err"><strong>ERROR SEQUENCE FAILED. PLEASE SUBMIT NEW SEQUENCE FOR ANALYSIS</strong></span>`);
         aiLine.textContent = '“No match. Resubmit when ready.”';
       }
       running = false;
@@ -209,4 +213,3 @@
 </script>
 </body>
 </html>
-
