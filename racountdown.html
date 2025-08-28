@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LCARS • One Hour Countdown</title>
+<style>
+  :root{
+    /* LCARS-ish palette */
+    --bg:#000; 
+    --text:#FFCC66;
+    --panel:#330000;
+    --panel2:#663300;
+    --edge:#FFCC66;
+    --accent:#6bdcff;
+    --ok:#4be38f;
+    --warn:#ff6b6b;
+
+    --rad:22px;
+    --shadow:0 12px 32px rgba(0,0,0,.45);
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    color:var(--text);
+    background: var(--bg) center/cover no-repeat fixed;
+    background-image: url('backgroundcountdown.png');
+  }
+
+  /* Soft overlay to help legibility over bright backgrounds */
+  .scrim{
+    position:fixed; inset:0;
+    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.75));
+    pointer-events:none;
+  }
+
+  .wrap{
+    position:relative;
+    min-height:100%;
+    display:grid;
+    place-items:center;
+    padding:24px;
+  }
+
+  /* LCARS frame */
+  .lcars{
+    width:min(920px, 95vw);
+    border-radius: var(--rad);
+    background:
+      linear-gradient(90deg, var(--panel) 0 62%, var(--panel2) 62% 100%);
+    box-shadow: var(--shadow);
+    padding:22px;
+    border:2px solid var(--edge);
+    position:relative;
+    overflow:hidden;
+  }
+
+  /* LCARS left bands */
+  .bands{
+    position:absolute; left:0; top:0; bottom:0; width:86px;
+    display:flex; flex-direction:column; gap:14px;
+    padding:16px 10px;
+  }
+  .band{
+    height:46px; border-radius: 24px;
+    background: var(--panel2);
+    outline:2px solid var(--edge);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.05);
+  }
+  .band:nth-child(odd){ background: #8a4b00; }
+  .band:nth-child(3n){ background: #994c4c; }
+
+  /* Header strip */
+  .header{
+    margin-left:100px;
+    display:flex; align-items:center; gap:12px;
+    padding:8px 12px;
+    background: rgba(255,255,255,.05);
+    border-radius: 10px;
+    border:1px solid rgba(255,255,255,.12);
+  }
+  .pill{
+    height:18px; width:80px; border-radius: 12px;
+    background: var(--accent);
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,.25);
+  }
+  .title{
+    letter-spacing:.08em; font-weight:700; text-transform:uppercase; font-size:14px;
+    color:var(--text);
+  }
+
+  /* Timer display */
+  .timer{
+    margin-left:100px;
+    display:grid; place-items:center;
+    padding:28px 16px 10px;
+  }
+  .time{
+    font-weight:900;
+    font-variant-numeric: tabular-nums;
+    letter-spacing:.06em;
+    font-size: clamp(48px, 9vw, 136px);
+    line-height:1;
+    padding:12px 20px;
+    border-radius: 18px;
+    border:2px solid var(--edge);
+    background: rgba(0,0,0,.35);
+    text-shadow: 0 0 12px rgba(255,204,102,.3);
+  }
+  .labels{
+    margin-top:10px;
+    display:flex; gap:14px; opacity:.9; font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+  }
+  .labels span{
+    padding:4px 8px; border-radius:12px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+  }
+
+  /* Start button */
+  .controls{
+    margin-left:100px; padding:20px 16px 8px;
+    display:flex; gap:12px; flex-wrap:wrap;
+  }
+  button{
+    cursor:pointer;
+    border:none;
+    padding:14px 22px;
+    border-radius: 999px;
+    font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+    color:#101018; background: var(--text);
+    box-shadow: 0 3px 0 rgba(0,0,0,.35), 0 0 20px rgba(255,204,102,.25);
+    transition: transform .06s ease, filter .2s ease;
+  }
+  button:hover{ filter:brightness(1.05)}
+  button:active{ transform: translateY(2px)}
+  button.secondary{
+    background: #ffd24d;
+  }
+
+  /* Footer strip */
+  .footer{
+    margin-left:100px;
+    margin-top:14px;
+    padding:10px 12px;
+    display:flex; gap:10px; align-items:center; justify-content:space-between;
+    font-size:12px; opacity:.8;
+  }
+  .status{
+    display:flex; gap:10px; align-items:center;
+  }
+  .dot{
+    width:9px; height:9px; border-radius:50%; background:var(--ok); box-shadow:0 0 10px var(--ok);
+  }
+
+  /* Finished flash */
+  .finished .time{
+    animation: flash 1s step-start infinite;
+    border-color: var(--warn);
+    color: #ffe6e6;
+    text-shadow: 0 0 14px rgba(255,107,107,.6);
+  }
+  @keyframes flash{
+    0%, 50% { background: rgba(75, 0, 0, .65);}
+    51%, 100% { background: rgba(0,0,0,.35);}
+  }
+
+  /* Small screens */
+  @media (max-width: 560px){
+    .bands{ width:72px }
+    .header, .timer, .controls, .footer{ margin-left:84px }
+    .pill{ width:64px }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="lcars" id="lcarsFrame" aria-live="polite">
+    <div class="bands" aria-hidden="true">
+      <div class="band"></div>
+      <div class="band"></div>
+      <div class="band"></div>
+      <div class="band"></div>
+      <div class="band"></div>
+    </div>
+
+    <div class="header">
+      <div class="pill" aria-hidden="true"></div>
+      <div class="pill" aria-hidden="true" style="width:46px"></div>
+      <div class="title">Countdown Protocol • LCARS BLOCK 7</div>
+    </div>
+
+    <div class="timer">
+      <div class="time" id="time">01:00:00</div>
+      <div class="labels"><span>Hours</span><span>Minutes</span><span>Seconds</span></div>
+    </div>
+
+    <div class="controls" id="controls">
+      <button id="startBtn" aria-label="Start one hour countdown">Start</button>
+      <!-- Uncomment to expose Pause/Reset later if you want 
+      <button class="secondary" id="pauseBtn" hidden>Pause</button>
+      <button class="secondary" id="resetBtn" hidden>Reset</button>
+      -->
+    </div>
+
+    <div class="footer">
+      <div class="status"><span class="dot" id="dot"></span> <span id="statusText">Idle</span></div>
+      <div>STARFLEET OPS // TIME INDEX</div>
+    </div>
+  </div>
+</div>
+<div class="scrim" aria-hidden="true"></div>
+
+<script>
+(function(){
+  // --- Config ---
+  const TOTAL_SECONDS = 60 * 60; // 1 hour
+
+  // Elements
+  const timeEl = document.getElementById('time');
+  const startBtn = document.getElementById('startBtn');
+  const controls = document.getElementById('controls');
+  const statusText = document.getElementById('statusText');
+  const frame = document.getElementById('lcarsFrame');
+  const dot = document.getElementById('dot');
+
+  let remaining = TOTAL_SECONDS;
+  let timerId = null;
+  let running = false;
+
+  function fmt(n){ return n.toString().padStart(2,'0'); }
+  function render(){
+    const hrs = Math.floor(remaining / 3600);
+    const mins = Math.floor((remaining % 3600) / 60);
+    const secs = remaining % 60;
+    timeEl.textContent = `${fmt(hrs)}:${fmt(mins)}:${fmt(secs)}`;
+  }
+  render();
+
+  function tick(){
+    if(remaining > 0){
+      remaining -= 1;
+      render();
+      if(remaining === 0){
+        complete();
+      }
+    }
+  }
+
+  function start(){
+    if(running) return;
+    running = true;
+    statusText.textContent = 'Running';
+    dot.style.background = 'var(--accent)';
+    dot.style.boxShadow = '0 0 10px var(--accent)';
+    // Remove the start button once clicked
+    startBtn.remove();
+    timerId = setInterval(tick, 1000);
+    // prevent accidental page sleep on mobile
+    window.addEventListener('visibilitychange', trySync, {passive:true});
+  }
+
+  function complete(){
+    clearInterval(timerId);
+    timerId = null;
+    running = false;
+    frame.classList.add('finished');
+    statusText.textContent = 'Complete';
+    dot.style.background = 'var(--warn)';
+    dot.style.boxShadow = '0 0 10px var(--warn)';
+  }
+
+  // Keeps the clock honest if the tab was hidden
+  function trySync(){
+    // Use a timestamp-based fallback to correct drift when tab was inactive
+    // We’ll store a baseline when starting, and recompute remaining on resume.
+  }
+
+  // Baseline start time for drift correction:
+  let startedAt = null;
+  function startWithBaseline(){
+    startedAt = Date.now();
+    start();
+    // Replace tick logic with baseline-aware drift correction:
+    clearInterval(timerId);
+    timerId = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+      remaining = Math.max(TOTAL_SECONDS - elapsed, 0);
+      render();
+      if(remaining === 0) complete();
+    }, 250); // faster updates for smoother catch-up
+  }
+
+  // Events
+  startBtn.addEventListener('click', startWithBaseline);
+
+  // Keyboard: Space or Enter starts
+  document.addEventListener('keydown', (e)=>{
+    if((e.key === ' ' || e.key === 'Enter') && !running){
+      e.preventDefault();
+      if(document.body.contains(startBtn)) startWithBaseline();
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
