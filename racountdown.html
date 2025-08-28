@@ -6,7 +6,6 @@
 <title>LCARS • One Hour Countdown</title>
 <style>
   :root{
-    /* LCARS-ish palette */
     --bg:#000; 
     --text:#FFCC66;
     --panel:#330000;
@@ -15,7 +14,6 @@
     --accent:#6bdcff;
     --ok:#4be38f;
     --warn:#ff6b6b;
-
     --rad:22px;
     --shadow:0 12px 32px rgba(0,0,0,.45);
   }
@@ -26,8 +24,17 @@
     margin:0;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     color:var(--text);
-    background: var(--bg) center/cover no-repeat fixed;
-    background-image: url('space.mp4');
+    background: var(--bg);
+    overflow:hidden; /* keep scrollbars off when video slightly overflows */
+  }
+
+  /* Fullscreen background video */
+  .bgvideo{
+    position:fixed; inset:0;
+    width:100%; height:100%;
+    object-fit:cover;
+    z-index:-2; /* behind everything */
+    filter: saturate(1.05) contrast(1.05) brightness(.9);
   }
 
   /* Soft overlay to help legibility over bright backgrounds */
@@ -35,6 +42,7 @@
     position:fixed; inset:0;
     background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.75));
     pointer-events:none;
+    z-index:-1;
   }
 
   .wrap{
@@ -49,8 +57,7 @@
   .lcars{
     width:min(920px, 95vw);
     border-radius: var(--rad);
-    background:
-      linear-gradient(90deg, var(--panel) 0 62%, var(--panel2) 62% 100%);
+    background: linear-gradient(90deg, var(--panel) 0 62%, var(--panel2) 62% 100%);
     box-shadow: var(--shadow);
     padding:22px;
     border:2px solid var(--edge);
@@ -135,9 +142,7 @@
   }
   button:hover{ filter:brightness(1.05)}
   button:active{ transform: translateY(2px)}
-  button.secondary{
-    background: #ffd24d;
-  }
+  button.secondary{ background: #ffd24d; }
 
   /* Footer strip */
   .footer{
@@ -147,12 +152,8 @@
     display:flex; gap:10px; align-items:center; justify-content:space-between;
     font-size:12px; opacity:.8;
   }
-  .status{
-    display:flex; gap:10px; align-items:center;
-  }
-  .dot{
-    width:9px; height:9px; border-radius:50%; background:var(--ok); box-shadow:0 0 10px var(--ok);
-  }
+  .status{ display:flex; gap:10px; align-items:center; }
+  .dot{ width:9px; height:9px; border-radius:50%; background:var(--ok); box-shadow:0 0 10px var(--ok); }
 
   /* Finished flash */
   .finished .time{
@@ -166,6 +167,11 @@
     51%, 100% { background: rgba(0,0,0,.35);}
   }
 
+  /* Respect reduced motion: pause the background video */
+  @media (prefers-reduced-motion: reduce){
+    .bgvideo{ animation: none; }
+  }
+
   /* Small screens */
   @media (max-width: 560px){
     .bands{ width:72px }
@@ -175,14 +181,18 @@
 </style>
 </head>
 <body>
+
+<!-- Background video (put space.mp4 in same folder). Add a WebM source if you have one. -->
+<video class="bgvideo" id="bgVideo" autoplay loop muted playsinline preload="auto"
+       controlslist="nodownload noremoteplayback nofullscreen" disablepictureinpicture>
+  <source src="space.mp4" type="video/mp4" />
+  <!-- Optional: <source src="space.webm" type="video/webm" /> -->
+</video>
+
 <div class="wrap">
   <div class="lcars" id="lcarsFrame" aria-live="polite">
     <div class="bands" aria-hidden="true">
-      <div class="band"></div>
-      <div class="band"></div>
-      <div class="band"></div>
-      <div class="band"></div>
-      <div class="band"></div>
+      <div class="band"></div><div class="band"></div><div class="band"></div><div class="band"></div><div class="band"></div>
     </div>
 
     <div class="header">
@@ -198,10 +208,6 @@
 
     <div class="controls" id="controls">
       <button id="startBtn" aria-label="Start one hour countdown">Start</button>
-      <!-- Uncomment to expose Pause/Reset later if you want 
-      <button class="secondary" id="pauseBtn" hidden>Pause</button>
-      <button class="secondary" id="resetBtn" hidden>Reset</button>
-      -->
     </div>
 
     <div class="footer">
@@ -210,24 +216,24 @@
     </div>
   </div>
 </div>
+
 <div class="scrim" aria-hidden="true"></div>
 
 <script>
 (function(){
-  // --- Config ---
   const TOTAL_SECONDS = 60 * 60; // 1 hour
 
-  // Elements
   const timeEl = document.getElementById('time');
   const startBtn = document.getElementById('startBtn');
-  const controls = document.getElementById('controls');
   const statusText = document.getElementById('statusText');
   const frame = document.getElementById('lcarsFrame');
   const dot = document.getElementById('dot');
+  const bgVideo = document.getElementById('bgVideo');
 
   let remaining = TOTAL_SECONDS;
   let timerId = null;
   let running = false;
+  let startedAt = null;
 
   function fmt(n){ return n.toString().padStart(2,'0'); }
   function render(){
@@ -238,14 +244,16 @@
   }
   render();
 
-  function tick(){
-    if(remaining > 0){
-      remaining -= 1;
-      render();
-      if(remaining === 0){
-        complete();
-      }
-    }
+  function complete(){
+    clearInterval(timerId);
+    timerId = null;
+    running = false;
+    frame.classList.add('finished');
+    statusText.textContent = 'Complete';
+    dot.style.background = 'var(--warn)';
+    dot.style.boxShadow = '0 0 10px var(--warn)';
+    // Optional: pause background on completion
+    // bgVideo.pause();
   }
 
   function start(){
@@ -256,56 +264,33 @@
     dot.style.boxShadow = '0 0 10px var(--accent)';
     // Remove the start button once clicked
     startBtn.remove();
-    timerId = setInterval(tick, 1000);
-    // prevent accidental page sleep on mobile
-    window.addEventListener('visibilitychange', trySync, {passive:true});
-  }
 
-  function complete(){
-    clearInterval(timerId);
-    timerId = null;
-    running = false;
-    frame.classList.add('finished');
-    statusText.textContent = 'Complete';
-    dot.style.background = 'var(--warn)';
-    dot.style.boxShadow = '0 0 10px var(--warn)';
-  }
-
-  // Keeps the clock honest if the tab was hidden
-  function trySync(){
-    // Use a timestamp-based fallback to correct drift when tab was inactive
-    // We’ll store a baseline when starting, and recompute remaining on resume.
-  }
-
-  // Baseline start time for drift correction:
-  let startedAt = null;
-  function startWithBaseline(){
     startedAt = Date.now();
-    start();
-    // Replace tick logic with baseline-aware drift correction:
     clearInterval(timerId);
     timerId = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startedAt) / 1000);
       remaining = Math.max(TOTAL_SECONDS - elapsed, 0);
       render();
       if(remaining === 0) complete();
-    }, 250); // faster updates for smoother catch-up
+    }, 250);
   }
 
-  // Events
-  startBtn.addEventListener('click', startWithBaseline);
+  startBtn.addEventListener('click', start);
 
   // Keyboard: Space or Enter starts
   document.addEventListener('keydown', (e)=>{
     if((e.key === ' ' || e.key === 'Enter') && !running){
       e.preventDefault();
-      if(document.body.contains(startBtn)) startWithBaseline();
+      if(document.body.contains(startBtn)) start();
     }
   });
 
+  // If the browser blocks autoplay for some reason, try to play after first interaction
+  bgVideo.addEventListener('error', ()=>{ /* ignore */ });
+  if (bgVideo.paused){
+    document.addEventListener('click', ()=>{ if(bgVideo.paused) bgVideo.play().catch(()=>{}); }, {once:true});
+  }
 })();
 </script>
 </body>
 </html>
-
-
