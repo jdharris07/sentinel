@@ -4,13 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport"
   content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>K2 EMF — Mobile (Calibrated LEDs)</title>
+<title>K2 EMF — Mobile (Calibrate + Fine-Tune)</title>
 <style>
   :root{
     --bg:#0a0f18; --ink:#e7f0ff; --muted:#aebedb; --grid:#23314a;
     --tile:#0e1524; --tile2:#121b2c; --rad:14px;
 
-    /* Default LED size; tweak if your PNG lenses feel larger/smaller */
+    /* Default LED size; tweak if your PNG lenses look bigger/smaller */
     --led-size: 10%;
   }
   *{box-sizing:border-box}
@@ -96,8 +96,8 @@
               rgba(255,255,255,.05) 29% 55%,
               rgba(0,0,0,.15) 56% 100%);
   }
-  /* Positions are stored as CSS vars on .meter style for perfect scaling */
-  .l1{ left: var(--l1x, 20%); top: var(--l1y, 14%); --col:#33d16a; } /* defaults are rough; calibration overwrites */
+  /* Positions are CSS vars on .meter style (calibrated/saved). Defaults are rough. */
+  .l1{ left: var(--l1x, 20%); top: var(--l1y, 14%); --col:#33d16a; }
   .l2{ left: var(--l2x, 37%); top: var(--l2y, 11%); --col:#27c15b; }
   .l3{ left: var(--l3x, 54%); top: var(--l3y, 10%); --col:#f1d44e; }
   .l4{ left: var(--l4x, 71%); top: var(--l4y, 11%); --col:#ff8a3d; }
@@ -116,16 +116,16 @@
     margin-top:8px; min-height:22px;
   }
 
-  /* Calibration hints */
-  .calNote{
-    color:#7ee2b8; font-size:13px; margin-left:8px;
-  }
+  /* Calibration/Fine-tune visuals */
+  .calNote{ color:#7ee2b8; font-size:13px; margin-left:8px; }
   .crosshair{
-    position:absolute; width:14px; height:14px; border-radius:50%;
+    position:absolute; width:16px; height:16px; border-radius:50%;
     border:2px solid #7ee2b8; box-shadow:0 0 10px rgba(126,226,184,.5);
-    pointer-events:none; transform:translate(-50%,-50%); display:none;
+    transform:translate(-50%,-50%); display:none; background:rgba(126,226,184,.12);
+    cursor:grab;
   }
-  .cal .crosshair{ display:block; }
+  .cal .crosshair, .tune .crosshair{ display:block; }
+  .crosshair.dragging{ cursor:grabbing }
 </style>
 </head>
 <body>
@@ -134,6 +134,7 @@
   <div>
     <button id="devBtn" class="btn" aria-pressed="false">DEV</button>
     <button id="calBtn" class="btn" aria-pressed="false">CAL</button>
+    <button id="tuneBtn" class="btn" aria-pressed="false">TUNE</button>
     <button id="resetCalBtn" class="btn">Reset CAL</button>
   </div>
 </header>
@@ -157,7 +158,7 @@
         <span class="led l4"></span>
         <span class="led l5"></span>
       </div>
-      <!-- calibration crosshairs preview -->
+      <!-- crosshairs for cal/tune -->
       <span id="ch1" class="crosshair"></span>
       <span id="ch2" class="crosshair"></span>
       <span id="ch3" class="crosshair"></span>
@@ -177,6 +178,7 @@ const img   = document.getElementById('k2img');
 const statusEl = document.getElementById('status');
 const devBtn = document.getElementById('devBtn');
 const calBtn = document.getElementById('calBtn');
+const tuneBtn = document.getElementById('tuneBtn');
 const resetCalBtn = document.getElementById('resetCalBtn');
 const leds = [...meter.querySelectorAll('.led')];
 const hotspots = [...field.querySelectorAll('.hotspot')];
@@ -262,7 +264,7 @@ function moveTo(x, y){
 }
 
 meter.addEventListener('pointerdown', (e)=>{
-  if(calActive) return; // disable dragging during calibration
+  if(calActive || tuneActive) return; // disable dragging while calibrating/tuning
   dragging = true;
   meter.setPointerCapture(e.pointerId);
   meter.classList.add('dragging');
@@ -295,11 +297,9 @@ devBtn.addEventListener('click', ()=>{
 
 /* ---------- Calibration (click 5 lens centers) ---------- */
 const VARS = ["--l1x","--l1y","--l2x","--l2y","--l3x","--l3y","--l4x","--l4y","--l5x","--l5y"];
-let calActive = false;
-let calStep = 0;
+let calActive = false, calStep = 0;
 
 function applyCalibration(vars){
-  // vars = {l1x:'%', l1y:'%', ...}
   meter.style.setProperty('--l1x', vars.l1x);
   meter.style.setProperty('--l1y', vars.l1y);
   meter.style.setProperty('--l2x', vars.l2x);
@@ -311,7 +311,7 @@ function applyCalibration(vars){
   meter.style.setProperty('--l5x', vars.l5x);
   meter.style.setProperty('--l5y', vars.l5y);
 
-  // show crosshairs for confirmation
+  // show crosshairs for confirmation/tune
   const arr = [
     [vars.l1x, vars.l1y],
     [vars.l2x, vars.l2y],
@@ -328,10 +328,7 @@ function applyCalibration(vars){
 function loadCalibration(){
   const raw = localStorage.getItem('k2_cal');
   if(!raw) return;
-  try{
-    const vars = JSON.parse(raw);
-    applyCalibration(vars);
-  }catch(e){}
+  try{ applyCalibration(JSON.parse(raw)); }catch(e){}
 }
 loadCalibration();
 
@@ -340,6 +337,7 @@ function startCal(){
   calBtn.setAttribute('aria-pressed','true');
   meter.classList.add('cal');
   document.getElementById('calNote').style.display = 'block';
+  setLights(5); // show all while aligning
   statusEl.textContent = 'CAL: Click left GREEN lens (1 of 5)';
 }
 function endCal(){
@@ -348,60 +346,120 @@ function endCal(){
   meter.classList.remove('cal');
   document.getElementById('calNote').style.display = 'none';
   statusEl.textContent = '';
+  setLights(0);
 }
-calBtn.addEventListener('click', ()=>{
-  if(calActive) endCal(); else startCal();
-});
+calBtn.addEventListener('click', ()=>{ if(calActive) endCal(); else startCal(); });
+
 resetCalBtn.addEventListener('click', ()=>{
   localStorage.removeItem('k2_cal');
-  // remove custom vars so defaults apply
   VARS.forEach(v => meter.style.removeProperty(v));
   statusEl.textContent = 'Calibration cleared.';
+  setLights(0);
 });
 
+/* click to set 5 points */
 meter.addEventListener('click', (e)=>{
   if(!calActive) return;
   const ir = img.getBoundingClientRect();
+  const pct = (n)=> `${n.toFixed(2)}%`;
   const xPct = ((e.clientX - ir.left) / ir.width * 100);
   const yPct = ((e.clientY - ir.top)  / ir.height * 100);
-  const pct = (n)=> `${n.toFixed(2)}%`;
 
   const order = [
+    ['--l1x','--l1y','right GREEN'],
+    ['--l2x','--l2y','YELLOW'],
+    ['--l3x','--l3y','ORANGE'],
+    ['--l4x','--l4y','RED'],
+    ['--l5x','--l5y','(done)'],
+  ];
+  const map = [
     ['--l1x','--l1y','left GREEN'],
     ['--l2x','--l2y','right GREEN'],
     ['--l3x','--l3y','YELLOW'],
     ['--l4x','--l4y','ORANGE'],
     ['--l5x','--l5y','RED'],
   ];
-  const [vx, vy, label] = order[calStep];
+  const [vx, vy] = map[calStep];
   meter.style.setProperty(vx, pct(xPct));
   meter.style.setProperty(vy, pct(yPct));
-
-  // draw crosshair and advance
   crosshairs[calStep].style.left = pct(xPct);
   crosshairs[calStep].style.top  = pct(yPct);
 
   calStep++;
   if(calStep < 5){
-    statusEl.textContent = `CAL: Click ${order[calStep][2]} lens (${calStep+1} of 5)`;
+    statusEl.textContent = `CAL: Click ${map[calStep][2]} lens (${calStep+1} of 5)`;
   }else{
-    // save
     const vars = {
-      l1x: getComputedStyle(meter).getPropertyValue('--l1x').trim(),
-      l1y: getComputedStyle(meter).getPropertyValue('--l1y').trim(),
-      l2x: getComputedStyle(meter).getPropertyValue('--l2x').trim(),
-      l2y: getComputedStyle(meter).getPropertyValue('--l2y').trim(),
-      l3x: getComputedStyle(meter).getPropertyValue('--l3x').trim(),
-      l3y: getComputedStyle(meter).getPropertyValue('--l3y').trim(),
-      l4x: getComputedStyle(meter).getPropertyValue('--l4x').trim(),
-      l4y: getComputedStyle(meter).getPropertyValue('--l4y').trim(),
-      l5x: getComputedStyle(meter).getPropertyValue('--l5x').trim(),
-      l5y: getComputedStyle(meter).getPropertyValue('--l5y').trim(),
+      l1x:getComputedStyle(meter).getPropertyValue('--l1x').trim(),
+      l1y:getComputedStyle(meter).getPropertyValue('--l1y').trim(),
+      l2x:getComputedStyle(meter).getPropertyValue('--l2x').trim(),
+      l2y:getComputedStyle(meter).getPropertyValue('--l2y').trim(),
+      l3x:getComputedStyle(meter).getPropertyValue('--l3x').trim(),
+      l3y:getComputedStyle(meter).getPropertyValue('--l3y').trim(),
+      l4x:getComputedStyle(meter).getPropertyValue('--l4x').trim(),
+      l4y:getComputedStyle(meter).getPropertyValue('--l4y').trim(),
+      l5x:getComputedStyle(meter).getPropertyValue('--l5x').trim(),
+      l5y:getComputedStyle(meter).getPropertyValue('--l5y').trim(),
     };
     localStorage.setItem('k2_cal', JSON.stringify(vars));
     statusEl.textContent = 'Calibration saved.';
     endCal();
   }
+});
+
+/* ---------- Fine-Tune: drag crosshairs to nudge per-LED ---------- */
+let tuneActive = false;
+let dragIdx = -1;
+
+function startTune(){
+  tuneActive = true;
+  tuneBtn.setAttribute('aria-pressed','true');
+  meter.classList.add('tune');
+  setLights(5); // preview alignment
+  statusEl.textContent = 'TUNE: Drag crosshairs onto lens centers (saves automatically).';
+}
+function endTune(){
+  tuneActive = false;
+  tuneBtn.setAttribute('aria-pressed','false');
+  meter.classList.remove('tune');
+  statusEl.textContent = '';
+  setLights(0);
+}
+tuneBtn.addEventListener('click', ()=>{ if(tuneActive) endTune(); else startTune(); });
+
+crosshairs.forEach((ch, i)=>{
+  ch.addEventListener('pointerdown', (e)=>{
+    if(!tuneActive) return;
+    dragIdx = i;
+    ch.setPointerCapture(e.pointerId);
+    ch.classList.add('dragging');
+  });
+  ch.addEventListener('pointermove', (e)=>{
+    if(!tuneActive || dragIdx !== i) return;
+    const ir = img.getBoundingClientRect();
+    const xPct = ((e.clientX - ir.left) / ir.width * 100);
+    const yPct = ((e.clientY - ir.top)  / ir.height * 100);
+    const pct = (n)=> `${Math.max(0, Math.min(100, n)).toFixed(2)}%`;
+    const vx = `--l${i+1}x`, vy = `--l${i+1}y`;
+    meter.style.setProperty(vx, pct(xPct));
+    meter.style.setProperty(vy, pct(yPct));
+    ch.style.left = pct(xPct);
+    ch.style.top  = pct(yPct);
+    // save live
+    const raw = localStorage.getItem('k2_cal');
+    const vars = raw ? JSON.parse(raw) : {};
+    vars[`l${i+1}x`] = pct(xPct);
+    vars[`l${i+1}y`] = pct(yPct);
+    localStorage.setItem('k2_cal', JSON.stringify(vars));
+  });
+  ch.addEventListener('pointerup', (e)=>{
+    ch.classList.remove('dragging');
+    dragIdx = -1;
+  });
+  ch.addEventListener('pointercancel', ()=>{
+    ch.classList.remove('dragging');
+    dragIdx = -1;
+  });
 });
 
 /* ---------- Init ---------- */
