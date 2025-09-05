@@ -4,18 +4,22 @@
 <meta charset="utf-8" />
 <meta name="viewport"
   content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>K2 EMF — Mobile</title>
+<title>K2 EMF — Mobile (Locked LEDs)</title>
 <style>
   :root{
     --bg:#0a0f18; --ink:#e7f0ff; --muted:#aebedb; --grid:#23314a;
     --tile:#0e1524; --tile2:#121b2c; --rad:14px;
+
+    /* LED global alignment (nudge if needed for your PNG crop) */
+    --nudge-x: 0%;
+    --nudge-y: -7%;
+    --led-size: 10%;   /* diameter of each LED lens */
   }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
     margin:0; background:linear-gradient(180deg,#060912,#0e1423);
-    color:var(--ink);
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+    color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
     -webkit-font-smoothing:antialiased;
   }
 
@@ -36,20 +40,19 @@
     padding:10px max(10px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-right));
   }
 
-  /* Field takes almost the whole viewport height in portrait */
+  /* Field uses portrait aspect; fully responsive */
   .field{
     position:relative;
     width:100%;
     max-width:600px;
     margin:0 auto;
-    aspect-ratio: 9 / 16;                  /* Portrait-first */
+    aspect-ratio: 9 / 16;
     background:linear-gradient(180deg,var(--tile),var(--tile2));
     border:1px solid var(--grid); border-radius:12px;
     box-shadow: inset 0 10px 28px rgba(0,0,0,.45);
     overflow:hidden;
     touch-action:none;
   }
-  /* Subtle grid (dev only) */
   .field.dev::before{
     content:""; position:absolute; inset:0; pointer-events:none; opacity:.25;
     background:
@@ -58,7 +61,7 @@
     background-size: 8% 8%;
   }
 
-  /* Hotspots scale by percent; hidden by default for gameplay */
+  /* Hotspots (percent-based, hidden by default) */
   .hotspot{
     position:absolute;
     border:1px dashed transparent; border-radius:10px;
@@ -68,35 +71,47 @@
   .field.dev .hotspot{ border-color:#2b3c5f; background:rgba(255,255,255,.03); color:var(--muted); }
   .hotspot.active{ outline:2px solid #7ee2b8; box-shadow:0 0 0 2px rgba(126,226,184,.25) }
 
-  /* Draggable K2 meter */
+  /* Draggable meter — IMPORTANT: only top+left; no bottom */
   .meter{
     position:absolute;
     width: clamp(120px, 32vw, 220px);
-    left: 3%; bottom: 6%;
+    left: 3%;
+    top: 65%;                   /* start position (can be anywhere) */
     user-select:none; -webkit-user-drag:none; cursor:grab; touch-action:none;
+    display:inline-block;
   }
   .meter.dragging{ cursor:grabbing }
   .meter img{display:block; width:100%; height:auto; pointer-events:none}
 
-  /* LED overlay positioned relative to image bounds */
-  .leds{ position:absolute; left:6%; top:5%; width:88%; height:19%; pointer-events:none }
+  /* LED overlay fills the IMAGE bounds exactly */
+  .leds{ position:absolute; inset:0; pointer-events:none; }
   .led{
-    position:absolute; width:16%; aspect-ratio:1/1; border-radius:50%;
-    opacity:.18; transform:translate(-50%,-50%);
-    background: radial-gradient(circle at 50% 55%, rgba(255,255,255,.35) 0 28%, rgba(255,255,255,.05) 29% 55%, rgba(0,0,0,.15) 56% 100%);
+    position:absolute;
+    width:var(--led-size);
+    aspect-ratio:1/1;
+    border-radius:50%;
+    opacity:.18;
+    transform: translate(calc(-50% + var(--nudge-x)), calc(-50% + var(--nudge-y)));
+    background: radial-gradient(circle at 50% 55%,
+              rgba(255,255,255,.35) 0 28%,
+              rgba(255,255,255,.05) 29% 55%,
+              rgba(0,0,0,.15) 56% 100%);
   }
-  .led.l1{ left:14%; top:50%; --col:#33d16a }  /* green */
-  .led.l2{ left:33%; top:42%; --col:#27c15b }  /* green */
-  .led.l3{ left:52%; top:36%; --col:#f1d44e }  /* yellow */
-  .led.l4{ left:71%; top:42%; --col:#ff8a3d }  /* orange */
-  .led.l5{ left:88%; top:50%; --col:#ff4b4b }  /* red   */
+  /* Calibrated LED positions (percent of full image) */
+  .led.l1{ left:19.5%; top:8%;   --col:#33d16a; }  /* green   */
+  .led.l2{ left:36.5%; top:5.5%; --col:#27c15b; }  /* green   */
+  .led.l3{ left:53.5%; top:4.5%; --col:#f1d44e; }  /* yellow  */
+  .led.l4{ left:70.5%; top:5.5%; --col:#ff8a3d; }  /* orange  */
+  .led.l5{ left:86.5%; top:8%;   --col:#ff4b4b; }  /* red     */
   .led.on{
     opacity:1;
-    box-shadow: 0 0 6px var(--col), 0 0 18px color-mix(in srgb, var(--col) 55%, transparent);
-    background: radial-gradient(circle at 50% 55%, #fff 0 18%, color-mix(in srgb, var(--col) 70%, #fff) 19% 52%, color-mix(in srgb, var(--col) 85%, #000) 53% 100%);
+    box-shadow:0 0 6px var(--col), 0 0 18px color-mix(in srgb, var(--col) 55%, transparent);
+    background: radial-gradient(circle at 50% 55%,
+              #fff 0 18%,
+              color-mix(in srgb, var(--col) 70%, #fff) 19% 52%,
+              color-mix(in srgb, var(--col) 85%, #000) 53% 100%);
   }
 
-  /* Bottom status bar */
   .status{
     text-align:center; font-size:14px; color:var(--muted);
     margin-top:8px; min-height:22px;
@@ -111,17 +126,16 @@
 
 <div class="wrap">
   <div id="field" class="field" aria-label="Playfield">
-    <!-- Hotspots: position & size in percentages for true responsiveness -->
-    <!-- data-x/y = left/top %, data-w/h = width/height %, data-level = 0–5 LEDs -->
+    <!-- Hotspots: data-x/y/w/h in %, data-level = 0–5 LEDs -->
     <div class="hotspot" data-x="5"  data-y="6"  data-w="22" data-h="14" data-level="2">2 lights</div>
     <div class="hotspot" data-x="31" data-y="18" data-w="22" data-h="14" data-level="3">3 lights</div>
     <div class="hotspot" data-x="57" data-y="7"  data-w="22" data-h="14" data-level="4">4 lights</div>
     <div class="hotspot" data-x="72" data-y="28" data-w="22" data-h="14" data-level="5">5 lights</div>
     <div class="hotspot" data-x="38" data-y="64" data-w="24" data-h="16" data-level="0">Quiet</div>
 
-    <!-- Draggable meter -->
+    <!-- K2 Meter -->
     <div id="meter" class="meter" aria-label="K2 Meter" role="img">
-      <img src="K2meter.png" alt="K2 EMF meter" />
+      <img src="k2meter.png" alt="K2 EMF meter" />
       <div class="leds">
         <span class="led l1"></span>
         <span class="led l2"></span>
@@ -148,9 +162,8 @@ let start = {x:0, y:0};
 let offset = {x: meter.offsetLeft, y: meter.offsetTop};
 let lastLevel = -1;
 
-/* Place hotspots by % so they scale on any screen */
+/* Layout hotspots by % so they scale on any screen */
 function layoutHotspots(){
-  const rect = field.getBoundingClientRect();
   hotspots.forEach(h=>{
     const x = parseFloat(h.dataset.x), y = parseFloat(h.dataset.y);
     const w = parseFloat(h.dataset.w), hgt = parseFloat(h.dataset.h);
@@ -163,7 +176,7 @@ function layoutHotspots(){
 window.addEventListener('resize', layoutHotspots);
 layoutHotspots();
 
-/* Utility rect + overlap */
+/* Rect + overlap helpers */
 function rect(el){ return el.getBoundingClientRect(); }
 function overlapRatio(a, b){
   const x1 = Math.max(a.left, b.left);
@@ -177,7 +190,7 @@ function overlapRatio(a, b){
   return area ? inter / area : 0;
 }
 
-/* Lights + haptics */
+/* Lights + (optional) haptics */
 function setLights(n){
   leds.forEach((el, i)=> el.classList.toggle('on', i < n));
   if(n !== lastLevel){
@@ -187,7 +200,6 @@ function setLights(n){
   }
 }
 
-/* Find best overlapping hotspot */
 function highlightHotspot(active){
   hotspots.forEach(h => h.classList.toggle('active', h === active));
 }
@@ -199,7 +211,7 @@ function checkHotspots(){
     const ratio = overlapRatio(m, r);
     if(ratio > bestRatio){ bestRatio = ratio; best = h; }
   }
-  const THRESH = 0.25; // % of hotspot overlapped to count
+  const THRESH = 0.25;
   if(best && bestRatio >= THRESH){
     highlightHotspot(best);
     const level = parseInt(best.dataset.level || '0', 10);
@@ -210,7 +222,7 @@ function checkHotspots(){
   }
 }
 
-/* Drag handling (pointer events work for touch + mouse) */
+/* Dragging — IMPORTANT: drop 'bottom' so top controls height */
 function clamp(val, min, max){ return Math.min(max, Math.max(min, val)); }
 function moveTo(x, y){
   const maxX = field.clientWidth - meter.clientWidth;
@@ -219,6 +231,7 @@ function moveTo(x, y){
   offset.y = clamp(y, 0, maxY);
   meter.style.left = offset.x + 'px';
   meter.style.top  = offset.y + 'px';
+  meter.style.bottom = 'auto';   // <— prevents stretch = drifting LEDs
   checkHotspots();
 }
 
@@ -226,6 +239,9 @@ meter.addEventListener('pointerdown', (e)=>{
   dragging = true;
   meter.setPointerCapture(e.pointerId);
   meter.classList.add('dragging');
+  // ensure we are using top instead of bottom
+  meter.style.bottom = 'auto';
+  // compute starting offset
   start.x = e.clientX - offset.x;
   start.y = e.clientY - offset.y;
   e.preventDefault();
