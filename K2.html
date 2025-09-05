@@ -10,10 +10,10 @@
     --bg:#0a0f18; --ink:#e7f0ff; --muted:#aebedb; --grid:#23314a;
     --tile:#0e1524; --tile2:#121b2c; --rad:14px;
 
-    /* LED global alignment (nudge if needed for your PNG crop) */
-    --nudge-x: 0%;
-    --nudge-y: -7%;
-    --led-size: 10%;   /* diameter of each LED lens */
+    /* === LED global alignment (adjust here if needed) === */
+    --nudge-x: 0%;     /* + moves ALL LEDs right,  - moves left  */
+    --nudge-y: 10%;    /* + moves ALL LEDs down,   - moves up    */
+    --led-size: 10%;   /* diameter of each LED lens (as % of image width) */
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -71,12 +71,12 @@
   .field.dev .hotspot{ border-color:#2b3c5f; background:rgba(255,255,255,.03); color:var(--muted); }
   .hotspot.active{ outline:2px solid #7ee2b8; box-shadow:0 0 0 2px rgba(126,226,184,.25) }
 
-  /* Draggable meter — IMPORTANT: only top+left; no bottom */
+  /* Draggable meter — ONLY top+left; never bottom (prevents stretching) */
   .meter{
     position:absolute;
     width: clamp(120px, 32vw, 220px);
     left: 3%;
-    top: 65%;                   /* start position (can be anywhere) */
+    top: 65%;
     user-select:none; -webkit-user-drag:none; cursor:grab; touch-action:none;
     display:inline-block;
   }
@@ -97,7 +97,7 @@
               rgba(255,255,255,.05) 29% 55%,
               rgba(0,0,0,.15) 56% 100%);
   }
-  /* Calibrated LED positions (percent of full image) */
+  /* LED positions as % of the full image (tuned for typical K2 crop) */
   .led.l1{ left:19.5%; top:8%;   --col:#33d16a; }  /* green   */
   .led.l2{ left:36.5%; top:5.5%; --col:#27c15b; }  /* green   */
   .led.l3{ left:53.5%; top:4.5%; --col:#f1d44e; }  /* yellow  */
@@ -162,7 +162,7 @@ let start = {x:0, y:0};
 let offset = {x: meter.offsetLeft, y: meter.offsetTop};
 let lastLevel = -1;
 
-/* Layout hotspots by % so they scale on any screen */
+/* Hotspots laid out by % so they scale on any screen */
 function layoutHotspots(){
   hotspots.forEach(h=>{
     const x = parseFloat(h.dataset.x), y = parseFloat(h.dataset.y);
@@ -222,7 +222,7 @@ function checkHotspots(){
   }
 }
 
-/* Dragging — IMPORTANT: drop 'bottom' so top controls height */
+/* Dragging — IMPORTANT: only top/left, never bottom */
 function clamp(val, min, max){ return Math.min(max, Math.max(min, val)); }
 function moveTo(x, y){
   const maxX = field.clientWidth - meter.clientWidth;
@@ -231,7 +231,7 @@ function moveTo(x, y){
   offset.y = clamp(y, 0, maxY);
   meter.style.left = offset.x + 'px';
   meter.style.top  = offset.y + 'px';
-  meter.style.bottom = 'auto';   // <— prevents stretch = drifting LEDs
+  meter.style.bottom = 'auto';   // prevents stretch = drifting LEDs
   checkHotspots();
 }
 
@@ -239,9 +239,7 @@ meter.addEventListener('pointerdown', (e)=>{
   dragging = true;
   meter.setPointerCapture(e.pointerId);
   meter.classList.add('dragging');
-  // ensure we are using top instead of bottom
-  meter.style.bottom = 'auto';
-  // compute starting offset
+  meter.style.bottom = 'auto'; // ensure we are using top instead of bottom
   start.x = e.clientX - offset.x;
   start.y = e.clientY - offset.y;
   e.preventDefault();
@@ -274,4 +272,3 @@ checkHotspots();
 </script>
 </body>
 </html>
-
