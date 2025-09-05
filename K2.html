@@ -4,16 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport"
   content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>K2 EMF — Mobile (Locked LEDs)</title>
+<title>K2 EMF — Mobile (Calibrated LEDs)</title>
 <style>
   :root{
     --bg:#0a0f18; --ink:#e7f0ff; --muted:#aebedb; --grid:#23314a;
     --tile:#0e1524; --tile2:#121b2c; --rad:14px;
 
-    /* === LED global alignment (adjust here if needed) === */
-    --nudge-x: 0%;     /* + moves ALL LEDs right,  - moves left  */
-    --nudge-y: 10%;    /* + moves ALL LEDs down,   - moves up    */
-    --led-size: 10%;   /* diameter of each LED lens (as % of image width) */
+    /* Default LED size; tweak if your PNG lenses feel larger/smaller */
+    --led-size: 10%;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -28,7 +26,8 @@
     padding: max(10px, env(safe-area-inset-top)) 16px 8px;
     background:rgba(10,15,25,.9);
     border-bottom:1px solid #1c2740;
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    flex-wrap:wrap;
   }
   h1{margin:0; font-size:16px; letter-spacing:.3px}
   .btn{
@@ -71,7 +70,7 @@
   .field.dev .hotspot{ border-color:#2b3c5f; background:rgba(255,255,255,.03); color:var(--muted); }
   .hotspot.active{ outline:2px solid #7ee2b8; box-shadow:0 0 0 2px rgba(126,226,184,.25) }
 
-  /* Draggable meter — ONLY top+left; never bottom (prevents stretching) */
+  /* Draggable meter — ONLY top+left; never bottom/right (prevents stretch) */
   .meter{
     position:absolute;
     width: clamp(120px, 32vw, 220px);
@@ -91,18 +90,18 @@
     aspect-ratio:1/1;
     border-radius:50%;
     opacity:.18;
-    transform: translate(calc(-50% + var(--nudge-x)), calc(-50% + var(--nudge-y)));
+    transform: translate(-50%, -50%);
     background: radial-gradient(circle at 50% 55%,
               rgba(255,255,255,.35) 0 28%,
               rgba(255,255,255,.05) 29% 55%,
               rgba(0,0,0,.15) 56% 100%);
   }
-  /* LED positions as % of the full image (tuned for typical K2 crop) */
-  .led.l1{ left:19.5%; top:8%;   --col:#33d16a; }  /* green   */
-  .led.l2{ left:36.5%; top:5.5%; --col:#27c15b; }  /* green   */
-  .led.l3{ left:53.5%; top:4.5%; --col:#f1d44e; }  /* yellow  */
-  .led.l4{ left:70.5%; top:5.5%; --col:#ff8a3d; }  /* orange  */
-  .led.l5{ left:86.5%; top:8%;   --col:#ff4b4b; }  /* red     */
+  /* Positions are stored as CSS vars on .meter style for perfect scaling */
+  .l1{ left: var(--l1x, 20%); top: var(--l1y, 14%); --col:#33d16a; } /* defaults are rough; calibration overwrites */
+  .l2{ left: var(--l2x, 37%); top: var(--l2y, 11%); --col:#27c15b; }
+  .l3{ left: var(--l3x, 54%); top: var(--l3y, 10%); --col:#f1d44e; }
+  .l4{ left: var(--l4x, 71%); top: var(--l4y, 11%); --col:#ff8a3d; }
+  .l5{ left: var(--l5x, 86%); top: var(--l5y, 14%); --col:#ff4b4b; }
   .led.on{
     opacity:1;
     box-shadow:0 0 6px var(--col), 0 0 18px color-mix(in srgb, var(--col) 55%, transparent);
@@ -116,12 +115,27 @@
     text-align:center; font-size:14px; color:var(--muted);
     margin-top:8px; min-height:22px;
   }
+
+  /* Calibration hints */
+  .calNote{
+    color:#7ee2b8; font-size:13px; margin-left:8px;
+  }
+  .crosshair{
+    position:absolute; width:14px; height:14px; border-radius:50%;
+    border:2px solid #7ee2b8; box-shadow:0 0 10px rgba(126,226,184,.5);
+    pointer-events:none; transform:translate(-50%,-50%); display:none;
+  }
+  .cal .crosshair{ display:block; }
 </style>
 </head>
 <body>
 <header>
   <h1>K2 EMF Hotspots</h1>
-  <button id="devBtn" class="btn" aria-pressed="false" aria-controls="field">DEV</button>
+  <div>
+    <button id="devBtn" class="btn" aria-pressed="false">DEV</button>
+    <button id="calBtn" class="btn" aria-pressed="false">CAL</button>
+    <button id="resetCalBtn" class="btn">Reset CAL</button>
+  </div>
 </header>
 
 <div class="wrap">
@@ -135,7 +149,7 @@
 
     <!-- K2 Meter -->
     <div id="meter" class="meter" aria-label="K2 Meter" role="img">
-      <img src="K2meter.png" alt="K2 EMF meter" />
+      <img id="k2img" src="K2meter.png" alt="K2 EMF meter" />
       <div class="leds">
         <span class="led l1"></span>
         <span class="led l2"></span>
@@ -143,26 +157,37 @@
         <span class="led l4"></span>
         <span class="led l5"></span>
       </div>
+      <!-- calibration crosshairs preview -->
+      <span id="ch1" class="crosshair"></span>
+      <span id="ch2" class="crosshair"></span>
+      <span id="ch3" class="crosshair"></span>
+      <span id="ch4" class="crosshair"></span>
+      <span id="ch5" class="crosshair"></span>
     </div>
   </div>
 
   <div id="status" class="status" aria-live="polite"></div>
+  <div id="calNote" class="status calNote" style="display:none;">CAL: Click lens centers left → right (5 clicks)</div>
 </div>
 
 <script>
 const field = document.getElementById('field');
 const meter = document.getElementById('meter');
+const img   = document.getElementById('k2img');
 const statusEl = document.getElementById('status');
 const devBtn = document.getElementById('devBtn');
+const calBtn = document.getElementById('calBtn');
+const resetCalBtn = document.getElementById('resetCalBtn');
 const leds = [...meter.querySelectorAll('.led')];
 const hotspots = [...field.querySelectorAll('.hotspot')];
+const crosshairs = [1,2,3,4,5].map(n=>document.getElementById('ch'+n));
 
 let dragging = false;
 let start = {x:0, y:0};
 let offset = {x: meter.offsetLeft, y: meter.offsetTop};
 let lastLevel = -1;
 
-/* Hotspots laid out by % so they scale on any screen */
+/* ---------- Hotspots layout (percentage) ---------- */
 function layoutHotspots(){
   hotspots.forEach(h=>{
     const x = parseFloat(h.dataset.x), y = parseFloat(h.dataset.y);
@@ -176,7 +201,7 @@ function layoutHotspots(){
 window.addEventListener('resize', layoutHotspots);
 layoutHotspots();
 
-/* Rect + overlap helpers */
+/* ---------- Rect + overlap helpers ---------- */
 function rect(el){ return el.getBoundingClientRect(); }
 function overlapRatio(a, b){
   const x1 = Math.max(a.left, b.left);
@@ -190,7 +215,7 @@ function overlapRatio(a, b){
   return area ? inter / area : 0;
 }
 
-/* Lights + (optional) haptics */
+/* ---------- Lights + (optional) haptics ---------- */
 function setLights(n){
   leds.forEach((el, i)=> el.classList.toggle('on', i < n));
   if(n !== lastLevel){
@@ -200,6 +225,7 @@ function setLights(n){
   }
 }
 
+/* ---------- Hotspot check ---------- */
 function highlightHotspot(active){
   hotspots.forEach(h => h.classList.toggle('active', h === active));
 }
@@ -222,7 +248,7 @@ function checkHotspots(){
   }
 }
 
-/* Dragging — IMPORTANT: only top/left, never bottom */
+/* ---------- Dragging (top/left only) ---------- */
 function clamp(val, min, max){ return Math.min(max, Math.max(min, val)); }
 function moveTo(x, y){
   const maxX = field.clientWidth - meter.clientWidth;
@@ -231,15 +257,16 @@ function moveTo(x, y){
   offset.y = clamp(y, 0, maxY);
   meter.style.left = offset.x + 'px';
   meter.style.top  = offset.y + 'px';
-  meter.style.bottom = 'auto';   // prevents stretch = drifting LEDs
+  meter.style.bottom = 'auto';   // never use bottom/right
   checkHotspots();
 }
 
 meter.addEventListener('pointerdown', (e)=>{
+  if(calActive) return; // disable dragging during calibration
   dragging = true;
   meter.setPointerCapture(e.pointerId);
   meter.classList.add('dragging');
-  meter.style.bottom = 'auto'; // ensure we are using top instead of bottom
+  meter.style.bottom = 'auto';
   start.x = e.clientX - offset.x;
   start.y = e.clientY - offset.y;
   e.preventDefault();
@@ -259,14 +286,125 @@ meter.addEventListener('pointercancel', ()=>{
   meter.classList.remove('dragging');
 });
 
-/* DEV toggle (shows grid + hotspot boxes) */
+/* ---------- DEV toggle ---------- */
 devBtn.addEventListener('click', ()=>{
   const on = !field.classList.contains('dev');
   field.classList.toggle('dev', on);
   devBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
 });
 
-/* Init */
+/* ---------- Calibration (click 5 lens centers) ---------- */
+const VARS = ["--l1x","--l1y","--l2x","--l2y","--l3x","--l3y","--l4x","--l4y","--l5x","--l5y"];
+let calActive = false;
+let calStep = 0;
+
+function applyCalibration(vars){
+  // vars = {l1x:'%', l1y:'%', ...}
+  meter.style.setProperty('--l1x', vars.l1x);
+  meter.style.setProperty('--l1y', vars.l1y);
+  meter.style.setProperty('--l2x', vars.l2x);
+  meter.style.setProperty('--l2y', vars.l2y);
+  meter.style.setProperty('--l3x', vars.l3x);
+  meter.style.setProperty('--l3y', vars.l3y);
+  meter.style.setProperty('--l4x', vars.l4x);
+  meter.style.setProperty('--l4y', vars.l4y);
+  meter.style.setProperty('--l5x', vars.l5x);
+  meter.style.setProperty('--l5y', vars.l5y);
+
+  // show crosshairs for confirmation
+  const arr = [
+    [vars.l1x, vars.l1y],
+    [vars.l2x, vars.l2y],
+    [vars.l3x, vars.l3y],
+    [vars.l4x, vars.l4y],
+    [vars.l5x, vars.l5y],
+  ];
+  arr.forEach(([x,y],i)=>{
+    crosshairs[i].style.left = x;
+    crosshairs[i].style.top  = y;
+  });
+}
+
+function loadCalibration(){
+  const raw = localStorage.getItem('k2_cal');
+  if(!raw) return;
+  try{
+    const vars = JSON.parse(raw);
+    applyCalibration(vars);
+  }catch(e){}
+}
+loadCalibration();
+
+function startCal(){
+  calActive = true; calStep = 0;
+  calBtn.setAttribute('aria-pressed','true');
+  meter.classList.add('cal');
+  document.getElementById('calNote').style.display = 'block';
+  statusEl.textContent = 'CAL: Click left GREEN lens (1 of 5)';
+}
+function endCal(){
+  calActive = false;
+  calBtn.setAttribute('aria-pressed','false');
+  meter.classList.remove('cal');
+  document.getElementById('calNote').style.display = 'none';
+  statusEl.textContent = '';
+}
+calBtn.addEventListener('click', ()=>{
+  if(calActive) endCal(); else startCal();
+});
+resetCalBtn.addEventListener('click', ()=>{
+  localStorage.removeItem('k2_cal');
+  // remove custom vars so defaults apply
+  VARS.forEach(v => meter.style.removeProperty(v));
+  statusEl.textContent = 'Calibration cleared.';
+});
+
+meter.addEventListener('click', (e)=>{
+  if(!calActive) return;
+  const ir = img.getBoundingClientRect();
+  const xPct = ((e.clientX - ir.left) / ir.width * 100);
+  const yPct = ((e.clientY - ir.top)  / ir.height * 100);
+  const pct = (n)=> `${n.toFixed(2)}%`;
+
+  const order = [
+    ['--l1x','--l1y','left GREEN'],
+    ['--l2x','--l2y','right GREEN'],
+    ['--l3x','--l3y','YELLOW'],
+    ['--l4x','--l4y','ORANGE'],
+    ['--l5x','--l5y','RED'],
+  ];
+  const [vx, vy, label] = order[calStep];
+  meter.style.setProperty(vx, pct(xPct));
+  meter.style.setProperty(vy, pct(yPct));
+
+  // draw crosshair and advance
+  crosshairs[calStep].style.left = pct(xPct);
+  crosshairs[calStep].style.top  = pct(yPct);
+
+  calStep++;
+  if(calStep < 5){
+    statusEl.textContent = `CAL: Click ${order[calStep][2]} lens (${calStep+1} of 5)`;
+  }else{
+    // save
+    const vars = {
+      l1x: getComputedStyle(meter).getPropertyValue('--l1x').trim(),
+      l1y: getComputedStyle(meter).getPropertyValue('--l1y').trim(),
+      l2x: getComputedStyle(meter).getPropertyValue('--l2x').trim(),
+      l2y: getComputedStyle(meter).getPropertyValue('--l2y').trim(),
+      l3x: getComputedStyle(meter).getPropertyValue('--l3x').trim(),
+      l3y: getComputedStyle(meter).getPropertyValue('--l3y').trim(),
+      l4x: getComputedStyle(meter).getPropertyValue('--l4x').trim(),
+      l4y: getComputedStyle(meter).getPropertyValue('--l4y').trim(),
+      l5x: getComputedStyle(meter).getPropertyValue('--l5x').trim(),
+      l5y: getComputedStyle(meter).getPropertyValue('--l5y').trim(),
+    };
+    localStorage.setItem('k2_cal', JSON.stringify(vars));
+    statusEl.textContent = 'Calibration saved.';
+    endCal();
+  }
+});
+
+/* ---------- Init ---------- */
 setLights(0);
 checkHotspots();
 </script>
