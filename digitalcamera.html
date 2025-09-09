@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Iron Well Witch - Camera</title>
+  <style>
+    :root{
+      --bg:#0b0b0d; --panel:#131318; --muted:#8ea0b8; --text:#e9f0ff;
+      --accent:#6bdcff; --ok:#4be38f; --warn:#ff6b6b; --ring:#2a2a30;
+      --rad:18px; --shadow:0 12px 28px rgba(0,0,0,.45);
+      --tap:56px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:#0b0b0d url('iwwcamerabackground.png') center/cover fixed no-repeat;
+      color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    .app{min-height:100%;display:flex;align-items:center;justify-content:center;padding:16px}
+    .phone{width:100%;max-width:480px;}
+
+    .card{background:linear-gradient(180deg, #15151b, #0f0f14);border:1px solid #262632;border-radius:24px;box-shadow:var(--shadow);overflow:hidden}
+    .header{padding:14px 16px;border-bottom:1px solid #20202a;display:flex;align-items:center;gap:10px}
+    .dot{width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 35%, #ff5a5a, #8a1010)}
+    .title{font-size:16px;letter-spacing:.3px;opacity:.95}
+
+    .camera-shell{position:relative;margin:14px;border-radius:16px;border:1px dashed #3a3a45;background:#000;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;color:#6e7584}
+    .camera-shell::after{content:"Adjustment image goes here";font-size:12px;opacity:.7}
+
+    /* Hide the config placeholder rectangle */
+    #cameraShell{display:none}
+
+    .controls{padding:10px 14px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;overflow:visible}
+    .control{background:var(--panel);border:1px solid #20202a;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+    .control h3{margin:0;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:#b6c3d9}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .val{font-variant-numeric:tabular-nums;color:#9fd6ff;font-size:13px}
+
+    /* toggle */
+    .switch{position:relative;width:56px;height:32px;background:#2a2a34;border-radius:999px;border:1px solid #3b3b49;cursor:pointer}
+    .knob{position:absolute;top:2px;left:2px;width:28px;height:28px;border-radius:50%;background:linear-gradient(#f0f3ff,#cfd7f0);box-shadow:0 2px 8px rgba(0,0,0,.35);transition:transform .2s}
+    .switch.on{background:#1f3a2a;border-color:#264b35}
+    .switch.on .knob{transform:translateX(24px);background:linear-gradient(#caffdc,#8ae9b3)}
+
+    /* segmented */
+    .seg{display:flex;border:1px solid #2b2b35;border-radius:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+    .seg button{flex:0 0 auto;padding:10px 10px;background:#1a1a21;color:#c8d3ea;border:none;font-size:13px;white-space:nowrap;scroll-snap-align:start}
+    .seg button+button{border-left:1px solid #2b2b35}
+    .seg button.active{background:#25324a;color:#9fd6ff}
+
+    /* range */
+    input[type=range]{-webkit-appearance:none;width:100%;height:36px;background:transparent}
+    input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:999px;background:linear-gradient(90deg,#2b2b36,#394056)}
+    input[type=range]::-moz-range-track{height:6px;border-radius:999px;background:linear-gradient(90deg,#2b2b36,#394056)}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;margin-top:-10px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 35%, #eaf2ff, #a7b2d6);border:1px solid #4a557b;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+    input[type=range]::-moz-range-thumb{width:26px;height:26px;border:none;border-radius:50%;background:radial-gradient(circle at 35% 35%, #eaf2ff, #a7b2d6)}
+
+    .actions{display:flex;gap:10px;padding:0 14px 16px}
+    .btn{flex:1;padding:14px;border-radius:14px;border:1px solid #2a2a36;background:#1a1a22;color:#dfe8ff;font-weight:600;letter-spacing:.2px}
+    .btn.primary{background:linear-gradient(180deg,#1b2a40,#142033);border-color:#2c3e5d}
+    .btn.primary:active{transform:translateY(1px)}
+
+    .log{padding:8px 14px 16px;color:#cbd7ef;font-size:13px;opacity:.9}
+
+    /* Gallery */
+    .gallery{display:none}
+    .lcd{position:relative;margin:14px;border:1px dashed #3a3a45;border-radius:18px;background:#000;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;color:#6e7584;overflow:hidden}
+    .lcd::after{content:"Camera screen image goes here";font-size:12px;opacity:.7;position:absolute;inset:auto auto 8px 8px}
+    .lcd img{max-width:100%;max-height:100%;display:block}
+    .gbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid #20202a}
+    .arrow{width:var(--tap);height:var(--tap);border-radius:999px;border:1px solid #30303a;background:#16161b;color:#cbd7ef;font-size:20px;display:grid;place-items:center}
+    .idx{font-size:13px;color:#b6c3d9}
+    .back{font-size:13px;color:#9fd6ff;text-decoration:underline;background:none;border:none}
+
+    /* Shutter flash overlay */
+    .shutter{position:fixed;inset:0;background:#000;pointer-events:none;opacity:0;transition:opacity .16s}
+    .shutter.on{opacity:1}
+
+    /* Small screens */
+    @media (max-width:420px){
+      .controls{grid-template-columns:1fr}
+      .header{padding:12px}
+      .camera-shell,.lcd{margin:12px}
+      .actions{padding:0 12px 12px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="phone card">
+      <div class="header">
+        <div class="dot"></div>
+        <div class="title">Digital Camera - Settings Menu</div>
+        <div class="title"> Please set your desired settings before taking a photo. </div>
+      </div>
+
+      <!-- CONFIG SCREEN -->
+      <section id="config" class="config">
+        <div class="camera-shell" id="cameraShell" aria-label="Adjustment image placeholder"></div>
+
+        <div class="controls">
+          <div class="control" data-key="ir">
+            <h3>IR Boost</h3>
+            <div class="row">
+              <div class="val" id="irVal">Off</div>
+              <div class="switch" role="switch" tabindex="0" aria-checked="false" id="irSwitch"><div class="knob"></div></div>
+            </div>
+          </div>
+
+          <div class="control" data-key="shutter">
+            <h3>Shutter (s)</h3>
+            <div class="row"><input id="shutter" type="range" min="0.1" max="10" step="0.1" value="1.0"><div class="val" id="shutterVal">1.0s</div></div>
+          </div>
+
+          <div class="control" data-key="iso">
+            <h3>ISO</h3>
+            <div class="seg" id="isoSeg"></div>
+          </div>
+
+          <div class="control" data-key="aperture">
+            <h3>Aperture (f/)</h3>
+            <div class="seg" id="apSeg"></div>
+          </div>
+
+          <div class="control" data-key="focusMode">
+            <h3>Focus</h3>
+            <div class="seg" id="focusSeg"></div>
+            <div class="row" id="focusRow" aria-hidden="true" style="opacity:.6">
+              <input id="focusDist" type="range" min="0.5" max="10" step="0.1" value="2.0" style="flex:1">
+              <div class="val" id="focusVal">2.0 m</div>
+            </div>
+          </div>
+
+          <div class="control" data-key="wb">
+            <h3>White Balance (K)</h3>
+            <div class="row"><input id="wb" type="range" min="2500" max="10000" step="50" value="5500"><div class="val" id="wbVal">5500 K</div></div>
+          </div>
+
+          <div class="control" data-key="flash">
+            <h3>Flash</h3>
+            <div class="row">
+              <div class="val" id="flashVal">Off</div>
+              <div class="switch" role="switch" tabindex="0" aria-checked="false" id="flashSwitch"><div class="knob"></div></div>
+            </div>
+          </div>
+
+          <div class="control" data-key="nr">
+            <h3>Noise Reduction</h3>
+            <div class="row">
+              <div class="val" id="nrVal">Off</div>
+              <div class="switch" role="switch" tabindex="0" aria-checked="false" id="nrSwitch"><div class="knob"></div></div>
+            </div>
+          </div>
+
+          <div class="control" data-key="ev">
+            <h3>Exposure (EV)</h3>
+            <div class="row"><input id="ev" type="range" min="-2" max="2" step="0.1" value="0"><div class="val" id="evVal">0.0</div></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="resetBtn">Reset</button>
+          <button class="btn primary" id="testBtn">Test Capture</button>
+        </div>
+        <div class="log" id="log">Dial in the spectral settings, then tap <b>Test Capture</b>.</div>
+      </section>
+
+      <!-- GALLERY SCREEN -->
+      <section id="gallery" class="gallery">
+        <div class="camera-shell" aria-hidden="true" style="opacity:.6">&nbsp;</div>
+        <div class="lcd" id="lcd">
+          <img id="photo" alt="Captured frame" />
+        </div>
+        <div class="gbar">
+          <button class="arrow" id="prev" aria-label="Previous">◀</button>
+          <div class="idx" id="idx">1 / 1</div>
+          <button class="arrow" id="next" aria-label="Next">▶</button>
+        </div>
+        <div class="gbar" style="gap:10px">
+          <button class="back" id="backBtn">← Back to Controls</button>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Renamed to avoid clashing with the shutter slider's id -->
+  <div class="shutter" id="shutterFx"></div>
+
+  <script>
+    // ===== Utility builders =====
+    const byId = (id)=>document.getElementById(id);
+    const makeSeg = (el, opts, onPick)=>{
+      opts.forEach((label, i)=>{
+        const b = document.createElement('button');
+        b.textContent = label; b.dataset.val = label;
+        if(i===0) b.classList.add('active');
+        b.addEventListener('click', ()=>{
+          [...el.children].forEach(c=>c.classList.remove('active'));
+          b.classList.add('active'); onPick(label);
+        });
+        el.appendChild(b);
+      });
+      onPick(opts[0]);
+    };
+
+    const setSwitch = (sw, on)=>{
+      sw.classList.toggle('on', on);
+      sw.setAttribute('aria-checked', String(on));
+    };
+    const getSwitch = (sw)=>sw.classList.contains('on');
+
+    // ===== Controls init =====
+    const state = {
+      ir:false, shutter:1.0, iso:100, aperture:'1.8', focusMode:'Auto', focusDist:2.0,
+      wb:5500, flash:false, nr:false, ev:0.0
+    };
+
+    // ISO segmented
+    const isoVals = [100,200,400,800,1600,3200,6400];
+    makeSeg(byId('isoSeg'), isoVals.map(String), v=>state.iso=Number(v));
+
+    // Aperture segmented
+    const apVals = ['1.8','2.8','4','5.6','8'];
+    makeSeg(byId('apSeg'), apVals, v=>state.aperture=v);
+
+    // Focus segmented (Auto/Manual)
+    makeSeg(byId('focusSeg'), ['Auto','Manual'], v=>{
+      state.focusMode = v;
+      const row = byId('focusRow');
+      const disabled = v!== 'Manual';
+      row.style.opacity = disabled? .6 : 1;
+      row.setAttribute('aria-hidden', String(disabled));
+    });
+
+    // Switches
+    const irSwitch = byId('irSwitch');
+    const flashSwitch = byId('flashSwitch');
+    const nrSwitch = byId('nrSwitch');
+    const irVal = byId('irVal');
+    const flashVal = byId('flashVal');
+    const nrVal = byId('nrVal');
+
+    const toggle = (sw, label, key)=>{
+      const on = !getSwitch(sw); setSwitch(sw,on); state[key]=on; label.textContent = on? 'On':'Off';
+    }
+    ;[irSwitch,flashSwitch,nrSwitch].forEach(sw=>{
+      sw.addEventListener('click', ()=>{
+        if(sw===irSwitch) toggle(sw, irVal, 'ir');
+        else if(sw===flashSwitch) toggle(sw, flashVal, 'flash');
+        else toggle(sw, nrVal, 'nr');
+      });
+      sw.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); sw.click(); }});
+    });
+
+    // Ranges
+    const s = byId('shutter'), sVal = byId('shutterVal');
+    s.addEventListener('input', ()=>{ state.shutter=Number(s.value); sVal.textContent = s.value+'s'; });
+
+    const fd = byId('focusDist'), fdVal = byId('focusVal');
+    fd.addEventListener('input', ()=>{ state.focusDist=Number(fd.value); fdVal.textContent = fd.value+' m'; });
+
+    const wb = byId('wb'), wbVal = byId('wbVal');
+    wb.addEventListener('input', ()=>{ state.wb=Number(wb.value); wbVal.textContent = wb.value+' K'; });
+
+    const ev = byId('ev'), evVal = byId('evVal');
+    ev.addEventListener('input', ()=>{ state.ev=Number(ev.value); evVal.textContent = Number(ev.value).toFixed(1); });
+
+    // Reset
+    const reset = ()=>{
+      // Switches off
+      setSwitch(irSwitch,false); setSwitch(flashSwitch,false); setSwitch(nrSwitch,false);
+      irVal.textContent = 'Off'; flashVal.textContent = 'Off'; nrVal.textContent='Off';
+      state.ir=false; state.flash=false; state.nr=false;
+      // Ranges
+      s.value = 1.0; s.dispatchEvent(new Event('input'));
+      fd.value = 2.0; fd.dispatchEvent(new Event('input'));
+      wb.value = 5500; wb.dispatchEvent(new Event('input'));
+      ev.value = 0; ev.dispatchEvent(new Event('input'));
+      // Segments first item
+      [...byId('isoSeg').children].forEach((b,i)=>b.classList.toggle('active', i===0)); state.iso=100;
+      [...byId('apSeg').children].forEach((b,i)=>b.classList.toggle('active', i===0)); state.aperture='1.8';
+      [...byId('focusSeg').children].forEach((b,i)=>b.classList.toggle('active', i===0)); state.focusMode='Auto';
+      byId('focusRow').style.opacity=.6; byId('focusRow').setAttribute('aria-hidden','true');
+      byId('log').innerHTML = 'Dial in the spectral settings, then tap <b>Test Capture</b>.';
+    };
+    byId('resetBtn').addEventListener('click', reset);
+    reset();
+
+    // ===== The ONE correct answer =====
+    const SOLUTION = {
+      ir:true,
+      shutter:3.5,          // within ±0.2s
+      iso:1600,             // exact
+      aperture:'2.8',       // exact
+      focusMode:'Manual',   // exact
+      focusDist:3.0,        // within ±0.2m
+      wb:9200,              // within ±300K
+      flash:false,          // exact
+      nr:false,             // exact
+      ev:1.0                // within ±0.1EV
+    };
+
+    function approx(a,b,tol){ return Math.abs(a-b) <= tol; }
+    function isSolution(st){
+      return st.ir===SOLUTION.ir
+        && approx(st.shutter, SOLUTION.shutter, .2)
+        && st.iso===SOLUTION.iso
+        && st.aperture===SOLUTION.aperture
+        && st.focusMode===SOLUTION.focusMode
+        && approx(st.focusDist, SOLUTION.focusDist, .2)
+        && approx(st.wb, SOLUTION.wb, 300)
+        && st.flash===SOLUTION.flash
+        && st.nr===SOLUTION.nr
+        && approx(st.ev, SOLUTION.ev, .11);
+    }
+
+    // ===== Test Capture -> Gallery =====
+    const shutterFx = byId('shutterFx'); // renamed overlay id
+    const toGallery = ()=>{
+      document.getElementById('config').style.display='none';
+      document.getElementById('gallery').style.display='block';
+    };
+
+    byId('testBtn').addEventListener('click', ()=>{
+      if(isSolution(state)){
+        byId('log').innerHTML = '<span style="color:var(--ok)">Settings locked. Capturing…</span>';
+        shutterFx.classList.add('on');
+        setTimeout(()=>{ shutterFx.classList.remove('on'); toGallery(); }, 220);
+      } else {
+        byId('log').innerHTML = '<span style="color:var(--warn)">Nothing special captured. Adjust settings and try again.</span>';
+      }
+    });
+
+    // ===== Fake Gallery =====
+    const frames = (()=>{
+      // Lightweight inline SVGs so the file is self-contained.
+      const mk = (label, tint) => {
+        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='900'>
+          <defs>
+            <filter id='noise'>
+              <feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/>
+              <feColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .25 0'/>
+            </filter>
+          </defs>
+          <rect width='100%' height='100%' fill='black'/>
+          <g filter='url(#noise)' opacity='.7'><rect width='100%' height='100%' fill='white' opacity='.15'/></g>
+          <g opacity='.25'><rect width='100%' height='100%' fill='${tint}'/></g>
+          <text x='50%' y='50%' fill='rgba(255,255,255,.9)' font-size='120' font-family='Arial' text-anchor='middle'>${label}</text>
+          <text x='50%' y='88%' fill='rgba(255,255,255,.6)' font-size='36' font-family='Arial' text-anchor='middle'>IR Bloom • 3.5s • ISO1600 • f/2.8</text>
+        </svg>`;
+        return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+      };
+      return [
+        mk('APPARITION A', 'rgba(100,200,255,.35)'),
+        mk('SHADOW TRACE', 'rgba(150, 100, 255,.35)'),
+        mk('COLD SPOT', 'rgba(120,255,200,.35)'),
+        mk('VEIL FORM', 'rgba(255,150,150,.35)'),
+        mk('ORBS', 'rgba(255,255,150,.3)')
+      ];
+    })();
+
+    const photo = byId('photo');
+    const idx = byId('idx');
+    let i = 0;
+    const show = (k)=>{ i=(k+frames.length)%frames.length; photo.src = frames[i]; idx.textContent = (i+1)+" / "+frames.length; };
+    show(0);
+
+    byId('prev').addEventListener('click', ()=>show(i-1));
+    byId('next').addEventListener('click', ()=>show(i+1));
+
+    // Support swipe on the LCD
+    (()=>{
+      const lcd = byId('lcd');
+      let startX = null;
+      lcd.addEventListener('touchstart', (e)=>{ startX = e.touches[0].clientX; });
+      lcd.addEventListener('touchend', (e)=>{
+        if(startX===null) return; const endX = e.changedTouches[0].clientX; const dx = endX - startX;
+        if(Math.abs(dx)>40){ if(dx<0) show(i+1); else show(i-1); }
+        startX=null;
+      });
+    })();
+
+    // Back
+    byId('backBtn').addEventListener('click', ()=>{
+      document.getElementById('gallery').style.display='none';
+      document.getElementById('config').style.display='block';
+      byId('log').textContent = 'Gallery closed. Adjust settings to attempt another capture.';
+    });
+  </script>
+</body>
+</html>
