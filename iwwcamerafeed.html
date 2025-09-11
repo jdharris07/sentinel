@@ -15,7 +15,6 @@
   body{margin:0;background:var(--bg);color:var(--text);
        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;}
 
-  /* Top bar */
   .topbar{position:sticky; top:0; z-index:5; backdrop-filter: blur(6px);
     background: linear-gradient(180deg, rgba(20,21,28,.85), rgba(20,21,28,.6));
     border-bottom:1px solid #1d1f27; padding:10px 14px; display:flex; align-items:center; gap:10px;}
@@ -29,8 +28,8 @@
         border-radius:16px; box-shadow:var(--shadow); padding:16px;}
   .cedric{margin:0 0 12px; line-height:1.35}
   .cedric strong{color:#cfe7ff}
+
   .boardWrap{display:flex; justify-content:center; margin-top:8px}
-  /* Paper-style board: small for mobile */
   .board{
     width:min(92vw, 340px);
     display:grid;
@@ -52,14 +51,17 @@
   }
   .cell:active{transform:scale(.98)}
   .cell.sel{border-color:#2f9fe6; box-shadow:0 0 0 2px rgba(107,220,255,.25) inset, var(--shadow);}
+
   .controls{display:flex; align-items:center; gap:10px; margin-top:12px; justify-content:center}
   .btn{appearance:none; border:1px solid #2a2f3a; background:#1a1d26; color:var(--text);
        padding:10px 14px; border-radius:10px; font-weight:800; cursor:pointer;}
   .btn:active{transform:translateY(1px)}
   .btn.secondary{background:#10131a}
+
   .msg{font-weight:800; font-size:12px; margin-top:8px; text-align:center}
   .msg.err{color:var(--warn)}
   .msg.ok{color:var(--ok)}
+  .hidden{display:none}
   .shake{animation: shake .28s linear}
   @keyframes shake{
     0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
@@ -70,7 +72,6 @@
   /* Camera wall */
   .wall{padding:12px; display:grid; gap:12px; grid-template-columns: repeat(2, minmax(0, 1fr));}
   @media (min-width: 900px){ .wall{grid-template-columns: repeat(3, minmax(0, 1fr));} }
-
   .tile{position:relative; border-radius:var(--rad); overflow:hidden; background:#0e0f14;
     border:1px solid var(--ring); box-shadow:var(--shadow); aspect-ratio: 16 / 9; isolation:isolate; cursor:pointer;}
   .tile video{width:100%; height:100%; object-fit:cover; display:block; background:#000;}
@@ -97,24 +98,34 @@
 <body>
   <header class="topbar">
     <div class="title">IRON WELL • Command Center</div>
-    <div class="title">click camera to enlarge </div>
-        <div class="spacer"></div>
+    <div class="spacer"></div>
   </header>
 
   <!-- Gate -->
   <section class="gate" id="gate">
     <div class="card" id="card">
-      <p class="cedric"><strong>Cedric:</strong> Alright, tell me which grid spaces you placed the cameras.</p>
+      <p class="cedric" id="prompt"><strong>Cedric:</strong> Alright, tell me which grid spaces you placed the cameras.</p>
 
-      <div class="boardWrap">
+      <div class="boardWrap" id="boardWrap">
         <div class="board" id="board"><!-- built by JS --></div>
       </div>
 
-      <div class="controls">
+      <div class="controls" id="controls">
         <button class="btn" id="submitBtn">Submit</button>
         <button class="btn secondary" id="clearBtn">Clear</button>
       </div>
+
       <div class="msg" id="msg"></div>
+
+      <!-- Reveal section appears after correct answer -->
+      <div id="reveal" class="hidden">
+        <p class="cedric" style="margin-top:6px">
+          <strong>Cedric:</strong> Alright, that looks great! Camera feeds are looking good and....hey, wait a minute. There is something on all six cameras! Looks like smoke or something but it appearing and disappearing. Here take a look.
+        </p>
+        <div class="controls">
+          <button class="btn" id="proceedBtn">View Camera Feed</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -137,35 +148,32 @@
   // Correct coordinates (x,y)
   const correct = new Set(["2,1","5,1","4,2","2,4","4,5","6,4"]);
 
-  // ---- Build paper-like board (top and left labels) ----
+  // ---- Build board ----
   const board = document.getElementById('board');
   const msgEl = document.getElementById('msg');
   const card = document.getElementById('card');
   const gate = document.getElementById('gate');
   const submitBtn = document.getElementById('submitBtn');
   const clearBtn = document.getElementById('clearBtn');
+  const boardWrap = document.getElementById('boardWrap');
+  const controls = document.getElementById('controls');
+  const reveal = document.getElementById('reveal');
+  const proceedBtn = document.getElementById('proceedBtn');
 
   // corner
-  const corner = document.createElement('div');
-  corner.className = 'corner';
-  board.appendChild(corner);
-
+  const corner = document.createElement('div'); corner.className = 'corner'; board.appendChild(corner);
   // top header 1..6
   for(let x=1;x<=6;x++){
     const t = document.createElement('div');
-    t.className = 'axisTop';
-    t.textContent = x;
-    t.style.gridColumn = (x+1);
-    t.style.gridRow = 1;
+    t.className = 'axisTop'; t.textContent = x;
+    t.style.gridColumn = (x+1); t.style.gridRow = 1;
     board.appendChild(t);
   }
-  // rows: left header + 6 cells
+  // rows
   for(let y=1;y<=6;y++){
     const l = document.createElement('div');
-    l.className = 'axisLeft';
-    l.textContent = y;
-    l.style.gridColumn = 1;
-    l.style.gridRow = (y+1);
+    l.className = 'axisLeft'; l.textContent = y;
+    l.style.gridColumn = 1; l.style.gridRow = (y+1);
     board.appendChild(l);
 
     for(let x=1;x<=6;x++){
@@ -173,15 +181,12 @@
       c.type = "button";
       c.className = 'cell';
       c.dataset.xy = `${x},${y}`;
-      c.setAttribute('aria-pressed', 'false');
-      c.style.gridColumn = (x+1);
-      c.style.gridRow = (y+1);
+      c.setAttribute('aria-pressed','false');
+      c.style.gridColumn = (x+1); c.style.gridRow = (y+1);
       c.addEventListener('click', () => {
         c.classList.toggle('sel');
-        const pressed = c.getAttribute('aria-pressed') === 'true';
-        c.setAttribute('aria-pressed', (!pressed).toString());
-        msgEl.textContent = "";
-        msgEl.className = "msg";
+        c.setAttribute('aria-pressed', c.classList.contains('sel') ? 'true' : 'false');
+        msgEl.textContent = ""; msgEl.className = "msg";
       });
       board.appendChild(c);
     }
@@ -189,11 +194,9 @@
 
   clearBtn.addEventListener('click', () => {
     document.querySelectorAll('.cell.sel').forEach(el => {
-      el.classList.remove('sel');
-      el.setAttribute('aria-pressed','false');
+      el.classList.remove('sel'); el.setAttribute('aria-pressed','false');
     });
-    msgEl.textContent = "";
-    msgEl.className = "msg";
+    msgEl.textContent = ""; msgEl.className = "msg";
   });
 
   submitBtn.addEventListener('click', () => {
@@ -205,10 +208,14 @@
       return;
     }
     if(equalSets(sel, correct)){
-      msgEl.textContent = "Unlocked.";
-      msgEl.className = "msg ok";
-      gate.classList.add('fadeOut');
-      setTimeout(() => { gate.remove(); initFeeds(); }, 280);
+      // Hide grid + controls, show reveal text + button
+      boardWrap.classList.add('hidden');
+      controls.classList.add('hidden');
+      msgEl.textContent = "";
+      msgEl.className = "msg";
+      reveal.classList.remove('hidden');
+      // proceed button will fade out the gate and start feeds
+      proceedBtn.addEventListener('click', proceedToFeeds, { once:true });
     }else{
       msgEl.textContent = "Hmm, that doesn't seem right. Try again.";
       msgEl.className = "msg err";
@@ -216,10 +223,15 @@
     }
   });
 
+  function proceedToFeeds(){
+    gate.classList.add('fadeOut');
+    setTimeout(() => { gate.remove(); initFeeds(); }, 280);
+  }
+
   function wiggle(){ card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
   function equalSets(a,b){ if(a.size !== b.size) return false; for(const v of a){ if(!b.has(v)) return false; } return true; }
 
-  // ---- Camera Wall (render after unlock) ----
+  // ---- Camera Wall ----
   const wall = document.getElementById('wall');
   let lightbox = null, popped = null;
 
@@ -252,9 +264,8 @@
     v.preload = "metadata";
     v.playsInline = true; v.setAttribute('playsinline','');
 
-    // tiny seek jitter (0–0.25s) so initial frames differ
     v.addEventListener('loadedmetadata', () => {
-      const jitter = Math.random() * 0.25;
+      const jitter = Math.random() * 0.25; // 0–0.25s
       try { v.currentTime = Math.min(Math.max(0, jitter), Math.max(0, (v.duration || 10) - 0.5)); } catch(e){}
     });
 
@@ -345,5 +356,3 @@
 </script>
 </body>
 </html>
-
-
