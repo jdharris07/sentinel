@@ -45,7 +45,29 @@
   }
   .tile video{
     width:100%; height:100%; object-fit:cover; display:block; background:#000;
+    transition: filter .25s ease;
   }
+  /* subtle per-feed variance + scanlines */
+  .fx{
+    position:absolute; inset:0; pointer-events:none;
+  }
+  .fx.scanlines{
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.04) 0px,
+      rgba(255,255,255,0.04) 1px,
+      transparent 2px,
+      transparent 3px
+    );
+    mix-blend-mode: overlay;
+    animation: flicker 3s infinite steps(60);
+    opacity:.25;
+  }
+  @keyframes flicker{
+    0%, 100% { opacity:.22 }
+    50% { opacity:.32 }
+  }
+
   .hud{
     position:absolute; inset:0; pointer-events:none;
     display:flex; flex-direction:column; justify-content:space-between; padding:8px;
@@ -58,24 +80,8 @@
     box-shadow:0 0 0 1px rgba(0,0,0,.2) inset;
   }
   .cam{letter-spacing:.6px}
-  .rec{color:var(--warn)}
-  .rec .dot{
-    display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--warn);
-    margin-right:6px; animation: blink 1.2s infinite;
-  }
-  @keyframes blink{0%,60%{opacity:1} 61%,100%{opacity:.2}}
-
   .clock{color:var(--muted); font-weight:700}
-  .controls{
-    position:absolute; inset:auto 8px 8px 8px; display:flex; gap:8px; justify-content:space-between;
-    pointer-events:auto;
-  }
-  .mini{
-    background:rgba(0,0,0,.55); color:var(--text);
-    border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:6px 10px;
-    font-weight:700; font-size:12px; cursor:pointer;
-  }
-  .mini:active{transform:translateY(1px)}
+
   .nosignal{
     position:absolute; inset:0; background:repeating-linear-gradient(90deg, #111 0 2px, #0e0e0e 2px 4px);
     color:#bbb; display:flex; align-items:center; justify-content:center; font-weight:800;
@@ -104,7 +110,7 @@
   }
 
   .tile.popped::after{
-    content:"TAP AGAIN TO RETURN";
+    content:"TAP ANYWHERE TO RETURN";
     position:absolute; inset:auto 8px 8px auto; pointer-events:none;
     background:rgba(0,0,0,.45); color:#cfd7ee; font-weight:800; font-size:11px;
     padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.15);
@@ -130,7 +136,7 @@
     {cam:5, src:"iwwvideo5.mp4"},
     {cam:6, src:"iwwvideo6.mp4"},
   ];
-  // Out-of-order initial layout
+  // Out-of-order initial layout (CAM numbers, not indexes)
   const order = [4,1,6,2,5,3];
 
   const wall = document.getElementById('wall');
@@ -141,13 +147,13 @@
 
   function render(){
     wall.innerHTML = "";
-    order.forEach(camNum => {
+    order.forEach((camNum, idx) => {
       const camData = sources.find(s => s.cam === camNum);
-      wall.appendChild(makeTile(camData));
+      wall.appendChild(makeTile(camData, idx));
     });
   }
 
-  function makeTile({cam, src}){
+  function makeTile({cam, src}, idx){
     const el = document.createElement('section');
     el.className = 'tile';
     el.dataset.cam = String(cam).padStart(2,'0');
@@ -156,25 +162,42 @@
 
     const v = document.createElement('video');
     v.src = src;
-    v.autoplay = false;            // we’ll start manually with stagger
+    v.autoplay = false;            // manual start (staggered)
     v.loop = true;
-    v.muted = true;                // required for mobile autoplay
-    v.preload = "metadata";
+    v.muted = true;                // mobile-friendly
+    v.preload = "auto";
     v.playsInline = true; v.setAttribute('playsinline','');
 
-    // randomize start delay (200–1400ms) so they don't all begin together
-    const startDelayMs = 200 + Math.random()*1200;
-    v.dataset.startDelay = String(Math.floor(startDelayMs));
+    // --- DESYNC PROFILE ---
+    // cascade delay based on position plus random jitter (0.8s–5.2s typical spread)
+    const base = idx * 900;                   // ms, stagger by grid position
+    const jitter = 600 + Math.random()*2600;  // ms
+    v.dataset.startDelay = String(Math.floor(base + jitter));
 
-    // after metadata loads, seek a small random offset (up to 20% or 8s max)
+    // random seek target will be applied when metadata is known
+    v.dataset.seekOffset = String(Math.random()); // 0..1 (we'll scale by duration later)
+
+    // slight speed variance
+    const rate = 0.96 + Math.random()*0.12;  // 0.96–1.08
+    v.playbackRate = rate;
+
+    // subtle visual variance
+    const hue = Math.floor(Math.random()*16 - 8); // -8..+8 deg
+    const sat = 0.90 + Math.random()*0.25;        // 0.90–1.15
+    const brt = 0.92 + Math.random()*0.15;        // 0.92–1.07
+    v.style.filter = `hue-rotate(${hue}deg) saturate(${sat}) brightness(${brt})`;
+    // vary object position a little so cover crops differ
+    const ox = 50 + (Math.random()*20 - 10);
+    const oy = 50 + (Math.random()*20 - 10);
+    v.style.objectPosition = `${ox}% ${oy}%`;
+
+    // apply random seek once we know duration
     v.addEventListener('loadedmetadata', () => {
-      const maxOffset = Math.min(8, v.duration ? v.duration * 0.2 : 2);
-      const seekTo = maxOffset * Math.random();
+      // seek up to 30% of duration, capped at 15s
+      const maxOffset = Math.min(15, v.duration ? v.duration * 0.30 : 3);
+      const seekTo = maxOffset * parseFloat(v.dataset.seekOffset);
       try { v.currentTime = seekTo; } catch(e){}
     });
-
-    // if autoplay is allowed, attempt staggered start automatically
-    setTimeout(() => v.play().catch(()=>{}), startDelayMs);
 
     v.addEventListener('error', () => showNoSignal(el));
 
@@ -183,41 +206,22 @@
     hud.innerHTML = `
       <div class="row">
         <div class="badge cam">CAM ${String(cam).padStart(2,'0')}</div>
-        <div class="badge rec"><span class="dot"></span>REC</div>
       </div>
       <div class="row right">
         <div class="badge clock" data-clock></div>
       </div>
     `;
 
-    const controls = document.createElement('div');
-    controls.className = 'controls';
-    controls.innerHTML = `
-      <button class="mini" data-act="play">Pause</button>
-      <div style="display:flex; gap:8px;">
-        <button class="mini" data-act="mute">Unmute</button>
-      </div>
-    `;
-    controls.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const btn = e.target.closest('button'); if(!btn) return;
-      const act = btn.dataset.act;
-      if(act === 'play'){
-        if(v.paused){ v.play(); btn.textContent = 'Pause'; }
-        else { v.pause(); btn.textContent = 'Play'; }
-      }
-      if(act === 'mute'){
-        v.muted = !v.muted;
-        if(!v.muted){ v.play().catch(()=>{}); }
-        btn.textContent = v.muted ? 'Unmute' : 'Mute';
-      }
-    });
+    // scanline overlay
+    const fx = document.createElement('div');
+    fx.className = 'fx scanlines';
 
+    // open/close on click
     el.addEventListener('click', () => openLightbox(el));
 
     el.appendChild(v);
+    el.appendChild(fx);
     el.appendChild(hud);
-    el.appendChild(controls);
     return el;
   }
 
@@ -253,7 +257,6 @@
     lbHud.innerHTML = `
       <div class="row">
         <div class="badge cam">CAM ${tile.dataset.cam}</div>
-        <div class="badge rec"><span class="dot"></span>REC</div>
       </div>
       <div class="row right">
         <div class="badge clock" data-clock></div>
@@ -261,14 +264,13 @@
       </div>
     `;
 
-    frame.appendChild(video);
+    frame.appendChild(video); // move into overlay (keeps state)
     frame.appendChild(lbHud);
     lightbox.appendChild(frame);
     document.body.appendChild(lightbox);
 
     lightbox.addEventListener('click', closeLightbox);
     window.addEventListener('keydown', escClose);
-
     popped = { tile, video, placeholder };
   }
 
@@ -295,11 +297,11 @@
   setInterval(tickClock, 500);
   tickClock();
 
-  // Manual start (gesture) with its own small stagger
+  // Manual start (gesture) with LARGE stagger per tile
   startBtn.addEventListener('click', () => {
-    document.querySelectorAll('video').forEach((v) => {
-      const extra = 100 + Math.random()*900;
-      setTimeout(() => v.play().catch(()=>{}), extra);
+    document.querySelectorAll('.tile video').forEach((v) => {
+      const delay = parseInt(v.dataset.startDelay, 10) || Math.floor(Math.random()*2000);
+      setTimeout(() => { v.play().catch(()=>{}); }, delay);
     });
   });
 
