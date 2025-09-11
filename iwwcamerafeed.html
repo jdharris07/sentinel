@@ -91,7 +91,7 @@
   .lbFrame{width:100%; max-width:1100px; height:72vh; max-height:90vh; border-radius:16px; overflow:hidden; border:1px solid var(--ring); background:#000; position:relative;}
   .lightbox video{width:100%; height:100%; object-fit:contain; background:#000;}
   .lbHud{position:absolute; inset:0; pointer-events:none; padding:10px; display:flex; flex-direction:column; justify-content:space-between;}
-  .lbHint{background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.18); padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px; color:var(--muted);}
+  .lbHint{background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.18); padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px; color:#muted;}
   .tile.popped::after{content:"TAP ANYWHERE TO RETURN"; position:absolute; inset:auto 8px 8px auto; pointer-events:none; background:rgba(0,0,0,.45); color:#cfd7ee; font-weight:800; font-size:11px; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.15);}
 </style>
 </head>
@@ -159,6 +159,7 @@
   const controls = document.getElementById('controls');
   const reveal = document.getElementById('reveal');
   const proceedBtn = document.getElementById('proceedBtn');
+  const promptEl = document.getElementById('prompt'); // <— initial prompt
 
   // corner
   const corner = document.createElement('div'); corner.className = 'corner'; board.appendChild(corner);
@@ -211,8 +212,12 @@
       // Hide grid + controls, show reveal text + button
       boardWrap.classList.add('hidden');
       controls.classList.add('hidden');
-      msgEl.textContent = "";
-      msgEl.className = "msg";
+      msgEl.textContent = ""; msgEl.className = "msg";
+
+      // Hide the initial "tell me where..." line
+      promptEl.classList.add('fadeOut');
+      setTimeout(() => promptEl.remove(), 300);
+
       reveal.classList.remove('hidden');
       // proceed button will fade out the gate and start feeds
       proceedBtn.addEventListener('click', proceedToFeeds, { once:true });
