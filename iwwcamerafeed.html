@@ -29,7 +29,6 @@
   }
   .btn:hover{border-color:#3b4150}
   .btn:active{transform:translateY(1px)}
-  .btn[disabled]{opacity:.5; cursor:not-allowed}
 
   .wall{
     padding:12px; display:grid; gap:12px;
@@ -104,7 +103,6 @@
     padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px; color:var(--muted);
   }
 
-  /* When a tile's video has been popped out */
   .tile.popped::after{
     content:"TAP AGAIN TO RETURN";
     position:absolute; inset:auto 8px 8px auto; pointer-events:none;
@@ -117,7 +115,6 @@
   <header class="topbar">
     <div class="title">IRON WELL • Command Center</div>
     <div class="spacer"></div>
-    <button class="btn" id="shuffleBtn">Shuffle Order</button>
     <button class="btn" id="startBtn">Start Feeds</button>
   </header>
 
@@ -134,14 +131,13 @@
     {cam:6, src:"iwwvideo6.mp4"},
   ];
   // Out-of-order initial layout
-  let order = [4,1,6,2,5,3];
+  const order = [4,1,6,2,5,3];
 
   const wall = document.getElementById('wall');
-  const shuffleBtn = document.getElementById('shuffleBtn');
   const startBtn = document.getElementById('startBtn');
 
-  let lightbox = null;              // overlay element
-  let popped = null;                // {tile, video, placeholder, cam}
+  let lightbox = null;
+  let popped = null; // {tile, video, placeholder}
 
   function render(){
     wall.innerHTML = "";
@@ -159,8 +155,26 @@
     el.setAttribute('aria-label', `Open camera ${el.dataset.cam}`);
 
     const v = document.createElement('video');
-    v.src = src; v.autoplay = true; v.loop = true; v.muted = true;
+    v.src = src;
+    v.autoplay = false;            // we’ll start manually with stagger
+    v.loop = true;
+    v.muted = true;                // required for mobile autoplay
+    v.preload = "metadata";
     v.playsInline = true; v.setAttribute('playsinline','');
+
+    // randomize start delay (200–1400ms) so they don't all begin together
+    const startDelayMs = 200 + Math.random()*1200;
+    v.dataset.startDelay = String(Math.floor(startDelayMs));
+
+    // after metadata loads, seek a small random offset (up to 20% or 8s max)
+    v.addEventListener('loadedmetadata', () => {
+      const maxOffset = Math.min(8, v.duration ? v.duration * 0.2 : 2);
+      const seekTo = maxOffset * Math.random();
+      try { v.currentTime = seekTo; } catch(e){}
+    });
+
+    // if autoplay is allowed, attempt staggered start automatically
+    setTimeout(() => v.play().catch(()=>{}), startDelayMs);
 
     v.addEventListener('error', () => showNoSignal(el));
 
@@ -184,7 +198,6 @@
         <button class="mini" data-act="mute">Unmute</button>
       </div>
     `;
-    // prevent tile-click from firing when pressing a control
     controls.addEventListener('click', (e) => {
       e.stopPropagation();
       const btn = e.target.closest('button'); if(!btn) return;
@@ -200,7 +213,6 @@
       }
     });
 
-    // click or tap the tile to open lightbox
     el.addEventListener('click', () => openLightbox(el));
 
     el.appendChild(v);
@@ -219,16 +231,15 @@
 
   // Lightbox logic
   function openLightbox(tile){
-    if(lightbox) return; // already open
+    if(lightbox) return;
     const video = tile.querySelector('video');
     const placeholder = document.createElement('div');
     placeholder.style.width = '100%';
     placeholder.style.height = '100%';
     placeholder.style.background = '#000';
     tile.classList.add('popped');
-    tile.insertBefore(placeholder, video); // mark spot
+    tile.insertBefore(placeholder, video);
 
-    // overlay
     lightbox = document.createElement('div');
     lightbox.className = 'lightbox';
     lightbox.setAttribute('role','dialog');
@@ -237,7 +248,6 @@
     const frame = document.createElement('div');
     frame.className = 'lbFrame';
 
-    // HUD inside overlay
     const lbHud = document.createElement('div');
     lbHud.className = 'lbHud';
     lbHud.innerHTML = `
@@ -251,42 +261,27 @@
       </div>
     `;
 
-    frame.appendChild(video); // move video into overlay (preserves playback state)
+    frame.appendChild(video);
     frame.appendChild(lbHud);
     lightbox.appendChild(frame);
     document.body.appendChild(lightbox);
 
-    // close on any click/tap (including on video)
-    lightbox.addEventListener('click', closeLightbox, { once:false });
-
-    // keyboard escape
+    lightbox.addEventListener('click', closeLightbox);
     window.addEventListener('keydown', escClose);
 
-    // disable shuffle while open to avoid layout surprises
-    shuffleBtn.disabled = true;
-
-    popped = { tile, video, placeholder, cam: tile.dataset.cam };
+    popped = { tile, video, placeholder };
   }
 
   function closeLightbox(){
     if(!lightbox || !popped) return;
     const {tile, video, placeholder} = popped;
-    // return video to its original tile
     tile.replaceChild(video, placeholder);
     tile.classList.remove('popped');
-
-    // remove overlay
     lightbox.remove();
     lightbox = null;
     popped = null;
-
-    // re-enable shuffle
-    shuffleBtn.disabled = false;
-
-    // remove key handler
     window.removeEventListener('keydown', escClose);
   }
-
   function escClose(e){ if(e.key === 'Escape') closeLightbox(); }
 
   // Live clock in tiles and overlay
@@ -300,16 +295,12 @@
   setInterval(tickClock, 500);
   tickClock();
 
-  // Shuffle order (disabled if lightbox open)
-  shuffleBtn.addEventListener('click', () => {
-    if(lightbox) return;
-    order = order.map(n => [Math.random(), n]).sort((a,b) => a[0]-b[0]).map(x => x[1]);
-    render();
-  });
-
-  // Start feeds button (mobile autoplay nudge)
+  // Manual start (gesture) with its own small stagger
   startBtn.addEventListener('click', () => {
-    document.querySelectorAll('video').forEach(v => v.play().catch(()=>{}));
+    document.querySelectorAll('video').forEach((v) => {
+      const extra = 100 + Math.random()*900;
+      setTimeout(() => v.play().catch(()=>{}), extra);
+    });
   });
 
   // Initial render
