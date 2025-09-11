@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Iron Well • Command Center</title>
+  <title> click camera feed to enlarge.</title>
 <style>
   :root{
     --bg:#0b0b0d; --panel:#14151c; --ring:#2a2a30; --text:#e9f0ff; --muted:#8ea0b8;
@@ -23,10 +24,6 @@
   }
   .title{font-weight:700; letter-spacing:.4px}
   .spacer{flex:1}
-  .btn{
-    appearance:none; border:1px solid #2a2f3a; background:#1a1d26; color:var(--text);
-    padding:8px 12px; border-radius:10px; font-weight:600; cursor:pointer; display:none;
-  }
 
   .wall{
     padding:12px; display:grid; gap:12px;
@@ -98,7 +95,6 @@
   <header class="topbar">
     <div class="title">IRON WELL • Command Center</div>
     <div class="spacer"></div>
-    <button class="btn" id="startBtn">Start Feeds</button>
   </header>
 
   <main class="wall" id="wall"></main>
@@ -113,17 +109,16 @@
     {cam:5, src:"iwwvideo5.mp4"},
     {cam:6, src:"iwwvideo6.mp4"},
   ];
-  // Display stays intentionally out of order:
+  // Keep the display intentionally out of order
   const order = [4,1,6,2,5,3];
 
-  // Stagger plan: cams 1 & 5 == immediate; then 2, 3, 4, 6 with tiny delays
+  // Tiny offsets (ms): 1 & 5 = 0; then 2,3,4,6
   const delayByCam = {1:0, 5:0, 2:40, 3:80, 4:120, 6:160};
 
   const wall = document.getElementById('wall');
-  const startBtn = document.getElementById('startBtn');
 
   let lightbox = null;
-  let popped = null;
+  let popped = null; // {tile, video, placeholder}
 
   function render(){
     wall.innerHTML = "";
@@ -131,7 +126,7 @@
       const camData = sources.find(s => s.cam === camNum);
       wall.appendChild(makeTile(camData));
     });
-    // After tiles exist, schedule starts
+    // As soon as tiles exist, kick off playback with tiny offsets
     scheduleAutoStart();
   }
 
@@ -144,18 +139,19 @@
 
     const v = document.createElement('video');
     v.src = src;
-    v.muted = true;                    // mobile autoplay-friendly
-    v.autoplay = false;                // we start manually with tiny delays
-    v.preload = "metadata";
+    v.muted = true;           // REQUIRED for mobile autoplay
+    v.autoplay = true;        // hint + backup; we still call play()
+    v.loop = true;
+    v.preload = "metadata";   // fast enough to start, light on bandwidth
     v.playsInline = true; v.setAttribute('playsinline','');
 
-    // Add a tiny seek jitter once metadata is ready (0–0.25s)
+    // minuscule seek jitter so first frames differ (0–0.25s)
     v.addEventListener('loadedmetadata', () => {
       const jitter = Math.random() * 0.25;
-      try { v.currentTime = Math.min((v.duration || 10) - 0.5, jitter); } catch(e){}
+      try { v.currentTime = Math.min(Math.max(0, jitter), Math.max(0, (v.duration || 10) - 0.5)); } catch(e){}
     });
 
-    // Fallback: mark no-signal if it errors
+    // If something goes wrong with the file, show NO SIGNAL overlay
     v.addEventListener('error', () => showNoSignal(el));
 
     const hud = document.createElement('div');
@@ -182,24 +178,27 @@
     tiles.forEach(tile => {
       const cam = parseInt(tile.dataset.cam, 10);
       const v = tile.querySelector('video');
-      const delay = delayByCam[cam] ?? 0;
-      setTimeout(() => tryPlay(v), delay);
+      // add a hair of random jitter (±15ms)
+      const jitter = (Math.random() * 30) - 15; // -15..+15
+      const delay = Math.max(0, (delayByCam[cam] ?? 0) + jitter);
+      setTimeout(() => robustPlay(v), delay);
     });
   }
 
-  async function tryPlay(v){
-    try{
-      await v.play();
-    }catch(err){
-      // If autoplay is blocked, show fallback button to start all feeds
-      startBtn.style.display = 'inline-block';
-    }
+  // Extra resilient play attempt (helps avoid occasional stalls)
+  function robustPlay(v){
+    // Attempt immediately
+    v.play().catch(() => {});
+    // Try again shortly in case data wasn’t ready yet
+    setTimeout(() => v.play().catch(()=>{}), 120);
+    setTimeout(() => {
+      // If still paused, nudge load then play again
+      if (v.paused) {
+        try { v.load(); } catch(e){}
+        v.play().catch(()=>{});
+      }
+    }, 300);
   }
-
-  startBtn.addEventListener('click', () => {
-    document.querySelectorAll('.tile video').forEach(v => v.play().catch(()=>{}));
-    startBtn.style.display = 'none';
-  });
 
   function showNoSignal(tile){
     if(tile.querySelector('.nosignal')) return;
@@ -240,7 +239,7 @@
       </div>
     `;
 
-    frame.appendChild(video);
+    frame.appendChild(video); // move into overlay (keeps current playback state)
     frame.appendChild(lbHud);
     lightbox.appendChild(frame);
     document.body.appendChild(lightbox);
@@ -273,7 +272,7 @@
   setInterval(tickClock, 500);
   tickClock();
 
-  // Render + autostart
+  // Kick everything off
   render();
 </script>
 </body>
