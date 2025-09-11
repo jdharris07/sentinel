@@ -7,100 +7,121 @@
 <style>
   :root{
     --bg:#0b0b0d; --panel:#14151c; --ring:#2a2a30; --text:#e9f0ff; --muted:#8ea0b8;
+    --accent:#6bdcff; --warn:#ff6b6b; --ok:#4be38f;
     --rad:14px; --shadow:0 10px 26px rgba(0,0,0,.45);
   }
   *{box-sizing:border-box}
   html,body{height:100%}
-  body{
-    margin:0; background:var(--bg) center/cover fixed no-repeat; color:var(--text);
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
-  }
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;}
 
-  .topbar{
-    position:sticky; top:0; z-index:10; backdrop-filter: blur(6px);
+  /* Top bar */
+  .topbar{position:sticky; top:0; z-index:5; backdrop-filter: blur(6px);
     background: linear-gradient(180deg, rgba(20,21,28,.85), rgba(20,21,28,.6));
-    border-bottom:1px solid #1d1f27; padding:10px 14px; display:flex; align-items:center; gap:10px;
-  }
+    border-bottom:1px solid #1d1f27; padding:10px 14px; display:flex; align-items:center; gap:10px;}
   .title{font-weight:700; letter-spacing:.4px}
   .spacer{flex:1}
 
-  .wall{
-    padding:12px; display:grid; gap:12px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Gate */
+  .gate{position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center;
+        padding:18px; background: radial-gradient(120% 120% at 50% 40%, rgba(0,0,0,.82), rgba(0,0,0,.96));}
+  .card{width:100%; max-width:520px; background:var(--panel); border:1px solid var(--ring);
+        border-radius:16px; box-shadow:var(--shadow); padding:16px;}
+  .cedric{margin:0 0 12px; line-height:1.35}
+  .cedric strong{color:#cfe7ff}
+  .boardWrap{display:flex; justify-content:center; margin-top:8px}
+  /* Paper-style board: small for mobile */
+  .board{
+    width:min(92vw, 340px);
+    display:grid;
+    grid-template-columns: 28px repeat(6, 1fr);
+    grid-template-rows: 28px repeat(6, 1fr);
+    gap:6px;
   }
-  @media (min-width: 900px){
-    .wall{grid-template-columns: repeat(3, minmax(0, 1fr));}
+  .axisTop, .axisLeft{
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:12px; color:#9aa7c2;
   }
+  .corner{grid-column:1; grid-row:1;}
+  .axisTop{grid-row:1;}
+  .axisLeft{grid-column:1;}
+  .cell{
+    aspect-ratio:1/1; border:1px solid #232633; border-radius:10px; background:#0e0f14;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition: transform .06s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .cell:active{transform:scale(.98)}
+  .cell.sel{border-color:#2f9fe6; box-shadow:0 0 0 2px rgba(107,220,255,.25) inset, var(--shadow);}
+  .controls{display:flex; align-items:center; gap:10px; margin-top:12px; justify-content:center}
+  .btn{appearance:none; border:1px solid #2a2f3a; background:#1a1d26; color:var(--text);
+       padding:10px 14px; border-radius:10px; font-weight:800; cursor:pointer;}
+  .btn:active{transform:translateY(1px)}
+  .btn.secondary{background:#10131a}
+  .msg{font-weight:800; font-size:12px; margin-top:8px; text-align:center}
+  .msg.err{color:var(--warn)}
+  .msg.ok{color:var(--ok)}
+  .shake{animation: shake .28s linear}
+  @keyframes shake{
+    0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+  }
+  .fadeOut{animation: fadeOut .3s ease forwards}
+  @keyframes fadeOut{to{opacity:0; visibility:hidden}}
 
-  .tile{
-    position:relative; border-radius:var(--rad); overflow:hidden; background:#0e0f14;
-    border:1px solid var(--ring); box-shadow:var(--shadow);
-    aspect-ratio: 16 / 9; isolation:isolate; cursor:pointer;
-  }
-  .tile video{
-    width:100%; height:100%; object-fit:cover; display:block; background:#000;
-  }
+  /* Camera wall */
+  .wall{padding:12px; display:grid; gap:12px; grid-template-columns: repeat(2, minmax(0, 1fr));}
+  @media (min-width: 900px){ .wall{grid-template-columns: repeat(3, minmax(0, 1fr));} }
 
-  .hud{
-    position:absolute; inset:0; pointer-events:none;
-    display:flex; flex-direction:column; justify-content:space-between; padding:8px;
-  }
+  .tile{position:relative; border-radius:var(--rad); overflow:hidden; background:#0e0f14;
+    border:1px solid var(--ring); box-shadow:var(--shadow); aspect-ratio: 16 / 9; isolation:isolate; cursor:pointer;}
+  .tile video{width:100%; height:100%; object-fit:cover; display:block; background:#000;}
+  .hud{position:absolute; inset:0; pointer-events:none; display:flex; flex-direction:column; justify-content:space-between; padding:8px;}
   .row{display:flex; align-items:center; gap:8px}
   .row.right{justify-content:flex-end}
-  .badge{
-    background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.18);
-    padding:6px 10px; border-radius:999px; font-weight:700; font-size:12px;
-    box-shadow:0 0 0 1px rgba(0,0,0,.2) inset;
-  }
+  .badge{background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.18); padding:6px 10px; border-radius:999px; font-weight:700; font-size:12px; box-shadow:0 0 0 1px rgba(0,0,0,.2) inset;}
   .cam{letter-spacing:.6px}
   .clock{color:var(--muted); font-weight:700}
+  .nosignal{position:absolute; inset:0; background:repeating-linear-gradient(90deg,#111 0 2px,#0e0e0e 2px 4px);
+    color:#bbb; display:flex; align-items:center; justify-content:center; font-weight:800; letter-spacing:1px; text-shadow:0 1px 0 #000; font-size:14px;}
 
-  .nosignal{
-    position:absolute; inset:0; background:repeating-linear-gradient(90deg, #111 0 2px, #0e0e0e 2px 4px);
-    color:#bbb; display:flex; align-items:center; justify-content:center; font-weight:800;
-    letter-spacing:1px; text-shadow:0 1px 0 #000; font-size:14px;
-  }
-
-  /* Lightbox overlay */
-  .lightbox{
-    position:fixed; inset:0; z-index:50;
-    background: radial-gradient(120% 120% at 50% 40%, rgba(0,0,0,.75), rgba(0,0,0,.95));
-    display:flex; align-items:center; justify-content:center;
-    padding:16px; animation: fadeIn .15s ease-out;
-  }
+  /* Lightbox */
+  .lightbox{position:fixed; inset:0; z-index:50; background: radial-gradient(120% 120% at 50% 40%, rgba(0,0,0,.75), rgba(0,0,0,.95));
+    display:flex; align-items:center; justify-content:center; padding:16px; animation: fadeIn .15s ease-out;}
   @keyframes fadeIn{from{opacity:0} to{opacity:1}}
-  .lbFrame{
-    width:100%; max-width:1100px; height:72vh; max-height:90vh;
-    border-radius:16px; overflow:hidden; border:1px solid var(--ring); background:#000; position:relative;
-  }
+  .lbFrame{width:100%; max-width:1100px; height:72vh; max-height:90vh; border-radius:16px; overflow:hidden; border:1px solid var(--ring); background:#000; position:relative;}
   .lightbox video{width:100%; height:100%; object-fit:contain; background:#000;}
-  .lbHud{
-    position:absolute; inset:0; pointer-events:none; padding:10px; display:flex; flex-direction:column; justify-content:space-between;
-  }
-  .lbHint{
-    background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.18);
-    padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px; color:var(--muted);
-  }
-
-  .tile.popped::after{
-    content:"TAP ANYWHERE TO RETURN";
-    position:absolute; inset:auto 8px 8px auto; pointer-events:none;
-    background:rgba(0,0,0,.45); color:#cfd7ee; font-weight:800; font-size:11px;
-    padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.15);
-  }
+  .lbHud{position:absolute; inset:0; pointer-events:none; padding:10px; display:flex; flex-direction:column; justify-content:space-between;}
+  .lbHint{background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.18); padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px; color:var(--muted);}
+  .tile.popped::after{content:"TAP ANYWHERE TO RETURN"; position:absolute; inset:auto 8px 8px auto; pointer-events:none; background:rgba(0,0,0,.45); color:#cfd7ee; font-weight:800; font-size:11px; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.15);}
 </style>
 </head>
 <body>
   <header class="topbar">
     <div class="title">IRON WELL • Command Center</div>
-    <div class="title">click camera feed to enlarge</div>
     <div class="spacer"></div>
   </header>
 
+  <!-- Gate -->
+  <section class="gate" id="gate">
+    <div class="card" id="card">
+      <p class="cedric"><strong>Cedric:</strong> Alright, tell me which grid spaces you placed the cameras.</p>
+
+      <div class="boardWrap">
+        <div class="board" id="board"><!-- built by JS --></div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="submitBtn">Submit</button>
+        <button class="btn secondary" id="clearBtn">Clear</button>
+      </div>
+      <div class="msg" id="msg"></div>
+    </div>
+  </section>
+
+  <!-- Camera wall -->
   <main class="wall" id="wall"></main>
 
 <script>
-  // --- CONFIG ---
+  // ---- FEED CONFIG ----
   const sources = [
     {cam:1, src:"iwwvideo1.mp4"},
     {cam:2, src:"iwwvideo2.mp4"},
@@ -109,60 +130,140 @@
     {cam:5, src:"iwwvideo5.mp4"},
     {cam:6, src:"iwwvideo6.mp4"},
   ];
-  // Keep the display intentionally out of order
-  const order = [4,1,6,2,5,3];
+  const order = [4,1,6,2,5,3]; // intentionally out of order
+  const delayByCam = {1:0, 5:0, 2:40, 3:80, 4:120, 6:160}; // tiny offsets (ms)
 
-  // Tiny offsets (ms): 1 & 5 = 0; then 2,3,4,6
-  const delayByCam = {1:0, 5:0, 2:40, 3:80, 4:120, 6:160};
+  // Correct coordinates (x,y)
+  const correct = new Set(["2,1","5,1","4,2","2,4","4,5","6,4"]);
 
+  // ---- Build paper-like board (top and left labels) ----
+  const board = document.getElementById('board');
+  const msgEl = document.getElementById('msg');
+  const card = document.getElementById('card');
+  const gate = document.getElementById('gate');
+  const submitBtn = document.getElementById('submitBtn');
+  const clearBtn = document.getElementById('clearBtn');
+
+  // corner
+  const corner = document.createElement('div');
+  corner.className = 'corner';
+  board.appendChild(corner);
+
+  // top header 1..6
+  for(let x=1;x<=6;x++){
+    const t = document.createElement('div');
+    t.className = 'axisTop';
+    t.textContent = x;
+    t.style.gridColumn = (x+1);
+    t.style.gridRow = 1;
+    board.appendChild(t);
+  }
+  // rows: left header + 6 cells
+  for(let y=1;y<=6;y++){
+    const l = document.createElement('div');
+    l.className = 'axisLeft';
+    l.textContent = y;
+    l.style.gridColumn = 1;
+    l.style.gridRow = (y+1);
+    board.appendChild(l);
+
+    for(let x=1;x<=6;x++){
+      const c = document.createElement('button');
+      c.type = "button";
+      c.className = 'cell';
+      c.dataset.xy = `${x},${y}`;
+      c.setAttribute('aria-pressed', 'false');
+      c.style.gridColumn = (x+1);
+      c.style.gridRow = (y+1);
+      c.addEventListener('click', () => {
+        c.classList.toggle('sel');
+        const pressed = c.getAttribute('aria-pressed') === 'true';
+        c.setAttribute('aria-pressed', (!pressed).toString());
+        msgEl.textContent = "";
+        msgEl.className = "msg";
+      });
+      board.appendChild(c);
+    }
+  }
+
+  clearBtn.addEventListener('click', () => {
+    document.querySelectorAll('.cell.sel').forEach(el => {
+      el.classList.remove('sel');
+      el.setAttribute('aria-pressed','false');
+    });
+    msgEl.textContent = "";
+    msgEl.className = "msg";
+  });
+
+  submitBtn.addEventListener('click', () => {
+    const sel = new Set([...document.querySelectorAll('.cell.sel')].map(c => c.dataset.xy));
+    if(sel.size !== 6){
+      msgEl.textContent = "Choose exactly six squares.";
+      msgEl.className = "msg err";
+      wiggle();
+      return;
+    }
+    if(equalSets(sel, correct)){
+      msgEl.textContent = "Unlocked.";
+      msgEl.className = "msg ok";
+      gate.classList.add('fadeOut');
+      setTimeout(() => { gate.remove(); initFeeds(); }, 280);
+    }else{
+      msgEl.textContent = "Hmm, that doesn't seem right. Try again.";
+      msgEl.className = "msg err";
+      wiggle();
+    }
+  });
+
+  function wiggle(){ card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
+  function equalSets(a,b){ if(a.size !== b.size) return false; for(const v of a){ if(!b.has(v)) return false; } return true; }
+
+  // ---- Camera Wall (render after unlock) ----
   const wall = document.getElementById('wall');
+  let lightbox = null, popped = null;
 
-  let lightbox = null;
-  let popped = null; // {tile, video, placeholder}
+  function initFeeds(){
+    renderWall();
+    scheduleAutoStart();
+    startClock();
+  }
 
-  function render(){
+  function renderWall(){
     wall.innerHTML = "";
     order.forEach(camNum => {
       const camData = sources.find(s => s.cam === camNum);
       wall.appendChild(makeTile(camData));
     });
-    // As soon as tiles exist, kick off playback with tiny offsets
-    scheduleAutoStart();
   }
 
   function makeTile({cam, src}){
     const el = document.createElement('section');
     el.className = 'tile';
     el.dataset.cam = String(cam).padStart(2,'0');
-    el.setAttribute('role', 'button');
+    el.setAttribute('role','button');
     el.setAttribute('aria-label', `Open camera ${el.dataset.cam}`);
 
     const v = document.createElement('video');
     v.src = src;
-    v.muted = true;           // REQUIRED for mobile autoplay
-    v.autoplay = true;        // hint + backup; we still call play()
+    v.muted = true;      // mobile autoplay
+    v.autoplay = true;   // hint; we’ll also call play()
     v.loop = true;
-    v.preload = "metadata";   // fast enough to start, light on bandwidth
+    v.preload = "metadata";
     v.playsInline = true; v.setAttribute('playsinline','');
 
-    // minuscule seek jitter so first frames differ (0–0.25s)
+    // tiny seek jitter (0–0.25s) so initial frames differ
     v.addEventListener('loadedmetadata', () => {
       const jitter = Math.random() * 0.25;
       try { v.currentTime = Math.min(Math.max(0, jitter), Math.max(0, (v.duration || 10) - 0.5)); } catch(e){}
     });
 
-    // If something goes wrong with the file, show NO SIGNAL overlay
     v.addEventListener('error', () => showNoSignal(el));
 
     const hud = document.createElement('div');
     hud.className = 'hud';
     hud.innerHTML = `
-      <div class="row">
-        <div class="badge cam">CAM ${String(cam).padStart(2,'0')}</div>
-      </div>
-      <div class="row right">
-        <div class="badge clock" data-clock></div>
-      </div>
+      <div class="row"><div class="badge cam">CAM ${String(cam).padStart(2,'0')}</div></div>
+      <div class="row right"><div class="badge clock" data-clock></div></div>
     `;
 
     el.addEventListener('click', () => openLightbox(el));
@@ -172,32 +273,20 @@
     return el;
   }
 
-  // Start videos with tiny per-camera delays
   function scheduleAutoStart(){
-    const tiles = Array.from(document.querySelectorAll('.tile'));
-    tiles.forEach(tile => {
+    document.querySelectorAll('.tile').forEach(tile => {
       const cam = parseInt(tile.dataset.cam, 10);
-      const v = tile.querySelector('video');
-      // add a hair of random jitter (±15ms)
-      const jitter = (Math.random() * 30) - 15; // -15..+15
+      const video = tile.querySelector('video');
+      const jitter = (Math.random()*30) - 15; // ±15ms
       const delay = Math.max(0, (delayByCam[cam] ?? 0) + jitter);
-      setTimeout(() => robustPlay(v), delay);
+      setTimeout(() => robustPlay(video), delay);
     });
   }
 
-  // Extra resilient play attempt (helps avoid occasional stalls)
   function robustPlay(v){
-    // Attempt immediately
-    v.play().catch(() => {});
-    // Try again shortly in case data wasn’t ready yet
-    setTimeout(() => v.play().catch(()=>{}), 120);
-    setTimeout(() => {
-      // If still paused, nudge load then play again
-      if (v.paused) {
-        try { v.load(); } catch(e){}
-        v.play().catch(()=>{});
-      }
-    }, 300);
+    v.play().catch(()=>{});
+    setTimeout(() => v.play().catch(()=>{}), 100);
+    setTimeout(() => { if(v.paused){ try{v.load();}catch(e){} v.play().catch(()=>{}); } }, 280);
   }
 
   function showNoSignal(tile){
@@ -213,67 +302,45 @@
     if(lightbox) return;
     const video = tile.querySelector('video');
     const placeholder = document.createElement('div');
-    placeholder.style.width = '100%';
-    placeholder.style.height = '100%';
-    placeholder.style.background = '#000';
-    tile.classList.add('popped');
-    tile.insertBefore(placeholder, video);
+    Object.assign(placeholder.style,{width:'100%',height:'100%',background:'#000'});
+    tile.classList.add('popped'); tile.insertBefore(placeholder, video);
 
-    lightbox = document.createElement('div');
-    lightbox.className = 'lightbox';
-    lightbox.setAttribute('role','dialog');
-    lightbox.setAttribute('aria-label', `Camera ${tile.dataset.cam} expanded view`);
+    lightbox = document.createElement('div'); lightbox.className = 'lightbox';
+    lightbox.setAttribute('role','dialog'); lightbox.setAttribute('aria-label', `Camera ${tile.dataset.cam} expanded view`);
 
-    const frame = document.createElement('div');
-    frame.className = 'lbFrame';
-
-    const lbHud = document.createElement('div');
-    lbHud.className = 'lbHud';
+    const frame = document.createElement('div'); frame.className = 'lbFrame';
+    const lbHud = document.createElement('div'); lbHud.className = 'lbHud';
     lbHud.innerHTML = `
-      <div class="row">
-        <div class="badge cam">CAM ${tile.dataset.cam}</div>
-      </div>
-      <div class="row right">
-        <div class="badge clock" data-clock></div>
-        <div class="lbHint" style="margin-left:8px">Tap anywhere to close</div>
-      </div>
+      <div class="row"><div class="badge cam">CAM ${tile.dataset.cam}</div></div>
+      <div class="row right"><div class="badge clock" data-clock></div><div class="lbHint" style="margin-left:8px">Tap anywhere to close</div></div>
     `;
-
-    frame.appendChild(video); // move into overlay (keeps current playback state)
-    frame.appendChild(lbHud);
-    lightbox.appendChild(frame);
-    document.body.appendChild(lightbox);
+    frame.appendChild(video); frame.appendChild(lbHud);
+    lightbox.appendChild(frame); document.body.appendChild(lightbox);
 
     lightbox.addEventListener('click', closeLightbox);
     window.addEventListener('keydown', escClose);
     popped = { tile, video, placeholder };
   }
-
   function closeLightbox(){
     if(!lightbox || !popped) return;
     const {tile, video, placeholder} = popped;
-    tile.replaceChild(video, placeholder);
-    tile.classList.remove('popped');
-    lightbox.remove();
-    lightbox = null;
-    popped = null;
+    tile.replaceChild(video, placeholder); tile.classList.remove('popped');
+    lightbox.remove(); lightbox = null; popped = null;
     window.removeEventListener('keydown', escClose);
   }
   function escClose(e){ if(e.key === 'Escape') closeLightbox(); }
 
-  // Live clock
-  function tickClock(){
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2,'0');
-    const mm = String(now.getMinutes()).padStart(2,'0');
-    const ss = String(now.getSeconds()).padStart(2,'0');
-    document.querySelectorAll('[data-clock]').forEach(el => el.textContent = `${hh}:${mm}:${ss}`);
+  // Clock
+  function startClock(){
+    const tick = () => {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2,'0');
+      const mm = String(now.getMinutes()).padStart(2,'0');
+      const ss = String(now.getSeconds()).padStart(2,'0');
+      document.querySelectorAll('[data-clock]').forEach(el => el.textContent = `${hh}:${mm}:${ss}`);
+    };
+    tick(); setInterval(tick, 500);
   }
-  setInterval(tickClock, 500);
-  tickClock();
-
-  // Kick everything off
-  render();
 </script>
 </body>
 </html>
