@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ouija Session — Trigger Word</title>
+<style>
+  :root{
+    --bg:#0b0b0d; --panel:#131318; --ring:#23232a;
+    --text:#e9f0ff; --muted:#9fb0c9; --accent:#6bdcff; --ok:#67eea1; --warn:#ff6b6b;
+    --rad:18px; --shadow:0 14px 32px rgba(0,0,0,.55);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text);
+    font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+    background:#0b0b0d url('iwwcamerabackground.png') center/cover fixed no-repeat;
+  }
+  .wrap{
+    min-height:100%;
+    backdrop-filter: blur(2px);
+    display:grid; place-items:center; padding:24px;
+    background:linear-gradient(180deg, rgba(0,0,0,.4), rgba(0,0,0,.6));
+  }
+  .card{
+    width:min(820px, 95vw);
+    background:rgba(19,19,24,.88);
+    border:1px solid var(--ring);
+    border-radius:var(--rad);
+    box-shadow:var(--shadow);
+    padding:24px 22px;
+  }
+  h1{
+    margin:0 0 8px; font-weight:700; letter-spacing:.3px;
+    font-size:clamp(20px, 2.2vw, 28px);
+  }
+  .lead{ color:var(--muted); margin:0 0 18px; line-height:1.5 }
+  .prompt{
+    display:flex; gap:10px; align-items:center; margin:16px 0 6px;
+  }
+  input[type="text"]{
+    flex:1; font-size:16px; padding:12px 14px; color:var(--text);
+    background:#0f1117; border:1px solid var(--ring); border-radius:12px;
+    outline:none;
+  }
+  input[type="text"]:focus{ border-color:#3a3a48; box-shadow:0 0 0 3px rgba(107,220,255,.15) }
+  button{
+    padding:12px 16px; font-weight:600; border-radius:12px; cursor:pointer;
+    border:1px solid #1f2a33; background:linear-gradient(180deg,#1a2930,#0f1a22);
+    color:var(--accent);
+  }
+  button:active{ transform:translateY(1px) }
+  .hint{ color:#a9bfd8; font-size:13px; margin-top:6px }
+  .msg{ margin-top:14px; line-height:1.55 }
+  .msg.warn{ color:var(--warn) }
+  .msg.ok{ color:var(--ok) }
+  .clickable{
+    display:inline-block; margin-top:14px; font-weight:700; cursor:pointer;
+    color:var(--accent); text-decoration:underline;
+  }
+  video{ width:100%; max-height:70vh; border-radius:14px; margin-top:14px; outline:1px solid #263241 }
+  .byline{ color:#7fa3bf; font-size:13px; margin-top:10px }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <main class="card" id="card">
+      <h1>“We need a word,” Lisa whispers.</h1>
+      <p class="lead">
+        Lisa sets the planchette in the center of the Ouija board. “Spirits… if you’re here, give us a sign.”
+        She looks to you. “Say the <em>trigger word</em> so they'll listen.”
+      </p>
+
+      <div id="inputArea">
+        <label for="word" class="byline">Enter the trigger word (not case-sensitive):</label>
+        <div class="prompt">
+          <input id="word" name="word" type="text" placeholder="type the word…" autocomplete="off" />
+          <button id="submitBtn" type="button">Speak</button>
+        </div>
+        <div class="hint">Tip: you can change the correct word later in the code.</div>
+      </div>
+
+      <div id="message" class="msg" aria-live="polite"></div>
+      <div id="media"></div>
+    </main>
+  </div>
+
+<script>
+  // === CONFIG ===
+  // Edit this list with the correct trigger word(s). Case-insensitive and trimmed.
+  // Example: ["HOLLOW", "HARROW"]
+  const CORRECT_WORDS = ["<put-your-correct-word-here>"];
+
+  // Utility: simple escape to prevent HTML injection when echoing user input
+  function esc(str){
+    return String(str)
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'","&#39;");
+  }
+
+  const input = document.getElementById('word');
+  const btn = document.getElementById('submitBtn');
+  const message = document.getElementById('message');
+  const inputArea = document.getElementById('inputArea');
+  const media = document.getElementById('media');
+  const card = document.getElementById('card');
+
+  function isCorrect(val){
+    const v = val.trim().toLowerCase();
+    return CORRECT_WORDS.some(w => String(w).trim().toLowerCase() === v);
+  }
+
+  function handleSubmit(){
+    const val = input.value;
+    if(!val.trim()){
+      message.className = 'msg warn';
+      message.textContent = 'Say something. The room is waiting.';
+      return;
+    }
+
+    if(isCorrect(val)){
+      // Success: remove input UI and show the success text + clickable to load video
+      inputArea.remove();
+      message.className = 'msg ok';
+      message.innerHTML =
+        `You say <strong>${esc(val)}</strong> aloud. Instantly a chill runs down your spine and the air pressure in the room changes. ` +
+        `Suddenly, without either you or Lisa touching it, the planchette begins to move around the Ouija board. ` +
+        `<span id="watchLink" class="clickable">Click to watch the video</span>.`;
+
+      const watch = () => {
+        // Replace the clickable text with the video
+        const v = document.createElement('video');
+        v.src = 'iwwouijavideo.mp4';
+        v.controls = true;
+        v.autoplay = true;
+        v.playsInline = true;
+        media.innerHTML = '';
+        media.appendChild(v);
+
+        // remove link after click
+        const link = document.getElementById('watchLink');
+        if(link) link.removeEventListener('click', watch);
+      };
+
+      // Delegate click
+      card.addEventListener('click', function onCardClick(e){
+        if(e.target && e.target.id === 'watchLink'){
+          watch();
+          card.removeEventListener('click', onCardClick);
+        }
+      });
+    } else {
+      message.className = 'msg warn';
+      message.innerHTML =
+        `You say <strong>${esc(val)}</strong> but are rewarded only with silence. ` +
+        `The planchette on the board stays still. Try something else.`;
+      input.select();
+    }
+  }
+
+  btn.addEventListener('click', handleSubmit);
+  input.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ handleSubmit(); }
+  });
+
+  // Optional: autofocus for faster play
+  setTimeout(() => input.focus(), 50);
+</script>
+</body>
+</html>
