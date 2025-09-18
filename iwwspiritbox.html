@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
-<title>IWW Spirit Box</title>
+<title>Headstone Check</title>
 <style>
   :root{
     --ink:#f0f4ff; --muted:#c9d1e8; --accent:#7df3ff; --error:#ff7a7a;
+    --card-bg: rgba(8,12,18,.65);
   }
   *{ box-sizing:border-box; }
   html,body{ height:100%; }
@@ -19,8 +20,8 @@
   }
   .card{
     width:100%;
-    max-width:680px;
-    background:rgba(8,12,18,.65);
+    max-width:700px;
+    background:var(--card-bg);
     border:1px solid rgba(255,255,255,.08);
     border-radius:16px;
     backdrop-filter: blur(3px) saturate(120%);
@@ -31,11 +32,6 @@
     font-size: clamp(18px, 4.5vw, 22px);
     line-height: 1.35;
     margin:0 0 14px 0;
-  }
-  .sub{
-    font-size: clamp(13px, 3.5vw, 15px);
-    color: var(--muted);
-    margin:4px 0 16px 0;
   }
   form{
     display:flex; gap:10px; align-items:stretch; width:100%;
@@ -65,6 +61,14 @@
     font-size: clamp(14px, 3.8vw, 16px);
     min-height:1.2em;
   }
+  .player{
+    margin-top:14px;
+    display:none; /* shown after correct answer */
+  }
+  audio{
+    width:100%;
+    display:block;
+  }
   .sr-only{
     position:absolute !important; height:1px; width:1px; overflow:hidden;
     clip:rect(1px,1px,1px,1px); white-space:nowrap;
@@ -83,78 +87,59 @@
     </form>
 
     <div id="error" class="error" role="status" aria-live="polite"></div>
+
+    <!-- Audio player appears after correct answer -->
+    <div class="player" id="playerWrap">
+      <audio id="spiritAudio" preload="auto" controls>
+        <source src="iww spiritbox audio.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
+    </div>
   </main>
 
-  <!-- we create and control the audio in JS to ensure it plays after user interaction -->
-  <script>
-    (function(){
-      const form = document.getElementById('nameForm');
-      const input = document.getElementById('name');
-      const promptEl = document.getElementById('prompt');
-      const errorEl = document.getElementById('error');
+<script>
+(() => {
+  const form = document.getElementById('nameForm');
+  const input = document.getElementById('name');
+  const promptEl = document.getElementById('prompt');
+  const errorEl = document.getElementById('error');
+  const playerWrap = document.getElementById('playerWrap');
+  const audio = document.getElementById('spiritAudio');
 
-      // Correct answer exactly as provided (case-insensitive)
-      const CORRECT = 'joseph'; // note: this is intentionally spelled as given
+  const CORRECT = 'joseph'; // case-insensitive
 
-      let audio; // will be created on success
+  const normalize = s => (s || '').trim().toLowerCase();
 
-      function normalize(s){
-        return (s || '').trim().toLowerCase();
-      }
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const guess = normalize(input.value);
 
-      form.addEventListener('submit', async (e)=>{
-        e.preventDefault();
-        const guess = normalize(input.value);
+    if (guess === CORRECT){
+      errorEl.textContent = '';
+      // Replace prompt text
+      promptEl.textContent = 'Kristina: Great job! Alright, lets give the spirit box a shot. Joseph if you are here, talk to us.';
+      // Hide the form
+      form.style.display = 'none';
+      // Reveal player and attempt to autoplay once (user gesture present)
+      playerWrap.style.display = 'block';
+      try { await audio.play(); } catch(_) { /* user can tap play */ }
+    } else {
+      errorEl.textContent = "hmm, that doesn't look right. Take another look at the headstone.";
+      // subtle shake
+      form.animate(
+        [{ transform:'translateX(0)' },{ transform:'translateX(-6px)' },{ transform:'translateX(6px)' },{ transform:'translateX(0)' }],
+        { duration: 220, easing:'ease-in-out' }
+      );
+      input.focus();
+      input.select();
+    }
+  });
 
-        if (guess === CORRECT){
-          // Success UI
-          errorEl.textContent = '';
-          // Replace prompt text
-          promptEl.textContent = 'Kristina: Great job! Alright, lets give the spirit box a shot. Joseph if you are here, talk to us.';
-          // Hide the form
-          form.style.display = 'none';
-
-          // Create and play audio (user gesture already occurred)
-          try{
-            if(!audio){
-              audio = new Audio('iww spiritbox audio.mp3');
-              audio.preload = 'auto';
-            }
-            await audio.play();
-          }catch(err){
-            // If autoplay is blocked for any reason, show a tiny tap-to-play affordance
-            const retry = document.createElement('button');
-            retry.textContent = '▶ Play Spirit Box';
-            retry.style.marginTop = '12px';
-            retry.style.borderRadius = '10px';
-            retry.style.padding = '10px 14px';
-            retry.style.border = '1px solid rgba(125,243,255,.35)';
-            retry.style.background = 'rgba(25,35,48,.85)';
-            retry.style.color = 'var(--ink)';
-            retry.addEventListener('click', async ()=>{
-              try { await audio.play(); retry.remove(); } catch(e) {}
-            });
-            document.querySelector('.card').appendChild(retry);
-          }
-        } else {
-          errorEl.textContent = "hmm, that doesn't look right. Take another look at the headstone.";
-          // Optional: small shake to indicate error on mobile
-          form.animate(
-            [{ transform:'translateX(0)' },{ transform:'translateX(-6px)' },{ transform:'translateX(6px)' },{ transform:'translateX(0)' }],
-            { duration: 220, easing:'ease-in-out' }
-          );
-          // keep focus for quick re-try
-          input.focus();
-          input.select();
-        }
-      });
-
-      // Let users press Enter on mobile keyboards
-      input.addEventListener('keydown', (e)=>{
-        if(e.key === 'Enter'){ e.preventDefault(); form.requestSubmit(); }
-      });
-    })();
-  </script>
+  // Let users press Enter on mobile keyboards
+  input.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter'){ e.preventDefault(); form.requestSubmit(); }
+  });
+})();
+</script>
 </body>
 </html>
-
