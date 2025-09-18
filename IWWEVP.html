@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>EVP Session • The Iron Well Witch</title>
+<style>
+  :root{
+    --bg:#0a0c10; --panel:#121621; --ink:#e7f0ff; --muted:#b9c6e2;
+    --accent:#ff4d4d; --warn:#ff6b6b; --dim:#1b2130; --rad:16px;
+    --shadow:0 12px 28px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:linear-gradient(180deg,#07090d 0%, #0e1320 100%);
+    color:var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{min-height:100dvh; display:flex; flex-direction:column;}
+  header{
+    position:sticky; top:0; z-index:2; padding:14px 16px 10px;
+    background:linear-gradient(180deg, rgba(18,22,33,.95), rgba(18,22,33,.75));
+    backdrop-filter: blur(6px); border-bottom:1px solid #1f2738;
+  }
+  .title{display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:.5px;}
+  .dot{ width:10px; height:10px; border-radius:50%; background:var(--accent); box-shadow:0 0 10px var(--accent); animation:pulse 2s infinite ease-in-out; }
+  @keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
+
+  .log{flex:1; overflow:auto; padding:16px; scroll-behavior:smooth; position:relative;}
+
+  .msg{display:flex; margin:8px 0; gap:10px;}
+  .msg .b{
+    max-width:88%; padding:12px 14px; border-radius:14px;
+    line-height:1.25; box-shadow:var(--shadow);
+    font-size:16px; word-wrap:break-word; white-space:pre-wrap;
+  }
+  .me .b{ margin-left:auto; background:#1d2434; color:var(--ink); border:1px solid #25304a; font-size:14px; opacity:.9; }
+
+  .evp{ justify-content:center; margin:18px 0; }
+  .evp .b{
+    background:transparent; border:none; box-shadow:none; text-align:center; max-width:95%;
+    font-size:20px; line-height:1.35; letter-spacing:.4px;
+    text-shadow: 0 0 6px rgba(255,255,255,.15), 0 0 22px rgba(255,77,77,.08);
+    animation: fadeIn .35s ease-out, flicker 2.2s infinite steps(2,end);
+  }
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)}}
+  @keyframes flicker{50%{opacity:.95} 100%{opacity:1}}
+  .ts{display:none}
+  .typing{display:inline-block; letter-spacing:2px; opacity:.9;}
+
+  .inputBar{
+    position:sticky; bottom:0; z-index:2; padding:8px;
+    background:linear-gradient(180deg, rgba(18,22,33,.8), rgba(18,22,33,1));
+    border-top:1px solid #1f2738;
+  }
+  .row{ display:flex; gap:8px; background:var(--dim); padding:8px; border-radius:var(--rad); border:1px solid #24314a; }
+  input[type="text"]{ flex:1; border:0; outline:0; background:transparent; color:var(--ink); font-size:16px; padding:10px 8px; }
+  button{ border:0; outline:0; color:#0b121c; background:var(--accent); font-weight:700; padding:12px 16px; border-radius:12px; min-width:88px; touch-action:manipulation; }
+  button:active{transform:translateY(1px)}
+  .hint{text-align:center; color:#8ea2c6; font-size:12px; margin-top:8px}
+
+  /* CTA button that appears in the log */
+  .btn{
+    display:inline-block; margin-top:12px; padding:10px 14px; border-radius:12px; font-weight:700;
+    background:var(--accent); color:#0b121c; text-decoration:none;
+  }
+
+  @media (max-width:420px){
+    .evp .b{font-size:18px}
+    .msg .b{font-size:15px}
+    button{min-width:84px; padding:12px 14px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">
+      <span class="dot" aria-hidden="true"></span>
+      EVP SESSION — CH 3.1 “The Iron Well Witch”
+    </div>
+  </header>
+
+  <main id="log" class="log" aria-live="polite" aria-relevant="additions"></main>
+
+  <footer class="inputBar">
+    <form id="evpForm" class="row" autocomplete="off">
+      <input id="evpInput" type="text" inputmode="text" placeholder="Ask anything..." aria-label="Type your message" />
+      <button type="submit" id="sendBtn">SEND</button>
+    </form>
+    <div class="hint"></div>
+  </footer>
+</div>
+
+<script>
+/* ===========================
+   TRIGGERS
+=========================== */
+const TRIGGERS = [
+  { phrase: "liar",     response: "The..truth is..not being told....not. as they say... missing." },
+  { phrase: "killer",   response: "Killer...in..village. Someone...there..." },
+  { phrase: "hutchins", response: "Hutchins...guilty...run..." },
+  { phrase: "drowning", response: "Found....by well....drowned...held under..." }
+];
+// allow multiple hits per message
+const STOP_AT_FIRST_HIT = false;
+
+// track progress (persisted)
+const REQUIRED = TRIGGERS.map(t => t.phrase);
+const found = new Set(JSON.parse(localStorage.getItem("evp_found") || "[]"));
+let unlocked = JSON.parse(localStorage.getItem("evp_unlocked") || "false");
+
+/* Static / no-hit replies */
+const STATIC_REPLIES = [
+  "[STATIC]", "[CRACKLE] ... [STATIC] ...", "[HUM] —— [STATIC]", "[STATIC]", "[STATIC]"
+];
+const REPLY_DELAY_MS = [350, 900];
+
+/* ===========================
+   CORE
+=========================== */
+const logEl = document.getElementById("log");
+const inputEl = document.getElementById("evpInput");
+const formEl = document.getElementById("evpForm");
+
+function matchesWord(haystack, needle){
+  if(!needle) return false;
+  const esc = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`\\b${esc}\\b`, 'i');
+  return re.test(haystack);
+}
+
+function appendMessage(text, from="evp"){
+  const wrap = document.createElement("div");
+  wrap.className = `msg ${from}`;
+  const bubble = document.createElement("div");
+  bubble.className = "b";
+  bubble.textContent = text;
+  wrap.appendChild(bubble);
+  logEl.appendChild(wrap);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function appendHTML(html, from="evp"){
+  const wrap = document.createElement("div");
+  wrap.className = `msg ${from} evp`;
+  const bubble = document.createElement("div");
+  bubble.className = "b";
+  bubble.innerHTML = html;
+  wrap.appendChild(bubble);
+  logEl.appendChild(wrap);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function showTyping(){
+  const wrap = document.createElement("div");
+  wrap.className = "msg evp";
+  wrap.id = "typing";
+  const bubble = document.createElement("div");
+  bubble.className = "b";
+  bubble.innerHTML = '<span class="typing">[ . . . ]</span>';
+  wrap.appendChild(bubble);
+  logEl.appendChild(wrap);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function hideTyping(){ const t = document.getElementById("typing"); if(t) t.remove(); }
+
+function randomDelay([min,max]){ return Math.floor(Math.random()*(max-min+1))+min; }
+function randomStatic(){ return STATIC_REPLIES[Math.floor(Math.random()*STATIC_REPLIES.length)] }
+
+/* Process input */
+function process(input){
+  const outs = [];
+  for(const t of TRIGGERS){
+    if(matchesWord(input, t.phrase)){
+      outs.push(t.response || "");
+      found.add(t.phrase);
+    }
+    if(outs.length && STOP_AT_FIRST_HIT) break;
+  }
+  // persist progress
+  try{ localStorage.setItem("evp_found", JSON.stringify([...found])); }catch(e){}
+  return outs.length ? outs : [randomStatic()];
+}
+
+/* Check if all four asked → show unlock once */
+function maybeUnlock(){
+  if (unlocked) return;
+  const allAsked = REQUIRED.every(w => found.has(w));
+  if(!allAsked) return;
+  unlocked = true;
+  try{ localStorage.setItem("evp_unlocked", "true"); }catch(e){}
+  appendHTML(`
+    <div>Everyone in the group looks at once another, unsure of what to make of what was said when suddenly Anna yells. "Eliza! This isn't Eliza....I can see her." Anna points behind you. Turning you see nothing. Anna's face is contorted, watching the unseen specter. "Samantha, it's you....but where...oh..." Anna begins to well up in tears and whispers hoasrsely "Samantha is...dead. She was..."  "The perfect choice!"  Anna is cut off by a voice that causes you to jump. Turning you see Mary standing there, gone is the aura of a sweet older woman. She has a cold look in her eyes. "What is going on?" you ask. Mary's attention turns to you...." </div>
+    <a class="btn" href="iwwsolution.pdf" target="_blank" rel="noopener">Read solution</a>
+  `, "evp");
+}
+
+/* Optional: restore last log (messages only) */
+function saveLog(){
+  const items = [...logEl.querySelectorAll(".msg")].slice(-50).map(node=>{
+    const from = node.classList.contains("me") ? "me" : "evp";
+    const text = node.querySelector(".b")?.textContent ?? "";
+    return {from,text};
+  });
+  try{ localStorage.setItem("evp_log", JSON.stringify(items)); }catch(e){}
+}
+function restoreLog(){
+  try{
+    const raw = localStorage.getItem("evp_log");
+    if(!raw) return;
+    const items = JSON.parse(raw);
+    items.forEach(({from,text})=> appendMessage(text, from));
+  }catch(e){}
+}
+
+/* Submit */
+formEl.addEventListener("submit", (e)=>{
+  e.preventDefault();
+  const v = inputEl.value.trim();
+  if(!v) return;
+  appendMessage(v, "me");
+  inputEl.value = "";
+  inputEl.focus();
+
+  showTyping();
+  const outs = process(v);
+
+  setTimeout(()=>{
+    hideTyping();
+    const play = (i=0)=>{
+      appendMessage(outs[i], "evp");
+      saveLog();
+      if(i+1<outs.length){
+        setTimeout(()=>play(i+1), Math.min(600, REPLY_DELAY_MS[0]));
+      }else{
+        maybeUnlock();
+      }
+    };
+    play(0);
+  }, randomDelay(REPLY_DELAY_MS));
+});
+
+/* Bootstrap */
+restoreLog();
+appendMessage("[REC • EVP channel open]", "evp");
+// Re-check unlock on load (in case all 4 were already found)
+maybeUnlock();
+</script>
+</body>
+</html>
