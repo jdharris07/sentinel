@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
+<title>IWW Spirit Box</title>
+<style>
+  :root{
+    --ink:#f0f4ff; --muted:#c9d1e8; --accent:#7df3ff; --error:#ff7a7a;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0; color:var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    background:#000 url("iwwcamerabackground.png") center / cover fixed no-repeat;
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .card{
+    width:100%;
+    max-width:680px;
+    background:rgba(8,12,18,.65);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:16px;
+    backdrop-filter: blur(3px) saturate(120%);
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
+    padding:20px 18px;
+  }
+  .kristina{
+    font-size: clamp(18px, 4.5vw, 22px);
+    line-height: 1.35;
+    margin:0 0 14px 0;
+  }
+  .sub{
+    font-size: clamp(13px, 3.5vw, 15px);
+    color: var(--muted);
+    margin:4px 0 16px 0;
+  }
+  form{
+    display:flex; gap:10px; align-items:stretch; width:100%;
+  }
+  input[type="text"]{
+    flex:1;
+    font-size: clamp(16px, 5vw, 18px);
+    padding:14px 14px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.15);
+    background:rgba(10,16,24,.75);
+    color:var(--ink);
+    outline:none;
+  }
+  input[type="text"]::placeholder{ color:rgba(255,255,255,.45); }
+  button{
+    font-size: clamp(16px, 4.8vw, 18px);
+    padding:14px 18px;
+    border-radius:12px;
+    border:1px solid rgba(125,243,255,.35);
+    background:rgba(25,35,48,.85);
+    color:var(--ink);
+    white-space:nowrap;
+  }
+  .error{
+    margin-top:10px; color:var(--error);
+    font-size: clamp(14px, 3.8vw, 16px);
+    min-height:1.2em;
+  }
+  .sr-only{
+    position:absolute !important; height:1px; width:1px; overflow:hidden;
+    clip:rect(1px,1px,1px,1px); white-space:nowrap;
+  }
+</style>
+</head>
+<body>
+  <main class="card">
+    <p id="prompt" class="kristina">Kristina: “What first name did you get from the headstone?”</p>
+
+    <form id="nameForm" autocomplete="off" novalidate>
+      <label class="sr-only" for="name">Enter the first name</label>
+      <input id="name" type="text" inputmode="text" autocapitalize="none" autocomplete="off"
+             placeholder="Type the first name…" required />
+      <button type="submit">Submit</button>
+    </form>
+
+    <div id="error" class="error" role="status" aria-live="polite"></div>
+  </main>
+
+  <!-- we create and control the audio in JS to ensure it plays after user interaction -->
+  <script>
+    (function(){
+      const form = document.getElementById('nameForm');
+      const input = document.getElementById('name');
+      const promptEl = document.getElementById('prompt');
+      const errorEl = document.getElementById('error');
+
+      // Correct answer exactly as provided (case-insensitive)
+      const CORRECT = 'jospeh'; // note: this is intentionally spelled as given
+
+      let audio; // will be created on success
+
+      function normalize(s){
+        return (s || '').trim().toLowerCase();
+      }
+
+      form.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const guess = normalize(input.value);
+
+        if (guess === CORRECT){
+          // Success UI
+          errorEl.textContent = '';
+          // Replace prompt text
+          promptEl.textContent = 'Kristina: Great job! Alright, lets give the spirit box a shot. Joseph if you are here, talk to us.';
+          // Hide the form
+          form.style.display = 'none';
+
+          // Create and play audio (user gesture already occurred)
+          try{
+            if(!audio){
+              audio = new Audio('iww spiritbox audio.mp3');
+              audio.preload = 'auto';
+            }
+            await audio.play();
+          }catch(err){
+            // If autoplay is blocked for any reason, show a tiny tap-to-play affordance
+            const retry = document.createElement('button');
+            retry.textContent = '▶ Play Spirit Box';
+            retry.style.marginTop = '12px';
+            retry.style.borderRadius = '10px';
+            retry.style.padding = '10px 14px';
+            retry.style.border = '1px solid rgba(125,243,255,.35)';
+            retry.style.background = 'rgba(25,35,48,.85)';
+            retry.style.color = 'var(--ink)';
+            retry.addEventListener('click', async ()=>{
+              try { await audio.play(); retry.remove(); } catch(e) {}
+            });
+            document.querySelector('.card').appendChild(retry);
+          }
+        } else {
+          errorEl.textContent = "hmm, that doesn't look right. Take another look at the headstone.";
+          // Optional: small shake to indicate error on mobile
+          form.animate(
+            [{ transform:'translateX(0)' },{ transform:'translateX(-6px)' },{ transform:'translateX(6px)' },{ transform:'translateX(0)' }],
+            { duration: 220, easing:'ease-in-out' }
+          );
+          // keep focus for quick re-try
+          input.focus();
+          input.select();
+        }
+      });
+
+      // Let users press Enter on mobile keyboards
+      input.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter'){ e.preventDefault(); form.requestSubmit(); }
+      });
+    })();
+  </script>
+</body>
+</html>
