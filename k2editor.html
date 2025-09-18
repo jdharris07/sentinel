@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>K2 Drag • Shelves (Mobile)</title>
+<style>
+  :root{
+    --ink:#e7f0ff; --muted:#aebedb; --grid:#23314a;
+    --rad:14px; --accent:#7ee2b8;
+    --aspect: 16/9; /* overridden per shelf */
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:linear-gradient(180deg,#060912,#0e1423);
+    color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  header{
+    padding:10px 12px;
+    background:rgba(10,15,25,.9);
+    border-bottom:1px solid #1c2740;
+    position:sticky; top:0; z-index:5;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  h1{margin:0; font-size:16px; letter-spacing:.3px; opacity:.9}
+  .spacer{flex:1}
+  .row{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .tabs{display:flex; gap:6px; flex-wrap:wrap}
+  .tab{
+    appearance:none; cursor:pointer; padding:6px 10px; border-radius:10px;
+    font-size:14px; color:var(--muted); border:1px solid #2a3754; background:#0f1524;
+  }
+  .tab.active{ color:var(--ink); border-color:#39507e; background:#13203a; }
+
+  .wrap{max-width:980px; margin:0 auto; padding:12px}
+
+  .legend{font-size:14px; color:var(--muted); margin:4px 0 10px}
+
+  /* Shelf field uses the shelf image as its background. */
+  .field{
+    position:relative;
+    width:min(96vw, 940px);
+    aspect-ratio: var(--aspect);
+    margin:0 auto;
+    background:#000 center/contain no-repeat;
+    border:1px solid var(--grid); border-radius:12px;
+    box-shadow: inset 0 10px 28px rgba(0,0,0,.45);
+    overflow:hidden;
+    touch-action:none; /* helps dragging on mobile */
+  }
+
+  /* Optional grid for debugging (toggle with the checkbox) */
+  .field.show-grid::before{
+    content:""; position:absolute; inset:0;
+    background:
+      linear-gradient(#1b2943 1px, transparent 1px),
+      linear-gradient(90deg,#1b2943 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity:.25; pointer-events:none;
+  }
+
+  /* Hotspots are invisible in play mode; in dev mode they show a subtle outline */
+  .hotspot{
+    position:absolute; width:20%; height:20%;
+    left:0; top:0;
+    border-radius:10px;
+    pointer-events:none; /* not interactive; meter overlap only */
+    /* invisible by default */
+    border: none; background: transparent;
+  }
+  /* Show them when dev mode is on */
+  .dev .hotspot{
+    border:1px dashed rgba(237,104,104,.7);
+    background:rgba(237,104,104,.22);
+  }
+  .hotspot.active{
+    outline:2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+
+  /* Draggable K2 meter */
+  .meter{
+    position:absolute; width:min(38vw, 170px); touch-action:none; user-select:none; -webkit-user-drag:none; cursor:grab;
+    left:12px; top: 12px;
+  }
+  .meter.dragging{ cursor:grabbing }
+  .meter img{display:block; width:100%; height:auto; pointer-events:none}
+
+  /* LED overlay (positioned relative to the meter) */
+  .leds{ position:absolute; left:6%; top:4%; width:88%; height:18%; pointer-events:none }
+  .led{
+    position:absolute; width:16%; aspect-ratio:1/1; border-radius:50%;
+    opacity:.18; transform: translate(-50%,-50%);
+    background: radial-gradient(circle at 50% 55%, rgba(255,255,255,.35) 0 28%, rgba(255,255,255,.05) 29% 55%, rgba(0,0,0,.15) 56% 100%);
+  }
+  .led.l1{ left:14%; top:50%; --col:#33d16a }   /* green */
+  .led.l2{ left:33%; top:42%; --col:#27c15b }   /* green */
+  .led.l3{ left:52%; top:36%; --col:#f1d44e }   /* yellow */
+  .led.l4{ left:71%; top:42%; --col:#ff8a3d }   /* orange */
+  .led.l5{ left:88%; top:50%; --col:#ff4b4b }   /* red   */
+
+  .led.on{
+    opacity:1;
+    box-shadow:
+      0 0 6px var(--col),
+      0 0 18px color-mix(in srgb, var(--col) 55%, transparent);
+    background:
+      radial-gradient(circle at 50% 55%, #fff 0 18%, color-mix(in srgb, var(--col) 70%, #fff) 19% 52%, color-mix(in srgb, var(--col) 85%, #000) 53% 100%);
+  }
+
+  .status{ text-align:center; font-size:14px; color:var(--muted); margin-top:10px; min-height:22px }
+  .devToggle{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted) }
+  .devToggle input{ transform: translateY(1px); }
+</style>
+</head>
+<body>
+<header>
+  <h1>K2 EMF Shelves</h1>
+  <div class="tabs" id="shelfTabs"></div>
+  <div class="spacer"></div>
+  <label class="devToggle"><input id="hotToggle" type="checkbox" /> Show hotspots (dev)</label>
+</header>
+
+<div class="wrap">
+  <div class="legend">Drag the K2 meter over the shelf. Hidden <em>hot</em> spots will light all LEDs.</div>
+
+  <div id="field" class="field" aria-label="Shelf">
+    <!-- Hotspots injected here per shelf -->
+    <div id="meter" class="meter" aria-label="K2 Meter" role="img">
+      <img src="K2meter.png" alt="K2 EMF meter" />
+      <div class="leds">
+        <span class="led l1"></span>
+        <span class="led l2"></span>
+        <span class="led l3"></span>
+        <span class="led l4"></span>
+        <span class="led l5"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="status" class="status"></div>
+</div>
+
+<script>
+/* --------------------------
+   SHELF CONFIG
+   x/y/size are percentages; level=5 means full lights.
+---------------------------*/
+const SHELVES = [
+  {
+    name: 'Shelf 1',
+    img: 'shelf1.png',   // clean shelf art (no red)
+    aspectW: 702, aspectH: 975, // from your provided image
+    hotspots: [
+      { x:  2.85, y: 21.33, size: 22.36, level: 5 },
+      { x:  4.27, y: 37.54, size: 20.09, level: 5 },
+      { x:  4.99, y: 55.18, size: 19.94, level: 5 },
+      { x: 27.92, y: 69.64, size: 20.23, level: 5 },
+      { x: 51.14, y: 70.77, size: 20.51, level: 5 },
+      { x:  4.27, y: 70.97, size: 20.09, level: 5 }
+    ]
+  },
+  {
+    name: 'Shelf 2',
+    img: 'shelf2_clean.png',   // replace with real file
+    aspectW: 1920, aspectH: 1080,
+    hotspots: [
+      // send your red overlay and I’ll fill these in (target: 4)
+    ]
+  },
+  {
+    name: 'Shelf 3',
+    img: 'shelf3_clean.png',   // replace with real file
+    aspectW: 1600, aspectH: 1200,
+    hotspots: [
+      // send your red overlay and I’ll fill these in (target: 10)
+    ]
+  },
+  {
+    name: 'Shelf 4',
+    img: 'shelf4_clean.png',   // replace with real file
+    aspectW: 1080, aspectH: 1350,
+    hotspots: [
+      // send your red overlay and I’ll fill these in (target: 10)
+    ]
+  }
+];
+
+/* --------------------------
+   RUNTIME
+---------------------------*/
+const meter = document.getElementById('meter');
+const field = document.getElementById('field');
+const statusEl = document.getElementById('status');
+const leds = [...meter.querySelectorAll('.led')];
+const tabsWrap = document.getElementById('shelfTabs');
+const hotToggle = document.getElementById('hotToggle');
+
+let currentShelf = 0;
+let hotspots = []; // DOM nodes
+let dragging = false;
+let start = {x:0, y:0};
+let offset = {x: meter.offsetLeft, y: meter.offsetTop};
+
+/* ---- UI: shelf tabs ---- */
+SHELVES.forEach((s, i)=>{
+  const b = document.createElement('button');
+  b.className = 'tab' + (i===0 ? ' active' : '');
+  b.textContent = s.name;
+  b.addEventListener('click', ()=> loadShelf(i));
+  tabsWrap.appendChild(b);
+});
+
+/* ---- LEDs ---- */
+function setLights(n){
+  leds.forEach((el, i)=> el.classList.toggle('on', i < n));
+  statusEl.textContent = n === 1 ? `Level: ${n} light` : `Level: ${n} lights`;
+}
+function rect(el){ return el.getBoundingClientRect(); }
+
+function overlapRatio(a, b){
+  const x1 = Math.max(a.left, b.left);
+  const y1 = Math.max(a.top,  b.top);
+  const x2 = Math.min(a.right, b.right);
+  const y2 = Math.min(a.bottom,b.bottom);
+  const w = Math.max(0, x2 - x1);
+  const h = Math.max(0, y2 - y1);
+  const inter = w*h;
+  const area = (b.width * b.height); // compare against hotspot area
+  return area ? inter / area : 0;
+}
+function highlightHotspot(active){
+  hotspots.forEach(h => h.classList.toggle('active', h === active));
+}
+function checkHotspots(){
+  const m = rect(meter);
+  let best = null, bestRatio = 0;
+  for(const h of hotspots){
+    const r = rect(h);
+    const ratio = overlapRatio(m, r);
+    if(ratio > bestRatio){ bestRatio = ratio; best = h; }
+  }
+  const THRESH = 0.25; // how much overlap before it “counts”
+  if(best && bestRatio >= THRESH){
+    highlightHotspot(best);
+    const level = parseInt(best.dataset.level || '0', 10);
+    setLights(level);
+  }else{
+    highlightHotspot(null);
+    setLights(0);
+  }
+}
+
+/* ---- Drag logic ---- */
+function clamp(val, min, max){ return Math.min(max, Math.max(min, val)); }
+function moveTo(x, y){
+  const maxX = field.clientWidth - meter.clientWidth;
+  const maxY = field.clientHeight - meter.clientHeight;
+  offset.x = clamp(x, 0, maxX);
+  offset.y = clamp(y, 0, maxY);
+  meter.style.left = offset.x + 'px';
+  meter.style.top  = offset.y + 'px';
+  checkHotspots();
+}
+meter.addEventListener('pointerdown', (e)=>{
+  dragging = true;
+  meter.setPointerCapture(e.pointerId);
+  meter.classList.add('dragging');
+  start.x = e.clientX - offset.x;
+  start.y = e.clientY - offset.y;
+  e.preventDefault();
+});
+meter.addEventListener('pointermove', (e)=>{
+  if(!dragging) return;
+  moveTo(e.clientX - start.x, e.clientY - start.y);
+  e.preventDefault();
+});
+meter.addEventListener('pointerup', (e)=>{
+  dragging = false;
+  meter.classList.remove('dragging');
+  meter.releasePointerCapture(e.pointerId);
+});
+meter.addEventListener('pointercancel', ()=>{ dragging = false; meter.classList.remove('dragging'); });
+
+/* ---- Shelf loading & hotspot building ---- */
+function clearHotspots(){
+  hotspots.forEach(h => h.remove());
+  hotspots.length = 0;
+}
+function buildHotspots(defs){
+  clearHotspots();
+  defs.forEach(d=>{
+    const div = document.createElement('div');
+    div.className = 'hotspot';
+    div.dataset.level = String(d.level ?? 0);
+    div.style.width  = (d.size || 20) + '%';
+    div.style.height = (d.size || 20) + '%';
+    div.style.left   = (d.x    || 0)  + '%';
+    div.style.top    = (d.y    || 0)  + '%';
+    field.appendChild(div);
+    hotspots.push(div);
+  });
+}
+function setActiveTab(i){
+  [...tabsWrap.children].forEach((n, idx)=> n.classList.toggle('active', idx===i));
+}
+function loadShelf(i){
+  currentShelf = i;
+  setActiveTab(i);
+  const shelf = SHELVES[i];
+
+  // Aspect & background
+  const aspect = (shelf.aspectW && shelf.aspectH) ? (shelf.aspectW + '/' + shelf.aspectH) : '16/9';
+  field.style.setProperty('--aspect', aspect);
+  field.style.backgroundImage = `url("${shelf.img}")`;
+
+  // Reset meter and LEDs
+  offset = {x:12, y:12};
+  meter.style.left = offset.x + 'px';
+  meter.style.top  = offset.y + 'px';
+  setLights(0);
+
+  // Build hotspots for this shelf
+  buildHotspots(shelf.hotspots);
+  // Re-run after render
+  requestAnimationFrame(checkHotspots);
+}
+
+/* ---- Dev toggle (show hotspots) ---- */
+hotToggle.addEventListener('change', ()=>{
+  document.body.classList.toggle('dev', hotToggle.checked);
+});
+
+/* ---- Responsive rebuild ---- */
+new ResizeObserver(()=>{
+  // nothing to recompute since we’re using %; just re-check overlap
+  checkHotspots();
+}).observe(field);
+
+/* ---- Init ---- */
+loadShelf(0);
+checkHotspots();
+</script>
+</body>
+</html>
