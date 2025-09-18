@@ -17,6 +17,7 @@
     margin:0; background:linear-gradient(180deg,#060912,#0e1423);
     color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
     -webkit-font-smoothing:antialiased;
+    touch-action:manipulation;
   }
 
   header{
@@ -69,10 +70,8 @@
     left:0; top:0;
     border-radius:10px;
     pointer-events:none; /* not interactive; meter overlap only */
-    /* invisible by default */
-    border: none; background: transparent;
+    border: none; background: transparent; /* invisible by default */
   }
-  /* Show them when dev mode is on */
   .dev .hotspot{
     border:1px dashed rgba(237,104,104,.7);
     background:rgba(237,104,104,.22);
@@ -83,8 +82,9 @@
 
   /* Draggable K2 meter */
   .meter{
-    position:absolute; width:min(38vw, 170px); touch-action:none; user-select:none; -webkit-user-drag:none; cursor:grab;
-    left:12px; top: 12px;
+    position:absolute; /* width set dynamically via JS for mobile fit */
+    touch-action:none; user-select:none; -webkit-user-drag:none; cursor:grab;
+    left:12px; top:12px; z-index:3;
   }
   .meter.dragging{ cursor:grabbing }
   .meter img{display:block; width:100%; height:auto; pointer-events:none}
@@ -152,7 +152,7 @@
 const SHELVES = [
   {
     name: 'Shelf 1',
-    img: 'shelf1.png',   // clean shelf art (no red)
+    img: 'shelf1.png',          // ⬅ uses your requested filename
     aspectW: 702, aspectH: 975, // from your provided image
     hotspots: [
       { x:  2.85, y: 21.33, size: 22.36, level: 5 },
@@ -165,26 +165,26 @@ const SHELVES = [
   },
   {
     name: 'Shelf 2',
-    img: 'shelf2_clean.png',   // replace with real file
+    img: 'shelf2.png',          // replace with your file
     aspectW: 1920, aspectH: 1080,
     hotspots: [
-      // send your red overlay and I’ll fill these in (target: 4)
+      // send the red overlay and I'll fill these
     ]
   },
   {
     name: 'Shelf 3',
-    img: 'shelf3_clean.png',   // replace with real file
+    img: 'shelf3.png',          // replace with your file
     aspectW: 1600, aspectH: 1200,
     hotspots: [
-      // send your red overlay and I’ll fill these in (target: 10)
+      // send the red overlay and I'll fill these
     ]
   },
   {
     name: 'Shelf 4',
-    img: 'shelf4_clean.png',   // replace with real file
+    img: 'shelf4.png',          // replace with your file
     aspectW: 1080, aspectH: 1350,
     hotspots: [
-      // send your red overlay and I’ll fill these in (target: 10)
+      // send the red overlay and I'll fill these
     ]
   }
 ];
@@ -203,7 +203,7 @@ let currentShelf = 0;
 let hotspots = []; // DOM nodes
 let dragging = false;
 let start = {x:0, y:0};
-let offset = {x: meter.offsetLeft, y: meter.offsetTop};
+let offset = {x: 12, y: 12};
 
 /* ---- UI: shelf tabs ---- */
 SHELVES.forEach((s, i)=>{
@@ -307,6 +307,15 @@ function buildHotspots(defs){
 function setActiveTab(i){
   [...tabsWrap.children].forEach((n, idx)=> n.classList.toggle('active', idx===i));
 }
+function resizeMeter(){
+  // Make meter small enough to move anywhere inside the field on phones.
+  // ~18% of the field width, clamped 80–140px.
+  const w = field.clientWidth;
+  const target = Math.round(Math.min(140, Math.max(80, w * 0.18)));
+  meter.style.width = target + 'px';
+  // Keep current position valid after resizing
+  moveTo(offset.x, offset.y);
+}
 function loadShelf(i){
   currentShelf = i;
   setActiveTab(i);
@@ -317,15 +326,15 @@ function loadShelf(i){
   field.style.setProperty('--aspect', aspect);
   field.style.backgroundImage = `url("${shelf.img}")`;
 
-  // Reset meter and LEDs
+  // Reset meter position & LEDs, then size the meter for this field
   offset = {x:12, y:12};
   meter.style.left = offset.x + 'px';
   meter.style.top  = offset.y + 'px';
+  resizeMeter();
   setLights(0);
 
   // Build hotspots for this shelf
   buildHotspots(shelf.hotspots);
-  // Re-run after render
   requestAnimationFrame(checkHotspots);
 }
 
@@ -336,8 +345,8 @@ hotToggle.addEventListener('change', ()=>{
 
 /* ---- Responsive rebuild ---- */
 new ResizeObserver(()=>{
-  // nothing to recompute since we’re using %; just re-check overlap
-  checkHotspots();
+  resizeMeter();   // adapt meter size on rotate/resize
+  checkHotspots(); // recompute overlap
 }).observe(field);
 
 /* ---- Init ---- */
