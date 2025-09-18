@@ -2,75 +2,44 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>K2 Drag • Shelves</title>
 <style>
-  :root{
-    --ink:#e7f0ff; --muted:#aebedb; --grid:#23314a;
-    --accent:#7ee2b8; --aspect: 16/9;
-  }
+  :root{ --ink:#e7f0ff; --muted:#aebedb; --grid:#23314a; --aspect:16/9; }
   *{box-sizing:border-box}
   html,body{height:100%}
-  body{
-    margin:0; background:linear-gradient(180deg,#060912,#0e1423);
-    color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-    -webkit-font-smoothing:antialiased; touch-action:manipulation;
-  }
-
-  header{
-    padding:10px 12px; background:rgba(10,15,25,.9);
-    border-bottom:1px solid #1c2740; position:sticky; top:0; z-index:5;
-    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-  }
+  body{ margin:0; background:linear-gradient(180deg,#060912,#0e1423); color:var(--ink);
+        font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial; -webkit-font-smoothing:antialiased; touch-action:manipulation; }
+  header{ padding:10px 12px; background:rgba(10,15,25,.9); border-bottom:1px solid #1c2740;
+          position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   h1{margin:0; font-size:16px; letter-spacing:.3px; opacity:.9}
   .tabs{display:flex; gap:6px; flex-wrap:wrap}
-  .tab{
-    appearance:none; cursor:pointer; padding:6px 10px; border-radius:10px;
-    font-size:14px; color:#aebedb; border:1px solid #2a3754; background:#0f1524;
-  }
+  .tab{ appearance:none; cursor:pointer; padding:6px 10px; border-radius:10px; font-size:14px;
+        color:#aebedb; border:1px solid #2a3754; background:#0f1524; }
   .tab.active{ color:var(--ink); border-color:#39507e; background:#13203a; }
-
   .wrap{max-width:980px; margin:0 auto; padding:12px}
   .legend{font-size:14px; color:var(--muted); margin:4px 0 10px}
-
   .field{
-    position:relative; width:min(96vw, 940px); aspect-ratio: var(--aspect);
-    margin:0 auto; background:#000 center/contain no-repeat;
-    border:1px solid var(--grid); border-radius:12px;
-    box-shadow: inset 0 10px 28px rgba(0,0,0,.45);
-    overflow:visible; touch-action:none;
+    position:relative; width:min(96vw,940px); aspect-ratio:var(--aspect); margin:0 auto;
+    background:#000 center/contain no-repeat; border:1px solid var(--grid); border-radius:12px;
+    box-shadow:inset 0 10px 28px rgba(0,0,0,.45); overflow:visible; touch-action:none;
   }
-
-  /* hotspots are invisible in play */
   .hotspot{ position:absolute; border:none; background:transparent; border-radius:10px; pointer-events:none; }
-
-  /* meter */
-  .meter{
-    position:absolute; left:12px; top:12px; z-index:3;
-    touch-action:none; user-select:none; -webkit-user-drag:none; cursor:grab;
-  }
+  .meter{ position:absolute; left:12px; top:12px; z-index:3; touch-action:none; user-select:none; -webkit-user-drag:none; cursor:grab; }
   .meter.dragging{ cursor:grabbing }
   .meter img{display:block; width:100%; height:auto; pointer-events:none}
 
-  /* LED overlay (render-only) */
+  /* LED overlay (render only) */
   .leds{ position:absolute; left:6%; top:4%; width:88%; height:18%; pointer-events:none }
-  .led{
-    position:absolute; width:16%; aspect-ratio:1/1; border-radius:50%;
-    opacity:.18; transform: translate(-50%,-50%);
-    background: radial-gradient(circle at 50% 55%, rgba(255,255,255,.35) 0 28%, rgba(255,255,255,.05) 29% 55%, rgba(0,0,0,.15) 56% 100%);
-  }
+  .led{ position:absolute; width:16%; aspect-ratio:1/1; border-radius:50%; opacity:.18; transform:translate(-50%,-50%);
+        background: radial-gradient(circle at 50% 55%, rgba(255,255,255,.35) 0 28%, rgba(255,255,255,.05) 29% 55%, rgba(0,0,0,.15) 56% 100%);}
   .led.l1{ left:14%; top:50%; --col:#33d16a }
   .led.l2{ left:33%; top:42%; --col:#27c15b }
   .led.l3{ left:52%; top:36%; --col:#f1d44e }
   .led.l4{ left:71%; top:42%; --col:#ff8a3d }
   .led.l5{ left:88%; top:50%; --col:#ff4b4b }
-  .led.on{
-    opacity:1;
-    box-shadow:0 0 6px var(--col), 0 0 18px color-mix(in srgb, var(--col) 55%, transparent);
-    background:radial-gradient(circle at 50% 55%, #fff 0 18%, color-mix(in srgb, var(--col) 70%, #fff) 19% 52%, color-mix(in srgb, var(--col) 85%, #000) 53% 100%);
-  }
-
+  .led.on{ opacity:1; box-shadow:0 0 6px var(--col), 0 0 18px color-mix(in srgb,var(--col) 55%, transparent);
+           background:radial-gradient(circle at 50% 55%, #fff 0 18%, color-mix(in srgb,var(--col) 70%, #fff) 19% 52%, color-mix(in srgb,var(--col) 85%, #000) 53% 100%); }
   .status{ text-align:center; font-size:14px; color:var(--muted); margin-top:10px; min-height:22px }
 </style>
 </head>
@@ -87,11 +56,7 @@
     <div id="meter" class="meter" aria-label="K2 Meter" role="img">
       <img src="K2meter.png" alt="K2 EMF meter" />
       <div class="leds">
-        <span class="led l1"></span>
-        <span class="led l2"></span>
-        <span class="led l3"></span>
-        <span class="led l4"></span>
-        <span class="led l5"></span>
+        <span class="led l1"></span><span class="led l2"></span><span class="led l3"></span><span class="led l4"></span><span class="led l5"></span>
       </div>
     </div>
   </div>
@@ -100,11 +65,11 @@
 </div>
 
 <script>
-/* x/y/size are percentages; level 5 = full lights */
+/* x/y/size are percentages; level 5 = all LEDs */
 const SHELVES = [
   {
     name:'Shelf 1', img:'shelf1.png', aspectW:702, aspectH:975,
-    hotspots:[
+    hotspots:[ // ✅ already good
       {x:2.85,y:21.33,size:22.36,level:5},
       {x:4.27,y:37.54,size:20.09,level:5},
       {x:4.99,y:55.18,size:19.94,level:5},
@@ -115,22 +80,21 @@ const SHELVES = [
   },
   {
     name:'Shelf 2', img:'shelf2.png', aspectW:697, aspectH:990,
-    // 4 vertical squares in the second column (from your overlay)
+    // ✅ corrected: one vertical column (col 2) across all 4 rows
     hotspots:[
-      {x:25.82,y:20.30,size:23.24,level:5},
-      {x:26.11,y:37.47,size:22.53,level:5},
-      {x:27.26,y:54.34,size:22.96,level:5},
-      {x:27.83,y:69.19,size:19.94,level:5}
+      {x:25.54,y:20.30,size:23.53,level:5},
+      {x:25.54,y:36.36,size:23.53,level:5},
+      {x:25.54,y:52.02,size:23.53,level:5},
+      {x:25.54,y:68.08,size:23.53,level:5}
     ]
   },
   {
     name:'Shelf 3', img:'shelf3.png', aspectW:700, aspectH:958,
-    // 10 hotspots exactly as in your red overlay
-    hotspots:[
-      {x:27.29,y:20.15,size:19.71,level:5},
-      {x:2.71,y:21.29,size:21.71,level:5},
-      {x:52.29,y:21.29,size:21.29,level:5},
-      {x:3.71,y:36.64,size:19.14,level:5},
+    hotspots:[ // ✅ already good (10)
+      {x:2.71,y:7.60,size:21.71,level:5},
+      {x:27.29,y:7.60,size:19.71,level:5},
+      {x:52.29,y:7.60,size:21.29,level:5},
+      {x:3.71,y:31.64,size:19.14,level:5},
       {x:54.86,y:37.79,size:15.86,level:5},
       {x:51.71,y:54.59,size:19.00,level:5},
       {x:3.71,y:55.11,size:19.14,level:5},
@@ -141,18 +105,22 @@ const SHELVES = [
   },
   {
     name:'Shelf 4', img:'shelf4.png', aspectW:703, aspectH:981,
-    // 10 hotspots; two were faint so I added them at the exact grid cells
+    // ✅ corrected: 10 squares exactly where your overlay shows them
     hotspots:[
-      {x:50.07,y:21.00,size:23.76,level:5}, // r1 c3 (added)
-      {x:2.42,y:22.73,size:21.19,level:5},  // r1 c1
-      {x:28.73,y:23.34,size:21.48,level:5}, // r1 c2
-      {x:53.91,y:35.68,size:18.35,level:5}, // r2 c3
-      {x:4.55,y:38.33,size:20.48,level:5},  // r2 c1
-      {x:2.70,y:53.52,size:23.04,level:5},  // r3 c1
-      {x:26.60,y:53.52,size:21.76,level:5}, // r3 c2
-      {x:52.06,y:68.60,size:17.21,level:5}, // r4 c3
-      {x:74.25,y:68.91,size:23.76,level:5}, // r4 c4 (added)
-      {x:2.13,y:70.85,size:22.05,level:5}   // r4 c1
+      // Row 1: all four cells
+      {x:2.28,y:9.48,size:23.90,level:5},
+      {x:26.60,y:9.48,size:23.33,level:5},
+      {x:53.77,y:9.48,size:23.90,level:5},
+      {x:74.40,y:9.48,size:24.04,level:5},
+      // Row 2: col 1–2
+      {x:2.28,y:22.63,size:23.90,level:5},
+      {x:26.60,y:22.63,size:23.33,level:5},
+      // Row 3: col 1 & 3
+      {x:2.28,y:38.23,size:23.90,level:5},
+      {x:53.77,y:38.23,size:23.90,level:5},
+      // Row 4: col 1–2
+      {x:2.28,y:53.41,size:23.90,level:5},
+      {x:26.60,y:53.41,size:23.33,level:5}
     ]
   }
 ];
@@ -174,14 +142,14 @@ SHELVES.forEach((s,i)=>{
   tabsWrap.appendChild(b);
 });
 
-/* LEDs & hit detection */
+/* LEDs + hit test (LED head only) */
 function setLights(n){ leds.forEach((el,i)=>el.classList.toggle('on',i<n)); statusEl.textContent=n?`Level: ${n} lights`:''; }
 function rect(el){ return el.getBoundingClientRect(); }
 function ledHeadRect(){
-  const m=rect(meter);
+  const m=rect(meter); // same ratios as .leds
   const left=m.left+m.width*0.06, top=m.top+m.height*0.04;
   const width=m.width*0.88, height=m.height*0.18;
-  return {left, top, right:left+width, bottom:top+height, width, height};
+  return {left,top,right:left+width,bottom:top+height,width,height};
 }
 function overlapRatio(a,b){
   const x1=Math.max(a.left,b.left), y1=Math.max(a.top,b.top);
@@ -190,15 +158,16 @@ function overlapRatio(a,b){
   return (b.width*b.height)?(w*h)/(b.width*b.height):0;
 }
 function checkHotspots(){
-  const head=ledHeadRect(); let best=null, bestRatio=0;
+  const head=ledHeadRect(); let best=null,bestRatio=0;
   for(const h of hotspots){
     const r=rect(h), ratio=overlapRatio(head,r);
-    if(ratio>bestRatio){bestRatio=ratio; best=h;}
+    if(ratio>bestRatio){ bestRatio=ratio; best=h; }
   }
-  if(best && bestRatio>=0.25){ setLights(+best.dataset.level||0); } else { setLights(0); }
+  if(best && bestRatio>=0.25){ setLights(+best.dataset.level||0); }
+  else setLights(0);
 }
 
-/* drag — allow meter to hang outside the shelf so the LED head can line up */
+/* drag — allow the meter to hang outside the frame */
 function clamp(v,min,max){ return Math.min(max, Math.max(min,v)); }
 function moveTo(x,y){
   const mx=meter.clientWidth*0.6, my=meter.clientHeight*0.8;
@@ -215,11 +184,9 @@ meter.addEventListener('pointerdown',e=>{
 meter.addEventListener('pointermove',e=>{
   if(!dragging) return; moveTo(e.clientX-start.x, e.clientY-start.y); e.preventDefault();
 });
-meter.addEventListener('pointerup',()=>{
-  dragging=false; meter.classList.remove('dragging');
-});
+meter.addEventListener('pointerup',()=>{ dragging=false; meter.classList.remove('dragging'); });
 
-/* shelf loading */
+/* shelf management */
 function clearHotspots(){ hotspots.forEach(h=>h.remove()); hotspots=[]; }
 function buildHotspots(defs){
   clearHotspots();
@@ -234,7 +201,7 @@ function buildHotspots(defs){
 function setActiveTab(i){ [...tabsWrap.children].forEach((n,idx)=>n.classList.toggle('active', idx===i)); }
 function resizeMeter(){
   const w=field.clientWidth;
-  const target=Math.round(Math.min(140, Math.max(80, w*0.18))); // mobile-friendly
+  const target=Math.round(Math.min(140, Math.max(80, w*0.18))); // phone-friendly
   meter.style.width=target+'px'; moveTo(offset.x, offset.y);
 }
 function loadShelf(i){
@@ -248,8 +215,6 @@ function loadShelf(i){
   requestAnimationFrame(checkHotspots);
 }
 new ResizeObserver(()=>{ resizeMeter(); checkHotspots(); }).observe(field);
-
-/* init */
 loadShelf(0);
 </script>
 </body>
