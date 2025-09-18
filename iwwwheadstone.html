@@ -5,16 +5,23 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
 <title>Headstone — Reassemble</title>
 <style>
-  :root{ --ink:#e9f0ff; --ok:#4be38f; --frame-pad:14px }
+  :root{ --ink:#e9f0ff; --ok:#4be38f; --frame-pad:14px; --edge-gap:10px; --shelf-gap:10px }
   *{ box-sizing:border-box; touch-action:manipulation }
   html,body{ height:100% }
   body{
     margin:0; color:var(--ink); font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;
     background:#000 url("iwwcamerabackground.png") center / cover fixed no-repeat;
-    display:flex; align-items:center; justify-content:center;
   }
+
+  /* Stage holds the centered board; pieces are positioned relative to the PAGE (body) so they can go anywhere */
+  .stage{
+    position:relative; width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    padding:12px; /* some breathing room at very small viewports */
+  }
+
   .board{
-    position:relative; width:min(94vw,94vh); aspect-ratio:1/1;
+    position:relative; width:min(86vw, 86vh); aspect-ratio:1/1;
     border-radius:12px; overflow:hidden;
     box-shadow:0 20px 60px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.06);
     backdrop-filter:saturate(120%) blur(1px);
@@ -30,22 +37,27 @@
     opacity:.06; pointer-events:none; filter:grayscale(100%);
   }
   .piece{
-    position:absolute; cursor:grab; user-select:none; -webkit-user-drag:none;
+    position:fixed; /* <-- key: position to the PAGE so pieces can go anywhere */
+    z-index:3;
+    cursor:grab; user-select:none; -webkit-user-drag:none;
     filter:drop-shadow(0 6px 8px rgba(0,0,0,.5)); touch-action:none;
   }
   .piece.held{ cursor:grabbing; filter:drop-shadow(0 12px 18px rgba(0,0,0,.7)) }
+
   #toast{
     position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
     background:rgba(10,18,26,.85); border:1px solid rgba(153,255,204,.25);
     padding:10px 14px; border-radius:12px; color:var(--ok); font-weight:700; display:none;
-    box-shadow:0 10px 30px rgba(0,0,0,.6);
+    box-shadow:0 10px 30px rgba(0,0,0,.6); z-index:5;
   }
 </style>
 </head>
 <body>
-  <div class="board" id="board">
-    <div class="frame"></div>
-    <img class="goal" id="goal" alt="" />
+  <div class="stage" id="stage">
+    <div class="board" id="board">
+      <div class="frame"></div>
+      <img class="goal" id="goal" alt="" />
+    </div>
   </div>
   <div id="toast">✅ The headstone is restored.</div>
 
@@ -53,34 +65,36 @@
 (()=> {
   // ---------- Config ----------
   const IMG_SRC = "iwwheadstone.png";
-  const ROWS = 3, COLS = 3;        // 3x3 = 9 pieces
-  const JITTER = 0.10;             // 0.05–0.12 looks good
-  const SNAP_PX = 22;              // snap threshold in px
-  const ROTATION_ENABLED = false;  // keep simple on mobile
+  const ROWS = 3, COLS = 3;           // 3x3 = 9 pieces
+  const JITTER = 0.10;                // edge jaggedness
+  const SNAP_PX = 26;                 // snap threshold (a bit larger since pieces can start farther away)
+  const ROTATION_ENABLED = false;     // keep simple on mobile
 
   // ---------- State ----------
+  const stage = document.getElementById('stage');
   const board = document.getElementById('board');
   const goalImg = document.getElementById('goal');
   const toast = document.getElementById('toast');
   const inset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--frame-pad')) || 14;
 
   let img = null, scale = 1;
-  let buildInProgress = false;
-  let rebuildPending = false;
-  let lastSide = 0;
+  let buildInProgress = false, rebuildPending = false;
+  let lastBoardSide = 0;
 
-  /** pieces we manage */
   const pieces = []; // { el, goalX, goalY, w, h, placed, angle }
   let placedCount = 0;
 
-  // ---------- Utils ----------
+  // ---------- Helpers ----------
   const loadImage = (src)=> new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=src; });
-  const boardRect = ()=> {
-    const r = board.getBoundingClientRect();
-    const s = Math.min(r.width, r.height);
-    return { left:r.left, top:r.top, w:s, h:s };
-  };
+  const rect = (el)=> el.getBoundingClientRect();
   const dist = (ax,ay,bx,by)=> Math.hypot(ax-bx, ay-by);
+  const clamp = (v,min,max)=> Math.max(min, Math.min(max, v));
+
+  function boardInfo(){
+    const br = rect(board);
+    const side = Math.min(br.width, br.height) - inset*2; // drawable area inside frame
+    return { br, side };
+  }
 
   function buildPoints(rows, cols, jitter){
     const pts=[];
@@ -96,7 +110,7 @@
     }
     return pts;
   }
-  const quadsFromPoints = (pts, rows, cols)=>{
+  function quadsFromPoints(pts, rows, cols){
     const polys=[];
     for(let r=0;r<rows;r++){
       for(let c=0;c<cols;c++){
@@ -105,7 +119,7 @@
       }
     }
     return polys;
-  };
+  }
   function polyBounds(poly, side){
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     for(const [nx,ny] of poly){
@@ -116,52 +130,104 @@
   }
 
   function clearPieces(){
-    // Remove any existing .piece nodes (extra safety)
     document.querySelectorAll('.piece').forEach(n=>n.remove());
     pieces.length = 0; placedCount = 0;
   }
 
   function celebrate(){
     toast.style.display='block';
-    setTimeout(()=> toast.style.display='none', 2200);
+    setTimeout(()=> toast.style.display='none',2200);
   }
 
-  // ---------- Build (guarded against double-build) ----------
+  // ---------- Non-overlapping placement around the board ----------
+  function layOutAroundBoard(pieceElements){
+    // Arrange pieces on 4 "shelves" around the board (top, right, bottom, left)
+    // so they don't overlap and remain visible on mobile.
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const { br } = boardInfo();
+
+    const gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--shelf-gap')) || 10;
+    const edge = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--edge-gap')) || 10;
+
+    // Shelves: y for top row, y for bottom row, x for left col, x for right col
+    const topY = Math.max(edge, br.top - 90);     // will adjust with piece heights
+    const botY = Math.min(vh - edge, br.bottom + 10);
+    const leftX = Math.max(edge, br.left - 120);  // adjust with piece widths
+    const rightX = Math.min(vw - edge, br.right + 10);
+
+    // We’ll iterate pieces and place them across these shelves with wrapping
+    let xTop = edge, xBot = edge;
+    let yLeft = edge, yRight = edge;
+
+    // To distribute fairly, cycle shelves: top → right → bottom → left → repeat
+    const shelves = ['top','right','bottom','left'];
+    let shelfIdx = 0;
+
+    for(const p of pieceElements){
+      const el = p.el;
+      const shelf = shelves[shelfIdx % shelves.length];
+      shelfIdx++;
+
+      if(shelf === 'top'){
+        const y = clamp(topY - el.height - 8, edge, vh - el.height - edge);
+        if(xTop + el.width > vw - edge) xTop = edge; // wrap
+        el.style.left = xTop + 'px';
+        el.style.top  = y + 'px';
+        xTop += el.width + gap;
+
+      } else if(shelf === 'right'){
+        const x = clamp(rightX, edge, vw - el.width - edge);
+        if(yRight + el.height > vh - edge) yRight = edge; // wrap
+        el.style.left = x + 'px';
+        el.style.top  = yRight + 'px';
+        yRight += el.height + gap;
+
+      } else if(shelf === 'bottom'){
+        const y = clamp(botY, edge, vh - el.height - edge);
+        if(xBot + el.width > vw - edge) xBot = edge; // wrap
+        el.style.left = xBot + 'px';
+        el.style.top  = y + 'px';
+        xBot += el.width + gap;
+
+      } else { // left
+        const x = clamp(leftX - el.width - 8, edge, vw - el.width - edge);
+        if(yLeft + el.height > vh - edge) yLeft = edge; // wrap
+        el.style.left = x + 'px';
+        el.style.top  = yLeft + 'px';
+        yLeft += el.height + gap;
+      }
+    }
+  }
+
+  // ---------- Build (guarded) ----------
   async function build(){
     if(buildInProgress){ rebuildPending = true; return; }
     buildInProgress = true;
 
     clearPieces();
-
-    // ensure image loaded once
     if(!img) img = await loadImage(IMG_SRC);
 
-    // layout sizing
-    const br = boardRect();
-    const side = br.w - inset*2;
-    lastSide = side;
+    const { br, side } = boardInfo();
+    lastBoardSide = side;
 
-    // faint silhouette
+    // goal (faint final image inside frame)
     goalImg.src = IMG_SRC;
     goalImg.style.left = inset+'px';
     goalImg.style.top = inset+'px';
     goalImg.style.width = side+'px';
     goalImg.style.height = side+'px';
 
-    // scale factor to map image pixels -> board pixels
     scale = side / img.width;
 
-    // generate exactly 9 quads, jittered edges (non-overlapping)
     const pts = buildPoints(ROWS, COLS, JITTER);
     const polys = quadsFromPoints(pts, ROWS, COLS);
 
-    // create shards
-    for(const poly of polys){
-      // mask on full image
-      const off = document.createElement('canvas');
-      off.width = img.width; off.height = img.height;
-      const ctx = off.getContext('2d');
+    const newPieces = [];
 
+    for(const poly of polys){
+      // mask piece using offscreen canvas
+      const off = document.createElement('canvas'); off.width = img.width; off.height = img.height;
+      const ctx = off.getContext('2d');
       ctx.save();
       ctx.beginPath();
       poly.forEach(([nx,ny],i)=>{ const x=nx*img.width, y=ny*img.height; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
@@ -176,24 +242,23 @@
       const url = cut.toDataURL('image/png');
 
       const el = document.createElement('img');
-      el.className = 'piece';
-      el.src = url;
+      el.className='piece'; el.src=url;
       el.width  = Math.round(b.w*scale);
       el.height = Math.round(b.h*scale);
 
-      // scatter randomly within the board bounds
-      const scatterPad = 6;
-      el.style.left = (Math.random()*(br.w - el.width  - scatterPad*2) + scatterPad) + 'px';
-      el.style.top  = (Math.random()*(br.h - el.height - scatterPad*2) + scatterPad) + 'px';
-
-      const goalX = inset + Math.round(b.x*scale);
-      const goalY = inset + Math.round(b.y*scale);
+      // target position inside frame
+      const goalX = Math.round(br.left + inset + b.x*scale);
+      const goalY = Math.round(br.top  + inset + b.y*scale);
 
       const p = { el, goalX, goalY, w:el.width, h:el.height, placed:false, angle:0 };
       pieces.push(p);
-      board.appendChild(el);
+      newPieces.push(p);
+      document.body.appendChild(el); // position relative to PAGE
       wireDrag(p);
     }
+
+    // place pieces around the board with no overlap
+    layOutAroundBoard(newPieces);
 
     buildInProgress = false;
     if(rebuildPending){ rebuildPending = false; build(); }
@@ -201,14 +266,12 @@
 
   // ---------- Drag / Snap ----------
   function trySnap(p){
-    const rect = p.el.getBoundingClientRect();
-    const br = board.getBoundingClientRect();
-    const x = rect.left - br.left;
-    const y = rect.top  - br.top;
+    const r = rect(p.el);
+    // use top-left corner as alignment point
     const aligned = !ROTATION_ENABLED || (Math.abs(p.angle)%360) < 5;
-    if(aligned && dist(x,y,p.goalX,p.goalY) <= SNAP_PX){
-      p.el.style.left = p.goalX+'px';
-      p.el.style.top  = p.goalY+'px';
+    if(aligned && dist(r.left, r.top, p.goalX, p.goalY) <= SNAP_PX){
+      p.el.style.left = p.goalX + 'px';
+      p.el.style.top  = p.goalY + 'px';
       p.el.style.transform = 'rotate(0deg)';
       p.placed = true;
       p.el.style.pointerEvents = 'none';
@@ -223,23 +286,23 @@
     const onDown = (e)=>{
       e.preventDefault();
       p.el.classList.add('held');
-      const br = board.getBoundingClientRect();
-      const r  = p.el.getBoundingClientRect();
+      const r  = rect(p.el);
       startX=e.clientX; startY=e.clientY;
-      startL=r.left - br.left; startT=r.top - br.top;
+      startL=r.left; startT=r.top;
       window.addEventListener('pointermove', onMove, {passive:false});
       window.addEventListener('pointerup', onUp, {once:true});
       p.el.setPointerCapture?.(e.pointerId);
     };
     const onMove = (e)=>{
       e.preventDefault();
-      const br = board.getBoundingClientRect();
       let nx = startL + (e.clientX - startX);
       let ny = startT + (e.clientY - startY);
-      nx = Math.max(0, Math.min(br.width  - p.w, nx));
-      ny = Math.max(0, Math.min(br.height - p.h, ny));
-      p.el.style.left = nx+'px';
-      p.el.style.top  = ny+'px';
+      // keep within viewport (a little margin)
+      const vw = window.innerWidth, vh = window.innerHeight;
+      nx = clamp(nx, 0, vw - p.w);
+      ny = clamp(ny, 0, vh - p.h);
+      p.el.style.left = nx + 'px';
+      p.el.style.top  = ny + 'px';
     };
     const onUp = ()=>{
       p.el.classList.remove('held');
@@ -260,20 +323,15 @@
   // ---------- Init & guarded resize ----------
   loadImage(IMG_SRC).then(im=>{ img=im; build(); });
 
-  // Debounced + guarded rebuild on resize (prevents duplicates)
-  let resizeTimer = null;
+  let resizeTimer=null;
   const ro = new ResizeObserver(()=>{
-    // debounce a bit
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(()=>{
-      const br = boardRect();
-      const side = br.w - inset*2;
-      if(Math.abs(side - lastSide) > 2){
-        build(); // lock prevents re-entrancy; clears old pieces before adding new
-      }
+      const { side } = boardInfo();
+      if(Math.abs(side - lastBoardSide) > 2) build();
     }, 120);
   });
-  ro.observe(board);
+  ro.observe(stage);
 })();
 </script>
 </body>
