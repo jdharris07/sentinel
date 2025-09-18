@@ -5,45 +5,38 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
 <title>Headstone — Reassemble</title>
 <style>
-  :root{
-    --ink:#e9f0ff; --ok:#4be38f;
-    --frame-pad:14px; /* inner frame padding */
-  }
-  *{box-sizing:border-box; touch-action:manipulation}
-  html,body{height:100%}
+  :root{ --ink:#e9f0ff; --ok:#4be38f; --frame-pad:14px }
+  *{ box-sizing:border-box; touch-action:manipulation }
+  html,body{ height:100% }
   body{
     margin:0; color:var(--ink); font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;
-    background: #000 url("iwwcamerabackground.png") center / cover fixed no-repeat;
+    background:#000 url("iwwcamerabackground.png") center / cover fixed no-repeat;
     display:flex; align-items:center; justify-content:center;
   }
-  /* main board scales with viewport, stays square */
   .board{
-    position:relative; width:min(94vw, 94vh); aspect-ratio:1/1;
+    position:relative; width:min(94vw,94vh); aspect-ratio:1/1;
     border-radius:12px; overflow:hidden;
     box-shadow:0 20px 60px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.06);
     backdrop-filter:saturate(120%) blur(1px);
   }
-  /* subtle inner frame so users know where to place pieces */
   .frame{
     position:absolute; inset:var(--frame-pad);
     border:1px dashed rgba(255,255,255,.18);
     border-radius:10px;
     background:linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.35));
   }
-  /* the finished-image silhouette (faint; helps on mobile) */
   .goal{
     position:absolute; inset:var(--frame-pad);
     opacity:.06; pointer-events:none; filter:grayscale(100%);
   }
   .piece{
     position:absolute; cursor:grab; user-select:none; -webkit-user-drag:none;
-    filter: drop-shadow(0 6px 8px rgba(0,0,0,.5));
-    touch-action:none;
+    filter:drop-shadow(0 6px 8px rgba(0,0,0,.5)); touch-action:none;
   }
-  .piece.held{ cursor:grabbing; filter: drop-shadow(0 12px 18px rgba(0,0,0,.7)); }
+  .piece.held{ cursor:grabbing; filter:drop-shadow(0 12px 18px rgba(0,0,0,.7)) }
   #toast{
     position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
-    background:rgba(10,18,26,.8); border:1px solid rgba(153,255,204,.25);
+    background:rgba(10,18,26,.85); border:1px solid rgba(153,255,204,.25);
     padding:10px 14px; border-radius:12px; color:var(--ok); font-weight:700; display:none;
     box-shadow:0 10px 30px rgba(0,0,0,.6);
   }
@@ -53,68 +46,66 @@
   <div class="board" id="board">
     <div class="frame"></div>
     <img class="goal" id="goal" alt="" />
-    <!-- pieces injected here -->
   </div>
   <div id="toast">✅ The headstone is restored.</div>
 
 <script>
 (()=> {
   // ---------- Config ----------
-  const IMG_SRC = "iwwheadstone.png";   // your headstone art
-  const ROWS = 3, COLS = 3;             // 3x3 = 9 pieces
-  const JITTER = 0.10;                  // jaggedness (0.05–0.12 looks nice)
-  const SNAP_PX = 22;                   // snap distance (px)
-  const ROTATION_ENABLED = false;       // no rotation on mobile
+  const IMG_SRC = "iwwheadstone.png";
+  const ROWS = 3, COLS = 3;        // 3x3 = 9 pieces
+  const JITTER = 0.10;             // 0.05–0.12 looks good
+  const SNAP_PX = 22;              // snap threshold in px
+  const ROTATION_ENABLED = false;  // keep simple on mobile
 
   // ---------- State ----------
   const board = document.getElementById('board');
   const goalImg = document.getElementById('goal');
   const toast = document.getElementById('toast');
-
   const inset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--frame-pad')) || 14;
 
-  let img=null, scale=1, placing=false;
-  let lastW=0, lastH=0;
+  let img = null, scale = 1;
+  let buildInProgress = false;
+  let rebuildPending = false;
+  let lastSide = 0;
 
-  const pieces=[]; // {el, goalX, goalY, w, h, placed, angle}
-  let placedCount=0;
+  /** pieces we manage */
+  const pieces = []; // { el, goalX, goalY, w, h, placed, angle }
+  let placedCount = 0;
 
-  // --------- Helpers ----------
-  function loadImage(src){
-    return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=src; });
-  }
-  function boardRect(){
+  // ---------- Utils ----------
+  const loadImage = (src)=> new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=src; });
+  const boardRect = ()=> {
     const r = board.getBoundingClientRect();
     const s = Math.min(r.width, r.height);
-    return {left:r.left, top:r.top, w:s, h:s};
-  }
-  function distance(ax,ay,bx,by){ return Math.hypot(ax-bx, ay-by); }
+    return { left:r.left, top:r.top, w:s, h:s };
+  };
+  const dist = (ax,ay,bx,by)=> Math.hypot(ax-bx, ay-by);
 
-  // Build jittered grid points (tile perfectly, add irregularity)
   function buildPoints(rows, cols, jitter){
     const pts=[];
     for(let r=0;r<=rows;r++){
       const row=[];
       for(let c=0;c<=cols;c++){
-        let x = c/cols, y = r/rows;
-        if(r>0 && r<rows) y += (Math.random()*2-1) * (jitter/rows);
-        if(c>0 && c<cols) x += (Math.random()*2-1) * (jitter/cols);
+        let x=c/cols, y=r/rows;
+        if(r>0 && r<rows) y += (Math.random()*2-1)*(jitter/rows);
+        if(c>0 && c<cols) x += (Math.random()*2-1)*(jitter/cols);
         row.push([Math.max(0,Math.min(1,x)), Math.max(0,Math.min(1,y))]);
       }
       pts.push(row);
     }
     return pts;
   }
-  function quadsFromPoints(pts, rows, cols){
+  const quadsFromPoints = (pts, rows, cols)=>{
     const polys=[];
     for(let r=0;r<rows;r++){
       for(let c=0;c<cols;c++){
         const a=pts[r][c], b=pts[r][c+1], e=pts[r+1][c+1], d=pts[r+1][c];
-        polys.push([a,b,e,d]); // convex quad
+        polys.push([a,b,e,d]);
       }
     }
     return polys;
-  }
+  };
   function polyBounds(poly, side){
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     for(const [nx,ny] of poly){
@@ -125,8 +116,9 @@
   }
 
   function clearPieces(){
-    for(const p of pieces){ p.el.remove(); }
-    pieces.length=0; placedCount=0;
+    // Remove any existing .piece nodes (extra safety)
+    document.querySelectorAll('.piece').forEach(n=>n.remove());
+    pieces.length = 0; placedCount = 0;
   }
 
   function celebrate(){
@@ -134,83 +126,87 @@
     setTimeout(()=> toast.style.display='none', 2200);
   }
 
-  // --------- Build puzzle ----------
+  // ---------- Build (guarded against double-build) ----------
   async function build(){
-    placing = true;
+    if(buildInProgress){ rebuildPending = true; return; }
+    buildInProgress = true;
+
     clearPieces();
 
-    const br = boardRect();
-    lastW=br.w; lastH=br.h;
+    // ensure image loaded once
+    if(!img) img = await loadImage(IMG_SRC);
 
+    // layout sizing
+    const br = boardRect();
+    const side = br.w - inset*2;
+    lastSide = side;
+
+    // faint silhouette
     goalImg.src = IMG_SRC;
     goalImg.style.left = inset+'px';
     goalImg.style.top = inset+'px';
-    goalImg.style.width = (br.w - inset*2)+'px';
-    goalImg.style.height = (br.w - inset*2)+'px';
+    goalImg.style.width = side+'px';
+    goalImg.style.height = side+'px';
 
-    // image and scale (assumes square image; if not, it still scales into square)
-    if(!img) img = await loadImage(IMG_SRC);
-    const side = br.w - inset*2;
+    // scale factor to map image pixels -> board pixels
     scale = side / img.width;
 
+    // generate exactly 9 quads, jittered edges (non-overlapping)
     const pts = buildPoints(ROWS, COLS, JITTER);
     const polys = quadsFromPoints(pts, ROWS, COLS);
 
+    // create shards
     for(const poly of polys){
-      // mask piece using offscreen canvas
+      // mask on full image
       const off = document.createElement('canvas');
       off.width = img.width; off.height = img.height;
       const ctx = off.getContext('2d');
 
       ctx.save();
       ctx.beginPath();
-      poly.forEach(([nx,ny],i)=>{
-        const x=nx*img.width, y=ny*img.height;
-        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-      });
+      poly.forEach(([nx,ny],i)=>{ const x=nx*img.width, y=ny*img.height; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
       ctx.closePath(); ctx.clip();
       ctx.drawImage(img,0,0);
       ctx.restore();
 
       const b = polyBounds(poly, img.width);
       const crop = ctx.getImageData(b.x,b.y,b.w,b.h);
-      const cut = document.createElement('canvas');
-      cut.width=b.w; cut.height=b.h;
+      const cut = document.createElement('canvas'); cut.width=b.w; cut.height=b.h;
       cut.getContext('2d').putImageData(crop,0,0);
       const url = cut.toDataURL('image/png');
 
       const el = document.createElement('img');
-      el.className='piece';
+      el.className = 'piece';
       el.src = url;
-      el.width = Math.round(b.w*scale);
+      el.width  = Math.round(b.w*scale);
       el.height = Math.round(b.h*scale);
 
-      // scatter pieces (random) within the board bounds
+      // scatter randomly within the board bounds
       const scatterPad = 6;
-      el.style.left = (Math.random() * (br.w - el.width - scatterPad*2) + scatterPad) + 'px';
-      el.style.top  = (Math.random() * (br.h - el.height - scatterPad*2) + scatterPad) + 'px';
+      el.style.left = (Math.random()*(br.w - el.width  - scatterPad*2) + scatterPad) + 'px';
+      el.style.top  = (Math.random()*(br.h - el.height - scatterPad*2) + scatterPad) + 'px';
 
       const goalX = inset + Math.round(b.x*scale);
       const goalY = inset + Math.round(b.y*scale);
 
-      const p = {el, goalX, goalY, w:el.width, h:el.height, placed:false, angle:0};
+      const p = { el, goalX, goalY, w:el.width, h:el.height, placed:false, angle:0 };
       pieces.push(p);
       board.appendChild(el);
       wireDrag(p);
     }
 
-    placing = false;
+    buildInProgress = false;
+    if(rebuildPending){ rebuildPending = false; build(); }
   }
 
-  // --------- Drag / Snap ----------
+  // ---------- Drag / Snap ----------
   function trySnap(p){
     const rect = p.el.getBoundingClientRect();
     const br = board.getBoundingClientRect();
     const x = rect.left - br.left;
     const y = rect.top  - br.top;
-    const d = distance(x,y, p.goalX, p.goalY);
-    const aligned = !ROTATION_ENABLED || (Math.abs(p.angle)%360)<5;
-    if(d <= SNAP_PX && aligned){
+    const aligned = !ROTATION_ENABLED || (Math.abs(p.angle)%360) < 5;
+    if(aligned && dist(x,y,p.goalX,p.goalY) <= SNAP_PX){
       p.el.style.left = p.goalX+'px';
       p.el.style.top  = p.goalY+'px';
       p.el.style.transform = 'rotate(0deg)';
@@ -252,26 +248,32 @@
     };
     p.el.addEventListener('pointerdown', onDown);
 
-    // (Rotation disabled by default for mobile)
     if(ROTATION_ENABLED){
       p.el.addEventListener('dblclick', ()=>{
-        p.angle = (p.angle+90)%360;
+        p.angle = (p.angle + 90) % 360;
         p.el.style.transform = `rotate(${p.angle}deg)`;
         trySnap(p);
       });
     }
   }
 
-  // --------- Init & Resize ----------
+  // ---------- Init & guarded resize ----------
   loadImage(IMG_SRC).then(im=>{ img=im; build(); });
 
-  new ResizeObserver(()=>{
-    const br = boardRect();
-    if(Math.abs(br.w-lastW)>2 || Math.abs(br.h-lastH)>2){
-      if(placing) return;
-      build(); // rebuild to keep targets aligned to new size
-    }
-  }).observe(board);
+  // Debounced + guarded rebuild on resize (prevents duplicates)
+  let resizeTimer = null;
+  const ro = new ResizeObserver(()=>{
+    // debounce a bit
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(()=>{
+      const br = boardRect();
+      const side = br.w - inset*2;
+      if(Math.abs(side - lastSide) > 2){
+        build(); // lock prevents re-entrancy; clears old pieces before adding new
+      }
+    }, 120);
+  });
+  ro.observe(board);
 })();
 </script>
 </body>
