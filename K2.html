@@ -104,12 +104,24 @@
 
 <div class="wrap">
   <div id="field" class="field" aria-label="Playfield">
-    <!-- Hotspots: data-x/y/w/h in %, data-level = 0–5 LEDs -->
-    <div class="hotspot" data-x="5"  data-y="6"  data-w="22" data-h="14" data-level="2"></div>
-    <div class="hotspot" data-x="31" data-y="18" data-w="22" data-h="14" data-level="3"></div>
-    <div class="hotspot" data-x="57" data-y="7"  data-w="22" data-h="14" data-level="4"></div>
-    <div class="hotspot" data-x="72" data-y="28" data-w="22" data-h="14" data-level="5"></div>
-    <div class="hotspot" data-x="38" data-y="64" data-w="24" data-h="16" data-level="0"></div>
+    <!-- Three shelves, 4 squares each (all set to level 5 by default) -->
+    <!-- Shelf 1 (top row) -->
+    <div class="hotspot" data-x="6"   data-y="12" data-w="20" data-h="12" data-level="5"></div>
+    <div class="hotspot" data-x="28"  data-y="12" data-w="20" data-h="12" data-level="5"></div>
+    <div class="hotspot" data-x="50"  data-y="12" data-w="20" data-h="12" data-level="5"></div>
+    <div class="hotspot" data-x="72"  data-y="12" data-w="20" data-h="12" data-level="5"></div>
+
+    <!-- Shelf 2 (middle row) -->
+    <div class="hotspot" data-x="6"   data-y="44" data-w="20" data-h="12" data-level="5"></div>
+    <div class="hotspot" data-x="28"  data-y="44" data-w="20" data-h="12" data-level="5"></div>
+    <div class="hotspot" data-x="50"  data-y="44" data-w="20" data-h="12" data-level="5"></div>
+    <div class="hotspot" data-x="72"  data-y="44" data-w="20" data-h="12" data-level="5"></div>
+
+    <!-- Shelf 3 (bottom row) -->
+    <div class="hotspot" data-x="6"   data-y="76" data-w="20" data-h="12" data-level="5"></div>
+    <div class="hotspot" data-x="28"  data-y="76" data-w="20" data-h="12" data-level="5"></div>
+    <div class="hotspot" data-x="50"  data-y="76" data-w="20" data-h="12" data-level="5"></div>
+    <div class="hotspot" data-x="72"  data-y="76" data-w="20" data-h="12" data-level="5"></div>
 
     <!-- K2 Meter -->
     <div id="meter" class="meter" aria-label="K2 Meter" role="img">
@@ -178,13 +190,4 @@ function checkHotspots(){
   for(const h of hotspots){ const r=rect(h); const ratio=overlapRatio(m,r); if(ratio>bestR){bestR=ratio; best=h;} }
   const THRESH=0.25;
   hotspots.forEach(h=>h.classList.remove('active'));
-  if(best && bestR>=THRESH){ best.classList.add('active'); setLights(parseInt(best.dataset.level||'0',10)); }
-  else{ setLights(0); }
-}
-
-/* Init */
-setLights(0);
-checkHotspots();
-</script>
-</body>
-</html>
+  if(best && bestR>=THRESH){ best.classList.add('active'); setLights(
