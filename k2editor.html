@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>K2 Drag • Shelves (Simple Editor)</title>
+<title>K2 Drag • Shelves (Simple Editor • Stable Export)</title>
 <style>
   :root{ --ink:#e7f0ff; --muted:#aebedb; --grid:#23314a; --aspect:16/9; }
   *{box-sizing:border-box}
@@ -80,9 +80,10 @@
 
   .io{margin-top:10px}
   textarea{
-    width:100%; min-height:110px; border-radius:10px; border:1px solid #2a3754; background:#0f1524; color:var(--ink);
+    width:100%; min-height:120px; border-radius:10px; border:1px solid #2a3754; background:#0f1524; color:var(--ink);
     padding:10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   }
+  .note{ font-size:13px; color:#8fb3ff; }
 </style>
 </head>
 <body>
@@ -92,12 +93,12 @@
 </header>
 
 <div class="wrap">
-  <div class="legend">Toggle Edit Mode to drag each shelf’s 4 squares. Export gives you copy-paste JSON. Squares use % so they stick on phones & desktop.</div>
+  <div class="legend">Toggle Edit Mode to drag each shelf’s 4 squares. Export copies JSON to your clipboard and shows it below. All positions are in %, so they stick on phones & desktop.</div>
 
   <div class="toolbar">
-    <button id="editBtn" class="btn">Enter Edit Mode</button>
-    <button id="exportBtn" class="btn">Export Current Shelf JSON</button>
-    <span id="hint" style="color:#8fb3ff; font-size:13px;"></span>
+    <button id="editBtn"   class="btn" type="button">Enter Edit Mode</button>
+    <button id="exportBtn" class="btn" type="button">Export Current Shelf JSON</button>
+    <span id="hint" class="note"></span>
   </div>
 
   <div id="field" class="field" aria-label="Shelf">
@@ -111,7 +112,7 @@
 
   <div id="status" class="status"></div>
   <div class="io">
-    <textarea id="ioBox" placeholder='Exported JSON for the current shelf will appear here...'></textarea>
+    <textarea id="ioBox" placeholder='Exported JSON will appear here (and is copied to clipboard)...'></textarea>
   </div>
 </div>
 
@@ -162,6 +163,7 @@ SHELVES.forEach((s,i)=>{
   const b=document.createElement('button');
   b.className='tab'+(i===0?' active':'');
   b.textContent=s.name;
+  b.type='button';
   b.addEventListener('click',()=>loadShelf(i));
   tabsWrap.appendChild(b);
 });
@@ -264,7 +266,6 @@ function resizeMeter(){
   meter.style.width=target+'px';
   moveMeterTo(offset.x, offset.y);
 }
-function setActiveTab(i){ [...tabsWrap.children].forEach((n,idx)=>n.classList.toggle('active', idx===i)); }
 function loadShelf(i){
   currentShelf=i; setActiveTab(i);
   const s=SHELVES[i];
@@ -288,10 +289,31 @@ function setEditMode(on){
 }
 editBtn.addEventListener('click',()=> setEditMode(!editMode));
 
-exportBtn.addEventListener('click',()=>{
-  const {hotspots} = SHELVES[currentShelf];
-  ioBox.value = JSON.stringify(hotspots, null, 2);
+exportBtn.addEventListener('click', async ()=>{
+  try{
+    const {hotspots} = SHELVES[currentShelf];
+    const json = JSON.stringify(hotspots, null, 2);
+    ioBox.value = json;
+    ioBox.focus();
+    ioBox.select();
+    // Try to copy to clipboard (works on secure origins)
+    if (navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(json);
+      hint.textContent = 'Copied JSON to clipboard ✅';
+    }else{
+      // Fallback copy
+      const ok = document.execCommand && document.execCommand('copy');
+      hint.textContent = ok ? 'Copied JSON to clipboard ✅' : 'JSON placed in the box below — copy it manually.';
+    }
+    // Scroll textarea into view on mobile
+    ioBox.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }catch(err){
+    alert('Export failed: ' + (err?.message || err));
+  }
 });
+
+/* helper shared by tabs + loadShelf */
+function setActiveTab(i){ [...tabsWrap.children].forEach((n,idx)=>n.classList.toggle('active', idx===i)); }
 </script>
 </body>
 </html>
