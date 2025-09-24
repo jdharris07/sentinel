@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>K2 Drag • Shelves</title>
+<title>K2 Drag • Shelves (Editor)</title>
 <style>
   :root{ --ink:#e7f0ff; --muted:#aebedb; --grid:#23314a; --aspect:16/9; }
   *{box-sizing:border-box}
@@ -28,17 +28,43 @@
   .wrap{max-width:980px; margin:0 auto; padding:12px}
   .legend{font-size:14px; color:var(--muted); margin:4px 0 10px}
 
+  .toolbar{
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px;
+  }
+  .btn{
+    appearance:none; cursor:pointer; padding:6px 10px; border-radius:10px;
+    font-size:14px; border:1px solid #2a3754; background:#0f1524; color:#aebedb;
+  }
+  .btn.primary{ border-color:#39507e; background:#13203a; color:var(--ink); }
+
   .field{
     position:relative; width:min(96vw, 940px); aspect-ratio:var(--aspect); margin:0 auto;
     background:#000 center/contain no-repeat; border:1px solid var(--grid); border-radius:12px;
     box-shadow: inset 0 10px 28px rgba(0,0,0,.45); overflow:visible; touch-action:none;
   }
-  .hotspot{ position:absolute; border:none; background:transparent; border-radius:10px; pointer-events:none; }
 
+  /* Hotspot rectangles */
+  .hotspot{
+    position:absolute; background:transparent; border-radius:10px; pointer-events:none;
+  }
+  /* Edit visuals */
+  .edit .hotspot{ pointer-events:auto; border:2px dashed rgba(126,226,184,.8); background:rgba(126,226,184,.12) }
+  .hotspot .handle{
+    position:absolute; width:16px; height:16px; border-radius:4px; background:#7ee2b8; border:2px solid #0a1924;
+    display:none;
+  }
+  .edit .hotspot .handle{ display:block }
+  .handle.tl{ left:-10px; top:-10px; cursor:nwse-resize }
+  .handle.tr{ right:-10px; top:-10px; cursor:nesw-resize }
+  .handle.bl{ left:-10px; bottom:-10px; cursor:nesw-resize }
+  .handle.br{ right:-10px; bottom:-10px; cursor:nwse-resize }
+
+  /* Meter */
   .meter{ position:absolute; left:12px; top:12px; z-index:3; touch-action:none; user-select:none; -webkit-user-drag:none; cursor:grab; }
   .meter.dragging{ cursor:grabbing }
   .meter img{display:block; width:100%; height:auto; pointer-events:none}
 
+  /* LED overlay (head region) */
   .leds{ position:absolute; left:6%; top:4%; width:88%; height:18%; pointer-events:none }
   .led{
     position:absolute; width:16%; aspect-ratio:1/1; border-radius:50%;
@@ -57,6 +83,16 @@
   }
 
   .status{ text-align:center; font-size:14px; color:var(--muted); margin-top:10px; min-height:22px }
+
+  /* Export panel */
+  .io{
+    margin-top:10px; display:grid; gap:8px;
+    grid-template-columns: 1fr; 
+  }
+  textarea{
+    width:100%; min-height:100px; border-radius:10px; border:1px solid #2a3754; background:#0f1524; color:var(--ink);
+    padding:10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
 </style>
 </head>
 <body>
@@ -66,7 +102,14 @@
 </header>
 
 <div class="wrap">
-  <div class="legend">Drag the K2 meter around to see if anything on any of the four shelves make it light up. Make note of which things do.</div>
+  <div class="legend">Drag the K2 meter to test. Toggle Edit Mode to place the 4 hotspots per shelf. Exports are percentage-based, so they stay put on mobile & desktop.</div>
+
+  <div class="toolbar">
+    <button id="editBtn" class="btn">Enter Edit Mode</button>
+    <button id="exportBtn" class="btn">Export Current Shelf JSON</button>
+    <button id="importBtn" class="btn">Import JSON → Current Shelf</button>
+    <span id="hint" style="color:#8fb3ff; font-size:13px;"></span>
+  </div>
 
   <div id="field" class="field" aria-label="Shelf">
     <div id="meter" class="meter" aria-label="K2 Meter" role="img">
@@ -78,79 +121,64 @@
   </div>
 
   <div id="status" class="status"></div>
+
+  <div class="io">
+    <textarea id="ioBox" placeholder='Exported/importable JSON for the current shelf will appear here...'></textarea>
+  </div>
 </div>
 
 <script>
-/* x/y/size are percentages; level 5 = all LEDs.
-   aspectW/H must match each image’s actual pixel size for perfect alignment. */
+/* ========= MODEL =========
+   x,y,size are percentages relative to the field. Level 5 = all LEDs.
+   aspectW/H must match each shelf image’s pixel size.
+*/
 const SHELVES = [
   {
-    name:'Shelf 1', img:'shelf1.png', aspectW:702, aspectH:975,   // ✅ good
+    name:'Shelf 1', img:'shelf1.png', aspectW:702, aspectH:975,
     hotspots:[
-      {x:2.85,y:21.33,size:22.36,level:5},
-      {x:4.27,y:37.54,size:20.09,level:5},
-      {x:4.99,y:55.18,size:19.94,level:5},
-      {x:27.92,y:69.64,size:20.23,level:5},
-      {x:51.14,y:70.77,size:20.51,level:5},
-      {x:4.27,y:70.97,size:20.09,level:5}
-    ]
-  },
-  
-{
-  name: 'Shelf 2',
-  img: 'shelf2.png',
-  aspectW: 724, aspectH: 946, // shelf2 image size
-  hotspots: [
-    { x:  2.85, y: 21.33, size: 22.36, level: 5 }, // row 1, col 1
-    { x:  4.27, y: 37.54, size: 20.09, level: 5 }, // row 2, col 1
-    { x:  4.99, y: 55.18, size: 19.94, level: 5 }, // row 3, col 1
-    { x:  4.27, y: 70.97, size: 20.09, level: 5 }  // row 4, col 1
-  ]
-
-
-  },
-  {
-    name:'Shelf 3', img:'shelf3.png', aspectW:700, aspectH:958,   // ✅ good
-    hotspots:[
-      {x:2.71,y:7.60,size:21.71,level:5},
-      {x:27.29,y:7.60,size:19.71,level:5},
-      {x:52.29,y:7.60,size:21.29,level:5},
-      {x:3.71,y:31.64,size:19.14,level:5},
-      {x:54.86,y:37.79,size:15.86,level:5},
-      {x:51.71,y:54.59,size:19.00,level:5},
-      {x:3.71,y:55.11,size:19.14,level:5},
-      {x:28.00,y:55.11,size:18.00,level:5},
-      {x:52.71,y:71.09,size:19.57,level:5},
-      {x:4.00,y:71.71,size:19.57,level:5}
+      {x:  3, y: 18, size:20, level:5},
+      {x: 27, y: 18, size:20, level:5},
+      {x: 51, y: 18, size:20, level:5},
+      {x: 75, y: 18, size:20, level:5}
     ]
   },
   {
-    /* 🔧 FIXED using your overlay: 10 squares (r1: c1,c2,c3; r2: c1,c2,c3; r3: c1,c2; r4: c1,c3) */
-    name:'Shelf 4', img:'shelf4.png', aspectW:715, aspectH:978,
+    name:'Shelf 2', img:'shelf2.png', aspectW:724, aspectH:946,
     hotspots:[
-      {x: 2.97,y:19.00,size:21.68,level:5}, // r1 c1
-      {x:27.06,y:19.00,size:21.68,level:5}, // r1 c2
-      {x:49.84,y:19.00,size:21.68,level:5}, // r1 c3
-      {x: 2.97,y:35.12,size:21.68,level:5}, // r2 c1
-      {x:27.06,y:35.12,size:21.68,level:5}, // r2 c2
-      {x:49.84,y:35.12,size:21.68,level:5}, // r2 c3
-      {x: 2.97,y:51.41,size:21.68,level:5}, // r3 c1
-      {x:27.06,y:51.41,size:21.68,level:5}, // r3 c2
-      {x: 2.97,y:67.15,size:21.68,level:5}, // r4 c1
-      {x:49.84,y:67.15,size:21.68,level:5}  // r4 c3
+      {x:  3, y: 44, size:20, level:5},
+      {x: 27, y: 44, size:20, level:5},
+      {x: 51, y: 44, size:20, level:5},
+      {x: 75, y: 44, size:20, level:5}
+    ]
+  },
+  {
+    name:'Shelf 3', img:'shelf3.png', aspectW:700, aspectH:958,
+    hotspots:[
+      {x:  3, y: 70, size:20, level:5},
+      {x: 27, y: 70, size:20, level:5},
+      {x: 51, y: 70, size:20, level:5},
+      {x: 75, y: 70, size:20, level:5}
     ]
   }
 ];
 
-const meter = document.getElementById('meter');
 const field = document.getElementById('field');
+const meter = document.getElementById('meter');
 const statusEl = document.getElementById('status');
 const leds = [...meter.querySelectorAll('.led')];
 const tabsWrap = document.getElementById('shelfTabs');
+const ioBox = document.getElementById('ioBox');
+const editBtn = document.getElementById('editBtn');
+const exportBtn = document.getElementById('exportBtn');
+const importBtn = document.getElementById('importBtn');
+const hint = document.getElementById('hint');
 
-let currentShelf=0, hotspots=[], dragging=false, start={x:0,y:0}, offset={x:12,y:12};
+let currentShelf = 0;
+let hotspotEls = [];
+let draggingMeter=false, start={x:0,y:0}, offset={x:12,y:12};
+let editMode = false;
 
-/* tabs */
+/* ======== UI: Tabs ======== */
 SHELVES.forEach((s,i)=>{
   const b=document.createElement('button');
   b.className='tab'+(i===0?' active':'');
@@ -158,9 +186,13 @@ SHELVES.forEach((s,i)=>{
   b.addEventListener('click',()=>loadShelf(i));
   tabsWrap.appendChild(b);
 });
+function setActiveTab(i){ [...tabsWrap.children].forEach((n,idx)=>n.classList.toggle('active', idx===i)); }
 
-/* LEDs + hit test (LED head only) */
-function setLights(n){ leds.forEach((el,i)=>el.classList.toggle('on',i<n)); statusEl.textContent=n?`Level: ${n} lights`:''; }
+/* ======== Meter LEDs + hit test (LED head only) ======== */
+function setLights(n){
+  leds.forEach((el,i)=>el.classList.toggle('on',i<n));
+  statusEl.textContent = n ? `Level: ${n} lights` : '';
+}
 function rect(el){ return el.getBoundingClientRect(); }
 function ledHeadRect(){
   const m=rect(meter);
@@ -175,17 +207,18 @@ function overlapRatio(a,b){
   return (b.width*b.height)?(w*h)/(b.width*b.height):0;
 }
 function checkHotspots(){
+  if(editMode){ setLights(0); return; } // don’t interfere while editing
   const head=ledHeadRect(); let best=null,bestRatio=0;
-  for(const h of hotspots){
+  for(const h of hotspotEls){
     const r=rect(h), ratio=overlapRatio(head,r);
     if(ratio>bestRatio){bestRatio=ratio; best=h;}
   }
   if(best && bestRatio>=0.25){ setLights(+best.dataset.level||0); } else { setLights(0); }
 }
 
-/* drag — allow meter to hang outside frame so the LED head can line up */
+/* ======== Meter Drag (allow head to reach edges) ======== */
 function clamp(v,min,max){ return Math.min(max, Math.max(min,v)); }
-function moveTo(x,y){
+function moveMeterTo(x,y){
   const mx=meter.clientWidth*0.6, my=meter.clientHeight*0.8;
   const minX=-mx, maxX=field.clientWidth-meter.clientWidth+mx;
   const minY=-my, maxY=field.clientHeight-meter.clientHeight+my;
@@ -194,31 +227,113 @@ function moveTo(x,y){
   checkHotspots();
 }
 meter.addEventListener('pointerdown',e=>{
-  dragging=true; meter.setPointerCapture(e.pointerId); meter.classList.add('dragging');
+  if(editMode) return; // meter fixed during edit to avoid accidental drags
+  draggingMeter=true; meter.setPointerCapture(e.pointerId); meter.classList.add('dragging');
   start.x=e.clientX-offset.x; start.y=e.clientY-offset.y; e.preventDefault();
 });
 meter.addEventListener('pointermove',e=>{
-  if(!dragging) return; moveTo(e.clientX-start.x, e.clientY-start.y); e.preventDefault();
+  if(!draggingMeter) return; moveMeterTo(e.clientX-start.x, e.clientY-start.y); e.preventDefault();
 });
-meter.addEventListener('pointerup',()=>{ dragging=false; meter.classList.remove('dragging'); });
+meter.addEventListener('pointerup',()=>{ draggingMeter=false; meter.classList.remove('dragging'); });
 
-/* shelf management */
-function clearHotspots(){ hotspots.forEach(h=>h.remove()); hotspots=[]; }
+/* ======== Build / Clear Hotspots ======== */
+function clearHotspots(){ hotspotEls.forEach(h=>h.remove()); hotspotEls=[]; }
 function buildHotspots(defs){
   clearHotspots();
-  defs.forEach(d=>{
+  defs.forEach((d,idx)=>{
     const div=document.createElement('div');
     div.className='hotspot'; div.dataset.level=d.level;
-    div.style.width=d.size+'%'; div.style.height=d.size+'%';
-    div.style.left=d.x+'%'; div.style.top=d.y+'%';
-    field.appendChild(div); hotspots.push(div);
+    div.style.left = d.x + '%';
+    div.style.top = d.y + '%';
+    div.style.width = d.size + '%';
+    div.style.height = d.size + '%';
+    // resize handles
+    const tl = document.createElement('div'); tl.className='handle tl';
+    const tr = document.createElement('div'); tr.className='handle tr';
+    const bl = document.createElement('div'); bl.className='handle bl';
+    const br = document.createElement('div'); br.className='handle br';
+    div.append(tl,tr,bl,br);
+    // drag/resize interactions only in edit mode
+    enableHotspotEditing(div, idx);
+    field.appendChild(div); hotspotEls.push(div);
   });
 }
-function setActiveTab(i){ [...tabsWrap.children].forEach((n,idx)=>n.classList.toggle('active', idx===i)); }
+
+/* ======== Edit Mode: drag/resize hotspots in % ======== */
+function pctFromPx(px, total){ return (px / total) * 100; }
+function pxFromPct(pct, total){ return (pct / 100) * total; }
+
+function enableHotspotEditing(el, idx){
+  let dragging=false, startX=0, startY=0, startLeft=0, startTop=0;
+  let resizing=false, corner=null, startW=0, startH=0;
+
+  el.addEventListener('pointerdown', (e)=>{
+    if(!editMode) return;
+    if(e.target.classList.contains('handle')){
+      resizing=true; corner=[...e.target.classList].find(c=>/tl|tr|bl|br/.test(c)).slice(0,2);
+      const rect = el.getBoundingClientRect();
+      startW=rect.width; startH=rect.height;
+    }else{
+      dragging=true;
+      const style=getComputedStyle(el);
+      startLeft=parseFloat(style.left); startTop=parseFloat(style.top);
+    }
+    el.setPointerCapture(e.pointerId);
+    startX=e.clientX; startY=e.clientY; e.preventDefault();
+  });
+
+  el.addEventListener('pointermove', (e)=>{
+    if(!editMode) return;
+    const fRect=field.getBoundingClientRect();
+    if(dragging){
+      const dx=e.clientX-startX, dy=e.clientY-startY;
+      const newLeft = pctFromPx(pxFromPct(startLeft,fRect.width)+dx, fRect.width);
+      const newTop  = pctFromPx(pxFromPct(startTop ,fRect.height)+dy, fRect.height);
+      el.style.left = `${Math.max(0, Math.min(100 - parseFloat(el.style.width), newLeft))}%`;
+      el.style.top  = `${Math.max(0, Math.min(100 - parseFloat(el.style.height), newTop ))}%`;
+      updateModelFromElement(idx, el);
+      e.preventDefault();
+    }else if(resizing){
+      const rect = el.getBoundingClientRect();
+      let newW = rect.width, newH = rect.height;
+      // adjust by corner
+      const dx=e.clientX-startX, dy=e.clientY-startY;
+      if(corner==='br'){ newW = startW+dx; newH=startH+dy; }
+      if(corner==='tr'){ newW = startW+dx; newH=startH-dy; el.style.top = pctFromPx(rect.top - dy - fRect.top, fRect.height) + '%'; }
+      if(corner==='bl'){ newW = startW-dx; newH=startH+dy; el.style.left = pctFromPx(rect.left - dx - fRect.left, fRect.width) + '%'; }
+      if(corner==='tl'){ newW = startW-dx; newH=startH-dy; el.style.left = pctFromPx(rect.left - dx - fRect.left, fRect.width) + '%'; el.style.top = pctFromPx(rect.top - dy - fRect.top, fRect.height) + '%'; }
+      // keep square by using width for both
+      const sizePct = Math.max(4, pctFromPx(Math.max(newW,newH), Math.min(fRect.width,fRect.height))); // limit min
+      el.style.width = sizePct + '%';
+      el.style.height = sizePct + '%';
+      // clamp to field
+      const l=parseFloat(el.style.left), t=parseFloat(el.style.top);
+      const maxL = 100 - sizePct, maxT = 100 - sizePct;
+      el.style.left = Math.max(0, Math.min(maxL, l)) + '%';
+      el.style.top  = Math.max(0, Math.min(maxT, t)) + '%';
+      updateModelFromElement(idx, el);
+      e.preventDefault();
+    }
+  });
+
+  el.addEventListener('pointerup', ()=>{
+    dragging=false; resizing=false; corner=null;
+  });
+}
+
+function updateModelFromElement(idx, el){
+  const s = SHELVES[currentShelf].hotspots[idx];
+  s.x = parseFloat(el.style.left);
+  s.y = parseFloat(el.style.top);
+  s.size = parseFloat(el.style.width); // width==height (square)
+}
+
+/* ======== Shelf load / resize ======== */
 function resizeMeter(){
   const w=field.clientWidth;
-  const target=Math.round(Math.min(140, Math.max(80, w*0.18))); // mobile-friendly
-  meter.style.width=target+'px'; moveTo(offset.x, offset.y);
+  const target=Math.round(Math.min(160, Math.max(90, w*0.18))); // mobile-friendly
+  meter.style.width=target+'px';
+  moveMeterTo(offset.x, offset.y);
 }
 function loadShelf(i){
   currentShelf=i; setActiveTab(i);
@@ -232,8 +347,40 @@ function loadShelf(i){
 }
 new ResizeObserver(()=>{ resizeMeter(); checkHotspots(); }).observe(field);
 loadShelf(0);
+
+/* ======== Edit Mode Toggle ======== */
+function setEditMode(on){
+  editMode = on;
+  field.classList.toggle('edit', on);
+  editBtn.textContent = on ? 'Exit Edit Mode' : 'Enter Edit Mode';
+  hint.textContent = on ? 'Drag squares to move. Use corner handles to resize. (Positions are saved live.)' : '';
+  if(!on) checkHotspots();
+}
+editBtn.addEventListener('click',()=> setEditMode(!editMode));
+
+/* ======== Export / Import ======== */
+exportBtn.addEventListener('click',()=>{
+  const {hotspots} = SHELVES[currentShelf];
+  ioBox.value = JSON.stringify(hotspots, null, 2);
+});
+
+importBtn.addEventListener('click',()=>{
+  try{
+    const data = JSON.parse(ioBox.value);
+    if(!Array.isArray(data) || data.length!==4) throw new Error('Expecting an array of 4 hotspot objects');
+    // minimally validate and coerce
+    const cleaned = data.map(d=>({
+      x: +d.x, y:+d.y, size:+d.size, level: +d.level || 5
+    }));
+    SHELVES[currentShelf].hotspots = cleaned;
+    buildHotspots(cleaned);
+  }catch(err){
+    alert('Import failed: ' + err.message);
+  }
+});
+
+/* Keep K2 feedback live */
+field.addEventListener('pointermove', ()=> { if(!editMode) checkHotspots(); });
 </script>
 </body>
 </html>
-
-
