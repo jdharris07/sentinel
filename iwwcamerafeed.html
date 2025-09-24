@@ -143,7 +143,7 @@
     {cam:6, src:"iwwvideo6.mp4"},
   ];
   const order = [4,1,6,2,5,3]; // intentionally out of order
-  const delayByCam = {1:0, 5:0, 2:40, 3:80, 4:120, 6:160}; // tiny offsets (ms)
+  // (removed delayByCam and any start delays)
 
   // Correct coordinates (x,y)
   const correct = new Set(["2,1","5,1","4,2","2,4","4,5","6,4"]);
@@ -159,7 +159,7 @@
   const controls = document.getElementById('controls');
   const reveal = document.getElementById('reveal');
   const proceedBtn = document.getElementById('proceedBtn');
-  const promptEl = document.getElementById('prompt'); // <— initial prompt
+  const promptEl = document.getElementById('prompt');
 
   // corner
   const corner = document.createElement('div'); corner.className = 'corner'; board.appendChild(corner);
@@ -214,7 +214,7 @@
       controls.classList.add('hidden');
       msgEl.textContent = ""; msgEl.className = "msg";
 
-      // Hide the initial "tell me where..." line
+      // Hide the initial line
       promptEl.classList.add('fadeOut');
       setTimeout(() => promptEl.remove(), 300);
 
@@ -242,7 +242,7 @@
 
   function initFeeds(){
     renderWall();
-    scheduleAutoStart();
+    startAllVideos(); // <-- start immediately, no delays
     startClock();
   }
 
@@ -264,13 +264,13 @@
     const v = document.createElement('video');
     v.src = src;
     v.muted = true;      // mobile autoplay
-    v.autoplay = true;   // hint; we’ll also call play()
+    v.autoplay = true;   // also try attribute autoplay
     v.loop = true;
     v.preload = "metadata";
     v.playsInline = true; v.setAttribute('playsinline','');
 
     v.addEventListener('loadedmetadata', () => {
-      const jitter = Math.random() * 0.25; // 0–0.25s
+      const jitter = Math.random() * 0.25; // slight desync so all frames aren't identical
       try { v.currentTime = Math.min(Math.max(0, jitter), Math.max(0, (v.duration || 10) - 0.5)); } catch(e){}
     });
 
@@ -290,20 +290,15 @@
     return el;
   }
 
-  function scheduleAutoStart(){
-    document.querySelectorAll('.tile').forEach(tile => {
-      const cam = parseInt(tile.dataset.cam, 10);
-      const video = tile.querySelector('video');
-      const jitter = (Math.random()*30) - 15; // ±15ms
-      const delay = Math.max(0, (delayByCam[cam] ?? 0) + jitter);
-      setTimeout(() => robustPlay(video), delay);
-    });
+  // NEW: start everything immediately (no staggered setTimeouts)
+  function startAllVideos(){
+    document.querySelectorAll('.tile video').forEach(v => robustPlay(v));
   }
 
   function robustPlay(v){
     v.play().catch(()=>{});
-    setTimeout(() => v.play().catch(()=>{}), 100);
-    setTimeout(() => { if(v.paused){ try{v.load();}catch(e){} v.play().catch(()=>{}); } }, 280);
+    setTimeout(() => v.play().catch(()=>{}), 50);
+    setTimeout(() => { if(v.paused){ try{v.load();}catch(e){} v.play().catch(()=>{}); } }, 200);
   }
 
   function showNoSignal(tile){
