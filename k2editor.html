@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>K2 Drag • Shelves (Editor + Export All)</title>
+<title>K2 Drag • Shelves (Final)</title>
 <style>
   :root{ --ink:#e7f0ff; --muted:#aebedb; --grid:#23314a; --aspect:16/9; }
   *{box-sizing:border-box}
@@ -28,31 +28,17 @@
   .wrap{max-width:980px; margin:0 auto; padding:12px}
   .legend{font-size:14px; color:var(--muted); margin:4px 0 10px}
 
-  .toolbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px;}
-  .btn{
-    appearance:none; cursor:pointer; padding:6px 10px; border-radius:10px;
-    font-size:14px; border:1px solid #2a3754; background:#0f1524; color:#aebedb;
-  }
-  .btn.primary{ border-color:#39507e; background:#13203a; color:var(--ink); }
-
   .field{
     position:relative; width:min(96vw, 940px); aspect-ratio:var(--aspect); margin:0 auto;
     background:#000 center/contain no-repeat; border:1px solid var(--grid); border-radius:12px;
     box-shadow: inset 0 10px 28px rgba(0,0,0,.45); overflow:visible; touch-action:none;
   }
 
-  /* Hotspot visuals */
+  /* Hotspots (non-interactive) */
   .hotspot{
-    position:absolute; border:2px dashed transparent; background:transparent;
-    border-radius:10px; z-index:2; pointer-events:none; /* enabled only in edit */
-    transition: box-shadow .12s ease;
+    position:absolute; border:none; background:transparent; border-radius:10px;
+    pointer-events:none; z-index:2;
   }
-  .edit .hotspot{
-    pointer-events:auto;
-    border-color:#7ee2b8;
-    background:rgba(126,226,184,.14);
-  }
-  .edit .hotspot:active{ box-shadow:0 0 0 2px rgba(126,226,184,.35) inset; }
 
   /* Meter */
   .meter{ position:absolute; left:12px; top:12px; z-index:3; touch-action:none; user-select:none; -webkit-user-drag:none; cursor:grab; }
@@ -78,13 +64,6 @@
   }
 
   .status{ text-align:center; font-size:14px; color:var(--muted); margin-top:10px; min-height:22px }
-
-  .io{margin-top:10px}
-  textarea{
-    width:100%; min-height:140px; border-radius:10px; border:1px solid #2a3754; background:#0f1524; color:var(--ink);
-    padding:10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  }
-  .note{ font-size:13px; color:#8fb3ff; }
 </style>
 </head>
 <body>
@@ -94,15 +73,7 @@
 </header>
 
 <div class="wrap">
-  <div class="legend">Toggle Edit Mode to drag each shelf’s 4 hotspots. Export copies JSON (current or all shelves). Positions are % so they stick on phones & desktop.</div>
-
-  <div class="toolbar">
-    <button id="editBtn"        class="btn" type="button">Enter Edit Mode</button>
-    <button id="exportBtn"      class="btn" type="button">Export Current Shelf JSON</button>
-    <button id="exportAllBtn"   class="btn" type="button">Export All Shelves JSON</button>
-    <button id="downloadAllBtn" class="btn" type="button">Download All (JSON)</button>
-    <span id="hint" class="note"></span>
-  </div>
+  <div class="legend">Drag the K2 meter around each shelf image. When the LED head overlaps a hotspot, the meter lights up.</div>
 
   <div id="field" class="field" aria-label="Shelf">
     <div id="meter" class="meter" aria-label="K2 Meter" role="img">
@@ -114,64 +85,67 @@
   </div>
 
   <div id="status" class="status"></div>
-  <div class="io">
-    <textarea id="ioBox" placeholder='Exported JSON appears here (and is copied to clipboard).'></textarea>
-  </div>
 </div>
 
 <script>
-/* ===== CONFIG =====
-   HOTSPOT_SHAPE: 1.00 = true square; <1 = slightly shorter vertically (less tall)
-   This keeps hotspots from looking too “tall” while staying responsive.
+/* ===== VISUAL TWEAK =====
+   HOTSPOT_SHAPE: 1.00 = true square; <1 = slightly shorter (less tall).
+   Keeps visuals consistent across mobile/desktop.
 */
-const HOTSPOT_SHAPE = 0.88; // tweak 0.80–0.95 to taste
+const HOTSPOT_SHAPE = 0.88;
 
-/* === 3 shelves × 4 hotspots; x/y in %, size = width %; height is auto-calculated === */
+/* ===== YOUR BAKED SHELVES (from your JSON) ===== */
 const SHELVES = [
-  { name:'Shelf 1', img:'shelf1.png', aspectW:702, aspectH:975,
-    hotspots:[
-      { x: 51.65248659823803, y: 19.369630563201007, size: 20, level: 5 },
-      { x: 28.27659574468085, y: 35.849117556802234, size: 20, level: 5 },
-      { x: 28.659574468085108, y: 68.39350777931983, size: 20, level: 5 },
-      { x: 75.49645606507646, y: 68.8599082874717,  size: 20, level: 5 }
+  {
+    name: "Shelf 1",
+    img: "shelf1.png",
+    aspectW: 702,
+    aspectH: 975,
+    hotspots: [
+      { x: 76.4751859624335, y: 23.19942786351181, size: 20, level: 5 },
+      { x: 3.808509015022441, y: 23.134190519770357, size: 20, level: 5 },
+      { x: 28.304960210272608, y: 39.082792051354, size: 20, level: 5 },
+      { x: 51.950358938663555, y: 70.85140288363331, size: 20, level: 5 }
     ]
   },
-  { name:'Shelf 2', img:'shelf2.png', aspectW:724, aspectH:946,
-    hotspots:[
-      {x:  3, y: 44, size:20, level:5},
-      {x: 27, y: 44, size:20, level:5},
-      {x: 51, y: 44, size:20, level:5},
-      {x: 75, y: 44, size:20, level:5}
+  {
+    name: "Shelf 2",
+    img: "shelf2.png",
+    aspectW: 724,
+    aspectH: 946,
+    hotspots: [
+      { x: 6.333334415516955, y: 22.93987161554154, size: 20, level: 5 },
+      { x: 27.92198797997008, y: 38.51785213445026, size: 20, level: 5 },
+      { x: 5.397160956200139, y: 54.25867243099395, size: 20, level: 5 },
+      { x: 51.453896380485375, y: 70.32516482876474, size: 20, level: 5 }
     ]
   },
-  { name:'Shelf 3', img:'shelf3.png', aspectW:700, aspectH:958,
-    hotspots:[
-      {x:  3, y: 70, size:20, level:5},
-      {x: 27, y: 70, size:20, level:5},
-      {x: 51, y: 70, size:20, level:5},
-      {x: 75, y: 70, size:20, level:5}
+  {
+    name: "Shelf 3",
+    img: "shelf3.png",
+    aspectW: 700,
+    aspectH: 958,
+    hotspots: [
+      { x: 51.86524606258311, y: 22.997191652539218, size: 20, level: 5 },
+      { x: 28.205671594498007, y: 39.37303092579248, size: 20, level: 5 },
+      { x: 28.304966703374333, y: 70.88098190060104, size: 20, level: 5 },
+      { x: 76.13474744431515, y: 71.14008934029265, size: 20, level: 5 }
     ]
   }
 ];
 
+/* ===== DOM & STATE ===== */
 const field = document.getElementById('field');
 const meter = document.getElementById('meter');
 const statusEl = document.getElementById('status');
 const leds = [...meter.querySelectorAll('.led')];
 const tabsWrap = document.getElementById('shelfTabs');
-const ioBox = document.getElementById('ioBox');
-const editBtn = document.getElementById('editBtn');
-const exportBtn = document.getElementById('exportBtn');
-const exportAllBtn = document.getElementById('exportAllBtn');
-const downloadAllBtn = document.getElementById('downloadAllBtn');
-const hint = document.getElementById('hint');
 
 let currentShelf = 0;
 let hotspotEls = [];
-let editMode = false;
 let draggingMeter=false, start={x:0,y:0}, offset={x:12,y:12};
 
-/* Tabs */
+/* ===== Tabs ===== */
 SHELVES.forEach((s,i)=>{
   const b=document.createElement('button');
   b.className='tab'+(i===0?' active':'');
@@ -182,8 +156,9 @@ SHELVES.forEach((s,i)=>{
 });
 function setActiveTab(i){ [...tabsWrap.children].forEach((n,idx)=>n.classList.toggle('active', idx===i)); }
 
-/* LEDs + hit test (LED head only) */
-function setLights(n){ leds.forEach((el,i)=>el.classList.toggle('on',i<n)); statusEl.textContent = n?`Level: ${n} lights`:''; }
+/* ===== LEDs + hit test (LED head only) ===== */
+function setLights(n){ leds.forEach((el,i)=>el.classList.toggle('on',i<n));
+  statusEl.textContent = n ? `Level: ${n} lights` : ''; }
 function rect(el){ return el.getBoundingClientRect(); }
 function ledHeadRect(){
   const m=rect(meter);
@@ -198,16 +173,15 @@ function overlapRatio(a,b){
   return (b.width*b.height)?(w*h)/(b.width*b.height):0;
 }
 function checkHotspots(){
-  if(editMode){ setLights(0); return; } // don’t light while editing
   const head=ledHeadRect(); let best=null,bestRatio=0;
   for(const h of hotspotEls){ const r=rect(h), ratio=overlapRatio(head,r); if(ratio>bestRatio){bestRatio=ratio; best=h;} }
   if(best && bestRatio>=0.25){ setLights(+best.dataset.level||0); } else { setLights(0); }
 }
 
-/* Meter drag (disabled during edit) */
+/* ===== Meter drag ===== */
 function clamp(v,min,max){ return Math.min(max, Math.max(min,v)); }
 function moveMeterTo(x,y){
-  const mx=meter.clientWidth*0.6, my=meter.clientHeight*0.8; // allow head to reach edges
+  const mx=meter.clientWidth*0.6, my=meter.clientHeight*0.8; // let head reach edges
   const minX=-mx, maxX=field.clientWidth-meter.clientWidth+mx;
   const minY=-my, maxY=field.clientHeight-meter.clientHeight+my;
   offset.x=clamp(x,minX,maxX); offset.y=clamp(y,minY,maxY);
@@ -215,7 +189,6 @@ function moveMeterTo(x,y){
   checkHotspots();
 }
 meter.addEventListener('pointerdown',e=>{
-  if(editMode) return;
   draggingMeter=true; meter.setPointerCapture(e.pointerId); meter.classList.add('dragging');
   start.x=e.clientX-offset.x; start.y=e.clientY-offset.y; e.preventDefault();
 });
@@ -224,15 +197,13 @@ meter.addEventListener('pointermove',e=>{
 });
 meter.addEventListener('pointerup',()=>{ draggingMeter=false; meter.classList.remove('dragging'); });
 
-/* Build/Clear hotspots */
+/* ===== Hotspots ===== */
 function clearHotspots(){ hotspotEls.forEach(h=>h.remove()); hotspotEls=[]; }
 
-/* Compute visual height% to look square-ish (or a bit shorter) under current aspect */
+/* height% computed so boxes are slightly shorter than squares, stable to shelf aspect */
 function computeHeightPct(widthPct, aspectW, aspectH){
-  // true-square factor = aspectW/aspectH; apply HOTSPOT_SHAPE to make slightly shorter
   return widthPct * (aspectW / aspectH) * HOTSPOT_SHAPE;
 }
-
 function applyHotspotStyle(el, d, shelf){
   const hPct = computeHeightPct(d.size, shelf.aspectW, shelf.aspectH);
   el.style.left   = d.x + '%';
@@ -240,51 +211,18 @@ function applyHotspotStyle(el, d, shelf){
   el.style.width  = d.size + '%';
   el.style.height = hPct + '%';
 }
-
 function buildHotspots(defs){
   clearHotspots();
   const shelf = SHELVES[currentShelf];
-  defs.forEach((d,idx)=>{
+  defs.forEach(d=>{
     const el=document.createElement('div');
-    el.className='hotspot'; el.dataset.index=idx; el.dataset.level=d.level;
+    el.className='hotspot'; el.dataset.level=d.level;
     applyHotspotStyle(el, d, shelf);
-    enableDrag(el, idx);
     field.appendChild(el); hotspotEls.push(el);
   });
 }
 
-/* Drag hotspots (no resize) in % coords; clamp with current computed height */
-function enableDrag(el, idx){
-  let dragging=false, sx=0, sy=0, startLeftPct=0, startTopPct=0;
-  el.addEventListener('pointerdown', (e)=>{
-    if(!editMode) return;
-    dragging=true; el.setPointerCapture(e.pointerId);
-    const s=SHELVES[currentShelf].hotspots[idx];
-    startLeftPct=s.x; startTopPct=s.y; sx=e.clientX; sy=e.clientY; e.preventDefault();
-  });
-  el.addEventListener('pointermove', (e)=>{
-    if(!editMode || !dragging) return;
-    const shelf=SHELVES[currentShelf];
-    const fRect=field.getBoundingClientRect();
-    const dxPct=((e.clientX - sx)/fRect.width)*100;
-    const dyPct=((e.clientY - sy)/fRect.height)*100;
-    const sizeW = shelf.hotspots[idx].size;
-    const sizeH = computeHeightPct(sizeW, shelf.aspectW, shelf.aspectH);
-    let newX = startLeftPct + dxPct;
-    let newY = startTopPct + dyPct;
-    // clamp inside field so hotspot stays fully visible
-    newX = Math.max(0, Math.min(100 - sizeW, newX));
-    newY = Math.max(0, Math.min(100 - sizeH, newY));
-    // update model + element
-    const s=shelf.hotspots[idx];
-    s.x = newX; s.y = newY;
-    applyHotspotStyle(el, s, shelf);
-    e.preventDefault();
-  });
-  el.addEventListener('pointerup', ()=>{ dragging=false; });
-}
-
-/* Shelf loading / responsive */
+/* ===== Shelf loading / responsive ===== */
 function resizeMeter(){
   const w=field.clientWidth;
   const target=Math.round(Math.min(160, Math.max(90, w*0.18)));
@@ -303,72 +241,6 @@ function loadShelf(i){
 }
 new ResizeObserver(()=>{ resizeMeter(); checkHotspots(); }).observe(field);
 loadShelf(0);
-
-/* Edit Mode toggle */
-function setEditMode(on){
-  editMode = on;
-  field.classList.toggle('edit', on);
-  editBtn.textContent = on ? 'Exit Edit Mode' : 'Enter Edit Mode';
-  hint.textContent = on ? 'Drag each hotspot to position it. (Saved live.)' : '';
-  if(!on) checkHotspots();
-}
-editBtn.addEventListener('click',()=> setEditMode(!editMode));
-
-/* Export helpers */
-async function copyToClipboard(text){
-  if (navigator.clipboard && window.isSecureContext){
-    await navigator.clipboard.writeText(text);
-    return true;
-  }
-  const ta=document.createElement('textarea'); ta.value=text;
-  document.body.appendChild(ta); ta.select();
-  const ok=document.execCommand && document.execCommand('copy');
-  ta.remove();
-  return !!ok;
-}
-
-exportBtn.addEventListener('click', async ()=>{
-  try{
-    const json = JSON.stringify(SHELVES[currentShelf].hotspots, null, 2);
-    ioBox.value = json;
-    const ok = await copyToClipboard(json);
-    hint.textContent = ok ? 'Copied CURRENT shelf JSON ✅' : 'Current shelf JSON placed in the box — copy manually.';
-    ioBox.scrollIntoView({behavior:'smooth', block:'nearest'});
-  }catch(err){
-    alert('Export failed: ' + (err?.message || err));
-  }
-});
-
-function getAllShelvesJSON(pretty=true){
-  return JSON.stringify({ shelves: SHELVES }, pretty ? null : undefined, pretty ? 2 : undefined);
-}
-
-exportAllBtn.addEventListener('click', async ()=>{
-  try{
-    const json = getAllShelvesJSON(true);
-    ioBox.value = json;
-    const ok = await copyToClipboard(json);
-    hint.textContent = ok ? 'Copied ALL shelves JSON ✅' : 'ALL shelves JSON placed in the box — copy manually.';
-    ioBox.scrollIntoView({behavior:'smooth', block:'nearest'});
-  }catch(err){
-    alert('Export all failed: ' + (err?.message || err));
-  }
-});
-
-downloadAllBtn.addEventListener('click', ()=>{
-  try{
-    const json = getAllShelvesJSON(true);
-    const blob = new Blob([json], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'k2_hotspots.json';
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
-    hint.textContent = 'Downloaded k2_hotspots.json ✅';
-  }catch(err){
-    alert('Download failed: ' + (err?.message || err));
-  }
-});
 </script>
 </body>
 </html>
