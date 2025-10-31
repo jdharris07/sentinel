@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>What Remains • Thermal Imager (gated)</title>
+<style>
+  :root{ --bg:#0b0f14; --ink:#fff; --panel:#0e1422; --muted:#b7c2da; }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:#000; color:var(--ink);
+    font-family:system-ui,Segoe UI,Roboto,Arial;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* Gate (prompt) */
+  .gate{
+    width:min(92vw,720px);
+    background:linear-gradient(180deg,#0f1629,#0a0f1b);
+    border:1px solid #1f2942; border-radius:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45), inset 0 0 0 1px #0f1626;
+    padding:18px 16px 14px;
+    display:flex; flex-direction:column; gap:12px;
+    transform:translateY(0); opacity:1; transition:opacity .25s ease, transform .25s ease;
+  }
+  .gate h1{ margin:2px 0 4px; font-size:20px; font-weight:700; letter-spacing:.2px; }
+  .gate p{ margin:0; color:#dfe7ff; font-size:16px; }
+  .gate .row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .gate input[type="text"]{
+    flex:1 1 260px; min-width:200px;
+    padding:10px 12px; font-size:16px; color:#eaf1ff;
+    background:#0b1222; border:1px solid #2a3146; border-radius:10px; outline:none;
+  }
+  .btn{
+    padding:10px 14px; font-size:15px; font-weight:600;
+    border:1px solid #2a3146; border-radius:10px; background:#121a2e; color:#eaf1ff;
+    cursor:pointer;
+  }
+  .gateMsg{ min-height:20px; font-size:14px; color:#ffcccc; }
+
+  /* Viewer */
+  .wrap{ width:min(96vw, 900px); display:none; opacity:0; transform:translateY(8px);
+         transition:opacity .35s ease, transform .35s ease; }
+  .wrap.visible{ display:block; }
+  .wrap.faded{ opacity:1; transform:translateY(0); }
+
+  #view{
+    width:100%; aspect-ratio:16/9; display:block;
+    border:1px solid #1e263a; border-radius:14px; background:#05070c;
+    box-shadow:0 10px 28px rgba(0,0,0,.45), inset 0 0 0 1px #0f1626;
+  }
+  .controls{
+    display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-top:8px;
+  }
+  input[type="range"]{ flex:1 1 280px; min-width:200px; height:34px; }
+  .read{ font-variant-numeric:tabular-nums; padding:6px 10px; border:1px solid #2a3146; border-radius:10px; background:#10172a;}
+  .legend{
+    height:12px; flex:1 1 260px; min-width:200px; border-radius:999px; border:1px solid #2a3146; overflow:hidden;
+    background:linear-gradient(90deg,#001f4d,#0047a3,#00a3ff,#00e0a3,#f5f50a,#ff8c00,#ff3b00,#6f001a);
+  }
+  .helper{
+    margin-top:8px; font-size:14px; color:#cdd6f1;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Gate screen -->
+  <section id="gate" class="gate" role="dialog" aria-labelledby="gateTitle" aria-describedby="gateDesc">
+    <h1 id="gateTitle">Access Check</h1>
+    <p id="gateDesc">Did you come up with something special to ask about?</p>
+    <div class="row">
+      <input id="gateInput" type="text" inputmode="text" autocomplete="off" placeholder="Type your reply…" />
+      <button id="gateBtn" class="btn">Submit</button>
+    </div>
+    <div id="gateMsg" class="gateMsg" aria-live="polite"></div>
+  </section>
+
+  <!-- Hidden viewer (revealed after correct answer) -->
+  <div id="wrap" class="wrap" aria-hidden="true">
+    <canvas id="view" width="800" height="450" aria-label="Thermal canvas"></canvas>
+    <div class="controls">
+      <div class="legend" aria-hidden="true"></div>
+      <input id="thermo" type="range" min="0" max="100" step="1" value="0" />
+      <div class="read">Temp: <span id="out">0</span>°</div>
+    </div>
+    <div class="helper">Adjust the temperature slider to view the image through different thermal spectrums.</div>
+  </div>
+
+<script>
+(function(){
+  /* ===== GATE LOGIC ===== */
+  const gate      = document.getElementById('gate');
+  const gateInput = document.getElementById('gateInput');
+  const gateBtn   = document.getElementById('gateBtn');
+  const gateMsg   = document.getElementById('gateMsg');
+  const wrapEl    = document.getElementById('wrap');
+
+  let unlocked = false;
+  let loopTimer = null;
+
+  function showViewer(){
+    unlocked = true;
+    // hide gate
+    gate.style.opacity = '0';
+    gate.style.transform = 'translateY(-6px)';
+    setTimeout(()=>{ gate.style.display = 'none'; }, 260);
+
+    // reveal viewer
+    wrapEl.classList.add('visible');
+    requestAnimationFrame(()=>wrapEl.classList.add('faded'));
+    wrapEl.setAttribute('aria-hidden','false');
+
+    // ensure slider at 0 and start loop
+    slider.value = "0";
+    out.textContent = "0";
+    startLoop();
+    render(performance.now());
+  }
+
+  function handleGateSubmit(){
+    const v = (gateInput.value || '').trim().toLowerCase();
+    if (v === 'pumpkin'){
+      gateMsg.textContent = '';
+      showViewer();
+    } else {
+      gateMsg.textContent = 'Nothing seems to happen. Maybe ask about something else.';
+    }
+  }
+
+  gateBtn.addEventListener('click', handleGateSubmit);
+  gateInput.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter'){ e.preventDefault(); handleGateSubmit(); }
+  });
+
+  /* ===== Viewer (thermal imager) ===== */
+  const MESSAGE = "I AM PALOMA";
+  const WINDOWS = [
+    {center:18, idx:[3,6,8]},
+    {center:52, idx:[1,4,9]},
+    {center:86, idx:[2,7,8]}
+  ];
+  const BAND = 10;
+  const BG_DARKEN = 0.22;
+
+  // Lighten cool-band letters slightly
+  const COOL_THRESHOLD = 30;
+  const COOL_LIGHTEN   = 0.28;
+
+  // Noise (gentle blended layer)
+  let noiseOn = true;               // always on (no toggle)
+  const NOISE_ALPHA = 0.10;
+  const NOISE_MODE  = 'soft-light';
+  const NOISE_SAT   = 0.5;
+
+  // DOM
+  const cvs = document.getElementById('view');
+  const ctx = cvs.getContext('2d');
+  const slider = document.getElementById('thermo');
+  const out = document.getElementById('out');
+
+  // Char index map (ignore spaces)
+  const chars = [...MESSAGE];
+  const indexMap = [];
+  let count = 0;
+  for (let i=0;i<chars.length;i++){
+    indexMap[i] = (chars[i]===' ') ? null : ++count;
+  }
+  const idxToTemp = new Map();
+  WINDOWS.forEach(w => w.idx.forEach(id => idxToTemp.set(id, w.center)));
+
+  // Load 3 thermal frames (place these images next to this HTML)
+  const frames = [
+    {src:'wrthermalimage1.png'},
+    {src:'wrthermalimage2.png'},
+    {src:'wrthermalimage3.png'},
+  ].map(f=>({img:new Image(), loaded:false, error:false, ...f}));
+
+  frames.forEach(f=>{
+    f.img.onload  = ()=>{ f.loaded=true; f.error=false; if (unlocked) render(performance.now()); };
+    f.img.onerror = ()=>{ f.loaded=false; f.error=true;  };
+    f.img.src = f.src + '?v=' + Date.now();
+  });
+
+  function allFramesReady(){
+    return frames.every(f=>f.loaded) && frames.length===3;
+  }
+
+  // Sizing
+  function fitCanvasToCSS(){
+    const r = cvs.getBoundingClientRect();
+    const w = Math.max(1, Math.round(r.width));
+    const h = Math.max(1, Math.round(r.height));
+    if (cvs.width !== w || cvs.height !== h){
+      cvs.width = w; cvs.height = h;
+      noiseLayer.width = w; noiseLayer.height = h;
+    }
+    ctx.setTransform(1,0,0,1,0,0);
+  }
+
+  // Thermal ramp
+  function colorAtTemp(t){
+    const stops = [
+      {t:0,   c:[0,31,77]},
+      {t:15,  c:[0,71,163]},
+      {t:30,  c:[0,163,255]},
+      {t:45,  c:[0,224,163]},
+      {t:60,  c:[245,245,10]},
+      {t:75,  c:[255,140,0]},
+      {t:87,  c:[255,59,0]},
+      {t:100, c:[111,0,26]}
+    ];
+    if (t <= 0)   return `rgb(${stops[0].c.join(',')})`;
+    if (t >= 100) return `rgb(${stops[stops.length-1].c.join(',')})`;
+    let a = stops[0], b = stops[stops.length-1];
+    for (let i=0;i<stops.length-1;i++){
+      if (t >= stops[i].t && t <= stops[i+1].t){ a=stops[i]; b=stops[i+1]; break; }
+    }
+    const u = (t - a.t) / Math.max(1, b.t - a.t);
+    const mix=(p,q)=>Math.round(p*(1-u)+q*u);
+    return `rgb(${mix(a.c[0],b.c[0])},${mix(a.c[1],b.c[1])},${mix(a.c[2],b.c[2])})`;
+  }
+  const rgb = s => { const m = s.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/); return [m?+m[1]:255, m?+m[2]:255, m?+m[3]:255]; };
+
+  // Draw one image with cover scaling
+  function drawImageCover(img, alpha=1){
+    const w = cvs.width, h = cvs.height;
+    const iw = img.naturalWidth || img.width;
+    const ih = img.naturalHeight || img.height;
+    if (!iw || !ih) return;
+
+    const srcAR = iw/ih, dstAR = w/h;
+    let sw, sh, sx0, sy0;
+    if (dstAR > srcAR){ sh = ih; sw = ih*dstAR; sx0 = (iw - sw)/2; sy0 = 0; }
+    else { sw = iw; sh = iw/dstAR; sx0 = 0; sy0 = (ih - sh)/2; }
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(img, sx0, sy0, sw, sh, 0, 0, w, h);
+    ctx.restore();
+  }
+
+  // Cross-fade frames per slider
+  function drawThermalFrames(value){
+    const w = cvs.width, h = cvs.height;
+
+    if (!allFramesReady()){
+      const g = ctx.createLinearGradient(0,0,0,h);
+      g.addColorStop(0,'#0e1624'); g.addColorStop(0.6,'#0a1120'); g.addColorStop(1,'#070d19');
+      ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle = 'rgba(0,255,255,0.12)';
+      ctx.fillRect(0,0,w,Math.max(8,(h*0.06)|0));
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 14px ui-sans-serif,system-ui';
+      const errs = frames.map((f,i)=>f.error?`#${i+1} missing (${f.src})`:null).filter(Boolean);
+      const msg = errs.length? `Missing image(s): ${errs.join(', ')}` : 'Loading images…';
+      ctx.fillText(msg, 12, 22);
+      return;
+    }
+
+    const t = Math.max(0, Math.min(100, value));
+    if (t <= 50){
+      const k = t/50;
+      drawImageCover(frames[0].img, 1 - k);
+      drawImageCover(frames[1].img, k);
+    } else {
+      const k = (t-50)/50;
+      drawImageCover(frames[1].img, 1 - k);
+      drawImageCover(frames[2].img, k);
+    }
+
+    ctx.fillStyle = `rgba(0,0,0,${BG_DARKEN})`;
+    ctx.fillRect(0,0,w,h);
+  }
+
+  // Blended noise (offscreen)
+  const noiseLayer = document.createElement('canvas');
+  const nctx = noiseLayer.getContext('2d');
+
+  function renderNoiseLayer(t){
+    if (!noiseOn) return;
+    const w = noiseLayer.width = cvs.width;
+    const h = noiseLayer.height = cvs.height;
+    const img = nctx.createImageData(w, h);
+    const data = img.data;
+    const tt = t*0.0008;
+
+    for (let y=0; y<h; y++){
+      for (let x=0; x<w; x++){
+        const i = (y*w + x) * 4;
+        const v = (Math.sin((x*0.021 + tt)*3) + Math.cos((y*0.017 - tt)*2))*0.5 + Math.random()*0.35;
+        const temp = Math.max(0, Math.min(100, ((v+1)/2)*100));
+        const [r,g,b] = rgb(colorAtTemp(temp));
+        const gray = (r+g+b)/3;
+        const rr = Math.round(gray*(1-NOISE_SAT) + r*NOISE_SAT);
+        const gg = Math.round(gray*(1-NOISE_SAT) + g*NOISE_SAT);
+        const bb = Math.round(gray*(1-NOISE_SAT) + b*NOISE_SAT);
+        data[i  ] = rr; data[i+1] = gg; data[i+2] = bb; data[i+3] = 255;
+      }
+    }
+    nctx.putImageData(img, 0, 0);
+  }
+
+  function compositeNoise(){
+    if (!noiseOn) return;
+    ctx.save();
+    ctx.globalAlpha = NOISE_ALPHA;
+    ctx.globalCompositeOperation = NOISE_MODE;
+    ctx.drawImage(noiseLayer, 0, 0);
+    ctx.restore();
+  }
+
+  // Letters
+  function layoutLetters(){
+    const w = cvs.width, h = cvs.height;
+    const left = Math.round(w*0.08), right = Math.round(w*0.08);
+    const top = Math.round(h*0.18), bottom = Math.round(h*0.18);
+    const areaW = Math.max(1, w-left-right);
+    const step = (chars.length>1) ? areaW/(chars.length-1) : 0;
+
+    const fontPx = Math.min(120, Math.max(20, Math.round(Math.min(h*0.18, areaW/chars.length*0.95))));
+    const ascent = fontPx*0.78, descent=fontPx*0.22;
+    let baseline = h-bottom-descent;
+    if (baseline-ascent < top+6) baseline = top+6+ascent;
+
+    const list=[];
+    let x = left;
+    for (let i=0;i<chars.length;i++){
+      const idx=indexMap[i];
+      const y = baseline + (Math.sin(i*1.6)+Math.cos(i*0.85))*Math.min(6, Math.max(2, fontPx*0.08));
+      list.push({ch:chars[i], idx, x, y, fontPx, rotBase: Math.sin(i*0.6)*0.05});
+      x += step;
+    }
+    return list;
+  }
+
+  function drawLetters(val, items, t){
+    ctx.save();
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    for (let i=0;i<items.length;i++){
+      const L = items[i];
+      if (!L.idx) continue;
+      const target = idxToTemp.get(L.idx);
+      if (target==null) continue;
+
+      const d = Math.abs(val - target);
+      if (d > BAND) continue;
+
+      const base = 1 - d/BAND;
+      const shimmer = 0.22*Math.sin(t*0.003 + i*0.9) + 0.15*Math.cos(t*0.0017 + i*0.6);
+      const strength = Math.max(0, Math.min(1, base + 0.18*shimmer));
+
+      const driftX = Math.sin(t*0.0013 + i*1.2) * 1.1;
+      const driftY = Math.cos(t*0.0011 + i*1.1) * 0.9;
+      const rot    = L.rotBase + 0.01*Math.sin(t*0.001 + i);
+      const scale  = 1 + 0.02*Math.sin(t*0.002 + i*0.7);
+
+      let [r,g,b] = rgb(colorAtTemp(target));
+      if (target <= COOL_THRESHOLD){
+        const k = COOL_LIGHTEN;
+        r = Math.round(r*(1-k) + 255*k);
+        g = Math.round(g*(1-k) + 255*k);
+        b = Math.round(b*(1-k) + 255*k);
+      }
+      const col = `rgb(${r},${g},${b})`;
+
+      ctx.save();
+      ctx.translate(L.x + driftX, L.y + driftY);
+      ctx.rotate(rot);
+      ctx.scale(scale, scale);
+
+      ctx.font = `800 ${L.fontPx}px/1 ui-sans-serif, system-ui, Segoe UI, Arial`;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 28*strength + 10;
+      if (target <= COOL_THRESHOLD) ctx.shadowBlur += 4;
+
+      ctx.globalAlpha = 0.18 * strength;
+      ctx.fillStyle = `rgba(0,255,255,1)`; ctx.fillText(L.ch, -1.5,  0.5);
+      ctx.fillStyle = `rgba(255,0,255,1)`; ctx.fillText(L.ch,  1.5, -0.5);
+
+      ctx.globalAlpha = 0.44 + 0.46*strength + 0.06*Math.sin(t*0.006 + i);
+      ctx.fillStyle = col; ctx.fillText(L.ch, 0, 0);
+
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function drawScanline(t){
+    const w=cvs.width,h=cvs.height;
+    const y = Math.floor((t*0.08)%h);
+    const g=ctx.createLinearGradient(0,y-24,0,y+24);
+    g.addColorStop(0,'rgba(255,255,255,0)');
+    g.addColorStop(0.5,'rgba(255,255,255,0.05)');
+    g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,y-24,w,48);
+  }
+
+  // Render
+  let items = layoutLetters();
+  function render(t){
+    if (!unlocked) return; // nothing renders until unlocked
+    fitCanvasToCSS();
+    if (!items || !items.length || items[0].fontPx === undefined) items = layoutLetters();
+
+    const val = Number(slider.value);
+    out.textContent = val;
+
+    drawThermalFrames(val);
+    renderNoiseLayer(t);
+    compositeNoise();
+    drawLetters(val, items, t);
+    drawScanline(t);
+  }
+
+  function startLoop(){
+    if (loopTimer) return;
+    loopTimer = setInterval(()=>render(performance.now()), 80);
+  }
+
+  // UI events
+  slider.addEventListener('input', ()=>unlocked && render(performance.now()));
+  window.addEventListener('resize', ()=>{ if (!unlocked) return; items = layoutLetters(); render(performance.now()); });
+  window.addEventListener('orientationchange', ()=>setTimeout(()=>{ if (!unlocked) return; items = layoutLetters(); render(performance.now()); }, 250));
+
+  // Slider fully left by default
+  slider.value = "0";
+  out.textContent = "0";
+})();
+</script>
+</body>
+</html>
