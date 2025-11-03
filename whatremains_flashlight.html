@@ -6,16 +6,19 @@
 <title>What Remains</title>
 <style>
   :root{
-    --x: 57.9;
+    /* Position & size from your editor JSON */
+    --x: 58.7;
     --y: 68.7;
-    --diam: 31.9;
+    --diam: 30;
   }
+
   html,body{height:100%}
   body{
     margin:0; background:#0a0c10; color:#eaf1ff;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     display:grid; place-items:center;
   }
+
   .stage{
     width:min(94vw, 720px);
     aspect-ratio:1/1;
@@ -25,11 +28,14 @@
     background: center / contain no-repeat url("wrflashlight.png"), #000;
     box-shadow: 0 10px 22px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);
   }
+
+  /* Flashlight “lens” */
   .flash{
     position:absolute; left:calc(var(--x)*1%); top:calc(var(--y)*1%);
     width:calc(var(--diam)*1%); aspect-ratio:1/1; transform:translate(-50%,-50%); border-radius:50%;
     background: radial-gradient(circle at 50% 45%, #1b1b1b 0%, #0d0d0d 55%, #000 100%);
     box-shadow: inset 0 0 120px #000;
+    transition: box-shadow 120ms linear, background 120ms linear;
   }
   .flash.on{
     background: radial-gradient(circle at 48% 45%, #fff 0%, #f6f8ff 20%, #dfe8ff 34%, #b7c9ff38 62%, #0000 80%);
@@ -37,6 +43,8 @@
                 0 0 220px 90px rgba(155,183,255,.18),
                 inset 0 0 160px rgba(255,255,255,.9);
   }
+
+  /* Overlay & button */
   .overlay{
     position:absolute; inset:0;
     display:grid; place-items:center;
@@ -52,4 +60,146 @@
   }
   .cta:disabled{opacity:.6; cursor:not-allowed}
   .cta:focus-visible{outline:2px solid #7ea2ff; outline-offset:3px; box-shadow:0 0 0 4px rgba(126,162,255,.25)}
-  .visually-hidden{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px
+</style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="flash" id="flash"></div>
+
+    <div class="overlay" id="overlay">
+      <button class="cta" id="startBtn">Click to View</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ----- Config from your editor JSON -----
+  const cfg = {
+    x: 58.7,
+    y: 68.7,
+    size: 30,
+    dotLengthMs: 350,
+    gapBoostUnits: 1, // adds extra dot units to letter/word gaps
+    msg: "DEIDRE"
+  };
+
+  // Apply CSS vars in case you tweak cfg later
+  const rootStyle = document.documentElement.style;
+  rootStyle.setProperty('--x', String(cfg.x));
+  rootStyle.setProperty('--y', String(cfg.y));
+  rootStyle.setProperty('--diam', String(cfg.size));
+
+  // Elements
+  const flash = document.getElementById('flash');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('startBtn');
+
+  // Morse dictionary
+  const MORSE = {
+    A: ".-",     B: "-...",   C: "-.-.",   D: "-..",
+    E: ".",      F: "..-.",   G: "--.",    H: "....",
+    I: "..",     J: ".---",   K: "-.-",    L: ".-..",
+    M: "--",     N: "-.",     O: "---",    P: ".--.",
+    Q: "--.-",   R: ".-.",    S: "...",    T: "-",
+    U: "..-",    V: "...-",   W: ".--",    X: "-..-",
+    Y: "-.--",   Z: "--..",
+    "0": "-----","1": ".----","2": "..---","3": "...--",
+    "4": "....-","5": ".....","6": "-....","7": "--...",
+    "8": "---..","9": "----."
+  };
+
+  // Timing (ITU standard) + your gap boost
+  const DOT = cfg.dotLengthMs;             // dot length
+  const DASH = 3 * DOT;                    // dash length
+  const GAP_SYMBOL = DOT;                  // gap between elements of a letter
+  const GAP_LETTER = (3 + cfg.gapBoostUnits) * DOT; // gap between letters
+  const GAP_WORD = (7 + cfg.gapBoostUnits) * DOT;   // gap between words
+
+  // Build a schedule of on/off segments for the message
+  function buildSchedule(message) {
+    const parts = [];
+    const words = message.trim().toUpperCase().split(/\s+/);
+
+    words.forEach((word, wIdx) => {
+      [...word].forEach((ch, cIdx) => {
+        const code = MORSE[ch];
+        if (!code) return; // skip unsupported chars
+
+        // For each symbol in the letter
+        [...code].forEach((sym, sIdx) => {
+          // ON duration
+          parts.push({ on: true, dur: sym === '.' ? DOT : DASH });
+
+          // Intra-letter gap (OFF) if another symbol follows
+          if (sIdx < code.length - 1) {
+            parts.push({ on: false, dur: GAP_SYMBOL });
+          }
+        });
+
+        // Inter-letter gap if another letter follows in this word
+        if (cIdx < word.length - 1) {
+          parts.push({ on: false, dur: GAP_LETTER });
+        }
+      });
+
+      // Inter-word gap if another word follows
+      if (wIdx < words.length - 1) {
+        parts.push({ on: false, dur: GAP_WORD });
+      }
+    });
+
+    return parts;
+  }
+
+  // Play schedule (returns a Promise that resolves when done)
+  function playSchedule(schedule) {
+    return new Promise(async (resolve) => {
+      for (const seg of schedule) {
+        flash.classList.toggle('on', !!seg.on);
+        await wait(seg.dur);
+      }
+      flash.classList.remove('on'); // ensure off at end
+      resolve();
+    });
+  }
+
+  function wait(ms) {
+    return new Promise(res => setTimeout(res, ms));
+  }
+
+  // Build once for your message
+  const schedule = buildSchedule(cfg.msg);
+
+  // UI handlers
+  let playing = false;
+
+  async function startPlayback() {
+    if (playing) return;
+    playing = true;
+
+    // Hide overlay while playing
+    overlay.style.display = 'none';
+    startBtn.disabled = true;
+
+    // Play the Morse sequence
+    await playSchedule(schedule);
+
+    // Show overlay again, allow replay
+    startBtn.textContent = 'Replay';
+    startBtn.disabled = false;
+    overlay.style.display = 'grid';
+    playing = false;
+  }
+
+  // Click to start/replay
+  startBtn.addEventListener('click', startPlayback);
+
+  // Optional: allow tapping the background to start too (mobile friendly)
+  document.getElementById('stage').addEventListener('click', (e) => {
+    // If overlay is visible, the button click will handle it.
+    // If overlay is hidden and not playing, ignore background taps.
+  }, { passive: true });
+})();
+</script>
+</body>
+</html>
