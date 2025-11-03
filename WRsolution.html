@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>What Remains</title>
+<style>
+  :root{
+    --bg:#0a0c10;        /* deep black-blue */
+    --ink:#f2f6ff;       /* near-white text */
+    --panel:#121621;     /* dark panel */
+    --line:#2b3346;      /* subtle divider */
+    --accent:#c40000;    /* blood red */
+    --error:#ff6b6b;
+    --success:#7be47b;
+    --muted:#b9c6e2;
+  }
+
+  html,body{
+    margin:0; padding:0;
+    background:var(--bg); color:var(--ink);
+    font-family:Arial,system-ui,-apple-system,Segoe UI,Roboto;
+  }
+
+  /* faint vignette for mood */
+  body:before{
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background:
+      radial-gradient(120% 80% at 50% -10%, transparent 40%, rgba(0,0,0,.35) 100%),
+      radial-gradient(80% 60% at 100% 0%, rgba(0,0,0,.25), transparent 70%),
+      radial-gradient(80% 60% at 0% 0%, rgba(0,0,0,.25), transparent 70%);
+    mix-blend-mode:normal;
+  }
+
+  .container{max-width:640px;margin:0 auto;padding:20px}
+
+  h2{
+    margin:8px 0 12px; font-size:22px; letter-spacing:.03em;
+    text-shadow:0 0 8px rgba(255,255,255,.04);
+    animation:flicker 4s infinite steps(100, end);
+  }
+  @keyframes flicker{
+    0%,100%{opacity:1}
+    4%{opacity:.92}
+    5%{opacity:1}
+    11%{opacity:.95}
+    12%{opacity:1}
+    20%{opacity:.9}
+    21%{opacity:1}
+    60%{opacity:.97}
+    61%{opacity:1}
+  }
+
+  input[type="text"]{
+    width:100%; padding:12px; margin:6px 0; font-size:18px;
+    color:var(--ink); background:#0e1218;
+    border:2px solid var(--line); border-radius:8px;
+    outline:none;
+  }
+  input[type="text"]::placeholder{color:#91a0bd}
+
+  button{
+    width:100%; padding:14px; font-size:18px;
+    background:var(--accent); color:#fff; border:none; border-radius:8px;
+    margin-top:10px; cursor:pointer; letter-spacing:.04em;
+    box-shadow:0 6px 18px rgba(196,0,0,.15);
+  }
+  button:active{opacity:.9; transform:translateY(1px)}
+
+  #message{
+    margin-top:18px; font-size:18px; line-height:1.55; white-space:pre-wrap;
+  }
+  .error{color:var(--error); font-weight:700}
+  .success{color:var(--success)}
+
+  /* Reveal block */
+  .reveal{
+    margin-top:12px; padding:16px;
+    border:1px solid var(--line); border-radius:12px;
+    background:linear-gradient(180deg, rgba(18,22,33,.85), rgba(12,16,24,.85));
+    color:var(--ink);
+    box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .narrative{margin-bottom:12px}
+  .whispers{
+    font-style:italic; opacity:.9; color:#dbe5ff;
+    text-shadow:0 0 8px rgba(155,170,255,.12);
+    animation:whisper 3.6s ease-in-out infinite;
+  }
+  @keyframes whisper{
+    0%,100%{opacity:.86; letter-spacing:0}
+    50%{opacity:1; letter-spacing:.6px}
+  }
+
+  .clue{
+    margin:12px 0 8px; padding:12px 12px 12px 14px;
+    border-left:4px solid var(--accent);
+    background:rgba(0,0,0,.25);
+    border-radius:8px;
+  }
+
+  .img-wrap{margin:14px 0}
+  .img-wrap img{
+    display:block; max-width:100%; height:auto;
+    border:1px solid var(--line); border-radius:10px;
+    box-shadow:0 10px 24px rgba(0,0,0,.45);
+  }
+  .small{font-size:14px; opacity:.75; color:var(--muted)}
+
+  .answer-wrap{margin-top:12px}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h2>Who were the five names?</h2>
+
+  <!-- Five name inputs -->
+  <input id="name1" type="text" placeholder="Name 1" autocomplete="off">
+  <input id="name2" type="text" placeholder="Name 2" autocomplete="off">
+  <input id="name3" type="text" placeholder="Name 3" autocomplete="off">
+  <input id="name4" type="text" placeholder="Name 4" autocomplete="off">
+  <input id="name5" type="text" placeholder="Name 5" autocomplete="off">
+  <button onclick="checkNames()">Submit</button>
+
+  <div id="message"></div>
+</div>
+
+<script>
+function checkNames() {
+  const entries = [
+    document.getElementById('name1').value.trim().toLowerCase(),
+    document.getElementById('name2').value.trim().toLowerCase(),
+    document.getElementById('name3').value.trim().toLowerCase(),
+    document.getElementById('name4').value.trim().toLowerCase(),
+    document.getElementById('name5').value.trim().toLowerCase()
+  ];
+
+  // Allow Deidre/Deirdre
+  const requiredSets = [
+    ["paloma"],
+    ["brandon"],
+    ["gregory"],
+    ["deidre","deirdre"],
+    ["edith"]
+  ];
+
+  const isCorrect = requiredSets.every(set => set.some(n => entries.includes(n)));
+
+  const msg = document.getElementById("message");
+  msg.className = "";
+
+  if (!isCorrect) {
+    msg.classList.add("error");
+    msg.textContent = "Hmm, are you sure that was all the names? Doublecheck and try again.";
+    return;
+  }
+
+  // SUCCESS VIEW: narrative + image + answer box
+  msg.classList.add("success");
+  msg.innerHTML = `
+<div class="reveal">
+  <div class="narrative">
+    As the last name leaves your mouth you feel as if you've been hit in the chest. Your mind races as the room feels like it's spinning.
+    The lights press in; your ears fill with <span class="whispers">whispers — too many voices at once…</span><br><br>
+
+    Cedric pulls out his phone. “Maybe we can see if there are any missing people with those names. I can call the people over at the Will Street Detective Agency to see if they can help us—”
+    <br><br><strong>“Wait.”</strong> Anna cuts him off. “The voices… they’re all saying the same thing. Kristina, can you hear them?”<br><br>
+
+    You close your eyes and try to focus — and then you hear it: five voices, speaking in unison.
+  </div>
+
+  <div class="clue">
+    “Our names hold the truth — <strong>Paloma</strong>, <strong>Brandon</strong>, <strong>Deidre</strong>, <strong>Gregory</strong>, and <strong>Edith</strong>…<br>
+    They repeat it over and over. Anna pulls out her notebook and begins writing, eyes closed tight as she lets the spirits guide her hand. Then she suddenly stops, the voices stop for you too as if a switch was thrown. she stops, the whispers go silent. Everyone looks to you — and to Anna.<br><br>
+    She slides the paper across the table. “Any idea what to do with this? The spirits just stopped so I am not sure what to do with this.”
+  </div>
+
+  <div class="img-wrap">
+    <img src="WRannafinal.png" alt="Anna's notebook page with the names and markings">
+    <div class="small"></div>
+  </div>
+
+  <div class="answer-wrap">
+    <input id="finalAnswer" type="text" placeholder="Type the hidden message…" autocomplete="off">
+    <button id="answerBtn">Verify Message</button>
+  </div>
+</div>
+  `;
+
+  // Wire up final answer check
+  const btn = document.getElementById('answerBtn');
+  btn.addEventListener('click', () => {
+    const raw = (document.getElementById('finalAnswer').value || "");
+    // normalize: remove non-letters, lowercase
+    const norm = raw.toLowerCase().replace(/[^a-z]/g, "");
+    const target = "almaandroydidit"; // "alma and roy did it" without spaces/punct
+
+    if (norm === target) {
+      window.open('WRsolution.pdf', '_blank');
+    } else {
+      alert("That doesn’t seem right yet. Check the indices and try again.");
+    }
+  });
+
+  // Scroll reveal into view on mobile
+  msg.scrollIntoView({behavior:'smooth', block:'start'});
+}
+</script>
+</body>
+</html>
