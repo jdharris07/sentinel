@@ -13,8 +13,6 @@
     font-family:system-ui,Segoe UI,Roboto,Arial;
     display:flex; align-items:center; justify-content:center;
   }
-
-  /* Gate (prompt) */
   .gate{
     width:min(92vw,720px);
     background:linear-gradient(180deg,#0f1629,#0a0f1b);
@@ -38,13 +36,10 @@
     cursor:pointer;
   }
   .gateMsg{ min-height:20px; font-size:14px; color:#ffcccc; }
-
-  /* Viewer */
   .wrap{ width:min(96vw, 900px); display:none; opacity:0; transform:translateY(8px);
          transition:opacity .35s ease, transform .35s ease; }
   .wrap.visible{ display:block; }
   .wrap.faded{ opacity:1; transform:translateY(0); }
-
   #view{
     width:100%; aspect-ratio:16/9; display:block;
     border:1px solid #1e263a; border-radius:14px; background:#05070c;
@@ -67,7 +62,6 @@
 </head>
 <body>
 
-  <!-- Gate screen -->
   <section id="gate" class="gate" role="dialog" aria-labelledby="gateTitle" aria-describedby="gateDesc">
     <h1 id="gateTitle">Access Check</h1>
     <p id="gateDesc">Did you come up with something special to ask about?</p>
@@ -78,7 +72,6 @@
     <div id="gateMsg" class="gateMsg" aria-live="polite"></div>
   </section>
 
-  <!-- Hidden viewer (revealed after correct answer) -->
   <div id="wrap" class="wrap" aria-hidden="true">
     <canvas id="view" width="800" height="450" aria-label="Thermal canvas"></canvas>
     <div class="controls">
@@ -91,7 +84,7 @@
 
 <script>
 (function(){
-  /* ===== GATE LOGIC ===== */
+  /* ===== GATE ===== */
   const gate      = document.getElementById('gate');
   const gateInput = document.getElementById('gateInput');
   const gateBtn   = document.getElementById('gateBtn');
@@ -99,25 +92,21 @@
   const wrapEl    = document.getElementById('wrap');
 
   let unlocked = false;
-  let loopTimer = null;
+  let rafId = null;
 
   function showViewer(){
     unlocked = true;
-    // hide gate
     gate.style.opacity = '0';
     gate.style.transform = 'translateY(-6px)';
     setTimeout(()=>{ gate.style.display = 'none'; }, 260);
 
-    // reveal viewer
     wrapEl.classList.add('visible');
     requestAnimationFrame(()=>wrapEl.classList.add('faded'));
     wrapEl.setAttribute('aria-hidden','false');
 
-    // ensure slider at 0 and start loop
     slider.value = "0";
     out.textContent = "0";
-    startLoop();
-    render(performance.now());
+    loop();
   }
 
   function handleGateSubmit(){
@@ -131,35 +120,45 @@
   }
 
   gateBtn.addEventListener('click', handleGateSubmit);
-  gateInput.addEventListener('keydown', (e)=>{
-    if (e.key === 'Enter'){ e.preventDefault(); handleGateSubmit(); }
-  });
+  gateInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter'){ e.preventDefault(); handleGateSubmit(); } });
 
-  /* ===== Viewer (thermal imager) ===== */
+  /* ===== Viewer ===== */
   const MESSAGE = "I AM PALOMA";
   const WINDOWS = [
     {center:18, idx:[3,6,8]},
     {center:52, idx:[1,4,9]},
     {center:86, idx:[2,7,8]}
   ];
-  const BAND = 10;
+  const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const BAND_BASE = 10;
+  const BAND = isiOS ? BAND_BASE + 3 : BAND_BASE; // slightly easier to catch on iOS
   const BG_DARKEN = 0.22;
-
-  // Lighten cool-band letters slightly
   const COOL_THRESHOLD = 30;
   const COOL_LIGHTEN   = 0.28;
 
-  // Noise (gentle blended layer)
-  let noiseOn = true;               // always on (no toggle)
-  const NOISE_ALPHA = 0.10;
-  const NOISE_MODE  = 'soft-light';
-  const NOISE_SAT   = 0.5;
-
   // DOM
   const cvs = document.getElementById('view');
-  const ctx = cvs.getContext('2d');
+  const ctx = cvs.getContext('2d', { alpha: true });
+
   const slider = document.getElementById('thermo');
   const out = document.getElementById('out');
+
+  // High-DPI canvas scaling (fixes faint canvas text on iOS)
+  let dpr = Math.max(1, window.devicePixelRatio || 1);
+  function fitCanvasToCSS(){
+    const r = cvs.getBoundingClientRect();
+    const w = Math.max(1, Math.round(r.width));
+    const h = Math.max(1, Math.round(r.height));
+    if (cvs.width !== Math.round(w*dpr) || cvs.height !== Math.round(h*dpr)){
+      cvs.width = Math.round(w*dpr);
+      cvs.height = Math.round(h*dpr);
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // keep noise layer in lockstep
+    noiseLayer.width = Math.round(w*dpr);
+    noiseLayer.height = Math.round(h*dpr);
+    nctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
 
   // Char index map (ignore spaces)
   const chars = [...MESSAGE];
@@ -171,7 +170,7 @@
   const idxToTemp = new Map();
   WINDOWS.forEach(w => w.idx.forEach(id => idxToTemp.set(id, w.center)));
 
-  // Load 3 thermal frames (place these images next to this HTML)
+  // Frames
   const frames = [
     {src:'wrthermalimage1.png'},
     {src:'wrthermalimage2.png'},
@@ -179,26 +178,13 @@
   ].map(f=>({img:new Image(), loaded:false, error:false, ...f}));
 
   frames.forEach(f=>{
-    f.img.onload  = ()=>{ f.loaded=true; f.error=false; if (unlocked) render(performance.now()); };
+    f.img.crossOrigin = 'anonymous'; // harmless here; avoids odd Safari states
+    f.img.onload  = ()=>{ f.loaded=true; f.error=false; };
     f.img.onerror = ()=>{ f.loaded=false; f.error=true;  };
-    f.img.src = f.src + '?v=' + Date.now();
+    f.img.src = f.src; // no cache-buster—reduces Safari image churn
   });
 
-  function allFramesReady(){
-    return frames.every(f=>f.loaded) && frames.length===3;
-  }
-
-  // Sizing
-  function fitCanvasToCSS(){
-    const r = cvs.getBoundingClientRect();
-    const w = Math.max(1, Math.round(r.width));
-    const h = Math.max(1, Math.round(r.height));
-    if (cvs.width !== w || cvs.height !== h){
-      cvs.width = w; cvs.height = h;
-      noiseLayer.width = w; noiseLayer.height = h;
-    }
-    ctx.setTransform(1,0,0,1,0,0);
-  }
+  function allFramesReady(){ return frames.every(f=>f.loaded) && frames.length===3; }
 
   // Thermal ramp
   function colorAtTemp(t){
@@ -224,9 +210,9 @@
   }
   const rgb = s => { const m = s.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/); return [m?+m[1]:255, m?+m[2]:255, m?+m[3]:255]; };
 
-  // Draw one image with cover scaling
+  // Draw cover image
   function drawImageCover(img, alpha=1){
-    const w = cvs.width, h = cvs.height;
+    const w = cvs.width / dpr, h = cvs.height / dpr;
     const iw = img.naturalWidth || img.width;
     const ih = img.naturalHeight || img.height;
     if (!iw || !ih) return;
@@ -244,18 +230,14 @@
 
   // Cross-fade frames per slider
   function drawThermalFrames(value){
-    const w = cvs.width, h = cvs.height;
+    const w = cvs.width / dpr, h = cvs.height / dpr;
 
     if (!allFramesReady()){
       const g = ctx.createLinearGradient(0,0,0,h);
       g.addColorStop(0,'#0e1624'); g.addColorStop(0.6,'#0a1120'); g.addColorStop(1,'#070d19');
       ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
-      ctx.fillStyle = 'rgba(0,255,255,0.12)';
-      ctx.fillRect(0,0,w,Math.max(8,(h*0.06)|0));
       ctx.fillStyle = '#fff'; ctx.font = 'bold 14px ui-sans-serif,system-ui';
-      const errs = frames.map((f,i)=>f.error?`#${i+1} missing (${f.src})`:null).filter(Boolean);
-      const msg = errs.length? `Missing image(s): ${errs.join(', ')}` : 'Loading images…';
-      ctx.fillText(msg, 12, 22);
+      ctx.fillText('Loading images…', 12, 22);
       return;
     }
 
@@ -274,14 +256,17 @@
     ctx.fillRect(0,0,w,h);
   }
 
-  // Blended noise (offscreen)
+  // Noise layer (offscreen)
   const noiseLayer = document.createElement('canvas');
   const nctx = noiseLayer.getContext('2d');
+  const NOISE_ALPHA = 0.10;
+  const NOISE_MODE  = 'soft-light';
+  const NOISE_SAT   = 0.5;
 
   function renderNoiseLayer(t){
-    if (!noiseOn) return;
-    const w = noiseLayer.width = cvs.width;
-    const h = noiseLayer.height = cvs.height;
+    const w = noiseLayer.width / dpr;
+    const h = noiseLayer.height / dpr;
+    nctx.setTransform(dpr,0,0,dpr,0,0);
     const img = nctx.createImageData(w, h);
     const data = img.data;
     const tt = t*0.0008;
@@ -303,17 +288,16 @@
   }
 
   function compositeNoise(){
-    if (!noiseOn) return;
     ctx.save();
     ctx.globalAlpha = NOISE_ALPHA;
     ctx.globalCompositeOperation = NOISE_MODE;
-    ctx.drawImage(noiseLayer, 0, 0);
+    ctx.drawImage(noiseLayer, 0, 0, noiseLayer.width / dpr, noiseLayer.height / dpr);
     ctx.restore();
   }
 
-  // Letters
+  // Layout letters
   function layoutLetters(){
-    const w = cvs.width, h = cvs.height;
+    const w = cvs.width / dpr, h = cvs.height / dpr;
     const left = Math.round(w*0.08), right = Math.round(w*0.08);
     const top = Math.round(h*0.18), bottom = Math.round(h*0.18);
     const areaW = Math.max(1, w-left-right);
@@ -336,6 +320,9 @@
   }
 
   function drawLetters(val, items, t){
+    // Ensure we’re not in a weird blend mode before drawing text (important for Safari)
+    ctx.globalCompositeOperation = 'source-over';
+
     ctx.save();
     ctx.textAlign='center'; ctx.textBaseline='alphabetic';
     for (let i=0;i<items.length;i++){
@@ -371,15 +358,24 @@
       ctx.scale(scale, scale);
 
       ctx.font = `800 ${L.fontPx}px/1 ui-sans-serif, system-ui, Segoe UI, Arial`;
+
+      // iOS visibility helpers: subtle dark stroke + faint chroma shadows
+      ctx.lineWidth = Math.max(1, Math.round(L.fontPx * 0.055));
+      ctx.strokeStyle = 'rgba(0,0,0,0.65)';
+      ctx.globalAlpha = 0.9 * strength;
+      ctx.strokeText(L.ch, 0, 0);
+
       ctx.shadowColor = col;
-      ctx.shadowBlur = 28*strength + 10;
+      ctx.shadowBlur = 24*strength + 8;
       if (target <= COOL_THRESHOLD) ctx.shadowBlur += 4;
 
+      // slight chromatic offset
       ctx.globalAlpha = 0.18 * strength;
-      ctx.fillStyle = `rgba(0,255,255,1)`; ctx.fillText(L.ch, -1.5,  0.5);
-      ctx.fillStyle = `rgba(255,0,255,1)`; ctx.fillText(L.ch,  1.5, -0.5);
+      ctx.fillStyle = `rgba(0,255,255,1)`; ctx.fillText(L.ch, -1.2,  0.6);
+      ctx.fillStyle = `rgba(255,0,255,1)`; ctx.fillText(L.ch,  1.2, -0.6);
 
-      ctx.globalAlpha = 0.44 + 0.46*strength + 0.06*Math.sin(t*0.006 + i);
+      // main fill
+      ctx.globalAlpha = 0.95 * strength;
       ctx.fillStyle = col; ctx.fillText(L.ch, 0, 0);
 
       ctx.restore();
@@ -388,7 +384,7 @@
   }
 
   function drawScanline(t){
-    const w=cvs.width,h=cvs.height;
+    const w=cvs.width / dpr,h=cvs.height / dpr;
     const y = Math.floor((t*0.08)%h);
     const g=ctx.createLinearGradient(0,y-24,0,y+24);
     g.addColorStop(0,'rgba(255,255,255,0)');
@@ -397,12 +393,12 @@
     ctx.fillStyle=g; ctx.fillRect(0,y-24,w,48);
   }
 
-  // Render
-  let items = layoutLetters();
+  let items = null;
+
   function render(t){
-    if (!unlocked) return; // nothing renders until unlocked
+    if (!unlocked) return;
     fitCanvasToCSS();
-    if (!items || !items.length || items[0].fontPx === undefined) items = layoutLetters();
+    if (!items) items = layoutLetters();
 
     const val = Number(slider.value);
     out.textContent = val;
@@ -412,19 +408,23 @@
     compositeNoise();
     drawLetters(val, items, t);
     drawScanline(t);
+
+    rafId = requestAnimationFrame(render);
   }
 
-  function startLoop(){
-    if (loopTimer) return;
-    loopTimer = setInterval(()=>render(performance.now()), 80);
-  }
+  function loop(){ if (!rafId) rafId = requestAnimationFrame(render); }
 
   // UI events
-  slider.addEventListener('input', ()=>unlocked && render(performance.now()));
-  window.addEventListener('resize', ()=>{ if (!unlocked) return; items = layoutLetters(); render(performance.now()); });
-  window.addEventListener('orientationchange', ()=>setTimeout(()=>{ if (!unlocked) return; items = layoutLetters(); render(performance.now()); }, 250));
+  slider.addEventListener('input', ()=>unlocked && loop());
+  window.addEventListener('resize', ()=>{
+    dpr = Math.max(1, window.devicePixelRatio || 1);
+    items = null;
+    if (unlocked) loop();
+  });
+  window.addEventListener('orientationchange', ()=>{
+    setTimeout(()=>{ dpr = Math.max(1, window.devicePixelRatio || 1); items = null; if (unlocked) loop(); }, 250);
+  });
 
-  // Slider fully left by default
   slider.value = "0";
   out.textContent = "0";
 })();
