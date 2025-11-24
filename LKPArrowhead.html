@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Last Known Position</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- Google Font for carved/handwritten letters -->
+<link href="https://fonts.googleapis.com/css2?family=Reenie+Beanie&display=swap" rel="stylesheet">
+
+<style>
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#020617;
+    background-image:url("LKPpagebackground.png");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    color:#e5e7eb;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    padding:20px;
+  }
+
+  .wrapper{
+    text-align:center;
+    max-width:700px;
+    width:100%;
+  }
+
+  h1{
+    font-size:1.6rem;
+    margin-bottom:0.5rem;
+  }
+
+  .instructions{
+    font-size:1rem;
+    color:#d1d5db;
+    margin-bottom:1rem;
+    line-height:1.35;
+    padding:0 10px;
+    word-wrap:break-word;
+  }
+
+  .play-area{
+    position:relative;
+    width:600px;
+    height:400px;
+    border:2px solid #4b5563;
+    border-radius:10px;
+    overflow:hidden;
+    margin:0 auto;
+    background-image:url("LKPhide.png");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+  }
+
+  .symbol{
+    position:absolute;
+    transform:translate(-50%, -50%);
+    font-size:1.8rem;
+    color:#000000;          /* black text */
+    pointer-events:none;
+    z-index:1;
+    font-family: 'Reenie Beanie', cursive; /* carved/handwritten */
+    text-shadow: 
+        0px 0px 1px rgba(0,0,0,0.6),
+        -1px -1px 0 rgba(0,0,0,0.3),
+        1px 1px 0 rgba(255,255,255,0.15);  /* gives a carved look */
+  }
+
+  #arrowhead{
+    position:absolute;
+    width:80px;
+    height:auto;
+    cursor:grab;
+    z-index:10;
+    transform:translate(-50%, -50%);
+  }
+
+  #arrowhead.dragging{
+    cursor:grabbing;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <h1>The Arrowhead and the Letters</h1>
+
+  <div class="instructions">
+    Something about the arrowhead seems to be drawn to these letters.  
+    There must be something hidden here waiting to be revealed.  
+    Maybe it has something to do with that string of letters scrawled on that page about <strong>Kaya’tekwa</strong>.
+  </div>
+
+  <div id="playArea" class="play-area">
+    <img id="arrowhead" src="LKP Arrowhead.png" alt="arrowhead">
+  </div>
+</div>
+
+<script>
+  const playArea = document.getElementById('playArea');
+  const arrow    = document.getElementById('arrowhead');
+
+  const symbols = [
+    { ch: "N", x: 8.6,  y: 4.7  },
+    { ch: "U", x: 3.6,  y: 32.5 },
+    { ch: "B", x: 14.9, y: 33.0 },
+    { ch: "O", x: 27.6, y: 15.6 },
+    { ch: "C", x: 23.1, y: 45.1 },
+    { ch: "F", x: 35.1, y: 44.6 },
+    { ch: "T", x: 52.0, y: 5.2  },
+    { ch: "Y", x: 48.0, y: 34.0 },
+    { ch: "Q", x: 57.5, y: 34.0 },
+    { ch: "W", x: 77.0, y: 31.5 },
+    { ch: "K", x: 71.4, y: 60.8 },
+    { ch: "M", x: 83.8, y: 61.0 },
+    { ch: "H", x: 90.5, y: 3.5  },
+    { ch: "D", x: 85.1, y: 31.0 },
+    { ch: "J", x: 95.3, y: 32.5 },
+    { ch: "E", x: 56.0, y: 52.1 },
+    { ch: "X", x: 48.3, y: 84.3 },
+    { ch: "F", x: 63.8, y: 82.1 },
+    { ch: "E", x: 14.0, y: 51.6 },
+    { ch: "N", x: 8.4,  y: 81.6 },
+    { ch: "V", x: 19.5, y: 82.1 },
+    { ch: "A", x: 31.4, y: 62.7 },
+    { ch: "P", x: 26.5, y: 92.8 },
+    { ch: "Z", x: 37.0, y: 92.8 },
+    { ch: "R", x: 76.2, y: 68.0 },
+    { ch: "G", x: 71.9, y: 97.2 },
+    { ch: "L", x: 80.5, y: 96.5 },
+    { ch: "Y", x: 24.6, y: 5.0  },
+    { ch: "I", x: 66.6, y: 18.1 },
+    { ch: "X", x: 3.6,  y: 59.8 },
+    { ch: "K", x: 94.4, y: 79.6 },
+    { ch: "L", x: 80.0, y: 43.2 },
+    { ch: "C", x: 43.7, y: 56.8 },
+    { ch: "M", x: 35.9, y: 24.8 }
+  ];
+
+  symbols.forEach(sym => {
+    const span = document.createElement('span');
+    span.className = 'symbol';
+    span.textContent = sym.ch;
+    span.style.left = sym.x + '%';
+    span.style.top  = sym.y + '%';
+    playArea.appendChild(span);
+  });
+
+  function centerArrow() {
+    arrow.style.left = playArea.clientWidth / 2 + 'px';
+    arrow.style.top  = playArea.clientHeight / 2 + 'px';
+  }
+
+  centerArrow();
+
+  let dragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  arrow.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    arrow.classList.add('dragging');
+    arrow.setPointerCapture(e.pointerId);
+
+    const rect = arrow.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+  });
+
+  arrow.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+
+    const box = playArea.getBoundingClientRect();
+    let newLeft = e.clientX - offsetX - box.left;
+    let newTop  = e.clientY - offsetY - box.top;
+
+    const w = arrow.clientWidth;
+    const h = arrow.clientHeight;
+
+    newLeft = Math.max(w/2, Math.min(newLeft, box.width - w/2));
+    newTop  = Math.max(h/2, Math.min(newTop, box.height - h/2));
+
+    arrow.style.left = newLeft + "px";
+    arrow.style.top  = newTop + "px";
+  });
+
+  arrow.addEventListener('pointerup', (e) => {
+    dragging = false;
+    arrow.classList.remove('dragging');
+    arrow.releasePointerCapture(e.pointerId);
+  });
+
+  arrow.addEventListener('pointercancel', () => {
+    dragging = false;
+    arrow.classList.remove('dragging');
+  });
+
+  const step = 8;
+
+  window.addEventListener('keydown', (e) => {
+    const key = e.key;
+    if (!["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","w","a","s","d","W","A","S","D"].includes(key)) return;
+
+    e.preventDefault();
+
+    const box = playArea.getBoundingClientRect();
+    const rect = arrow.getBoundingClientRect();
+    let left = parseFloat(arrow.style.left);
+    let top  = parseFloat(arrow.style.top);
+
+    if (key === 'ArrowUp'   || key === 'w' || key === 'W') top  -= step;
+    if (key === 'ArrowDown' || key === 's' || key === 'S') top  += step;
+    if (key === 'ArrowLeft' || key === 'a' || key === 'A') left -= step;
+    if (key === 'ArrowRight'|| key === 'd' || key === 'D') left += step;
+
+    const w = rect.width;
+    const h = rect.height;
+
+    left = Math.max(w/2, Math.min(left, box.width - w/2));
+    top  = Math.max(h/2, Math.min(top, box.height - h/2));
+
+    arrow.style.left = left + "px";
+    arrow.style.top  = top + "px";
+  });
+
+  window.addEventListener('resize', centerArrow);
+</script>
+</body>
+</html>
