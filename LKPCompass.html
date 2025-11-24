@@ -12,7 +12,7 @@
     align-items:center;
     justify-content:center;
     background:#020617;
-    background-image:url("LPKpagebackground.png");
+    background-image:url("LKPpagebackground.png");
     background-size:cover;
     background-position:center;
     background-repeat:no-repeat;
@@ -33,18 +33,120 @@
     margin-bottom:0.4rem;
   }
 
-  .instructions{
+  .sub{
     font-size:0.95rem;
     color:#d1d5db;
     margin-bottom:1rem;
     padding:0 10px;
   }
 
+  /* LOCK SECTION */
+
+  #lockSection{
+    margin-bottom:20px;
+  }
+
+  .lock-box{
+    display:inline-block;
+    padding:18px 20px 22px;
+    border-radius:12px;
+    background:rgba(15,23,42,0.95);
+    border:1px solid #374151;
+    box-shadow:0 10px 30px rgba(0,0,0,0.7);
+  }
+
+  .rollers{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    margin:10px 0 14px;
+  }
+
+  .roller{
+    background:#0b1120;
+    border-radius:10px;
+    padding:6px 8px;
+    border:1px solid #4b5563;
+    width:54px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .roller button{
+    background:none;
+    border:none;
+    color:#e5e7eb;
+    font-size:1rem;
+    cursor:pointer;
+    padding:0;
+    line-height:1;
+    user-select:none;
+  }
+
+  .roller button:active{
+    transform:translateY(1px);
+  }
+
+  .digit{
+    font-size:1.4rem;
+    margin:4px 0;
+    font-weight:600;
+    letter-spacing:1px;
+  }
+
+  #tryCodeBtn{
+    margin-top:4px;
+    padding:6px 16px;
+    border-radius:999px;
+    border:none;
+    background:#f97316;
+    color:#111827;
+    font-weight:600;
+    cursor:pointer;
+    font-size:0.95rem;
+  }
+
+  #tryCodeBtn:active{
+    transform:translateY(1px);
+  }
+
+  #lockMessage{
+    margin-top:8px;
+    font-size:0.9rem;
+    min-height:1.2em;
+  }
+
+  #lockMessage.error{
+    color:#fca5a5;
+  }
+  #lockMessage.success{
+    color:#bbf7d0;
+  }
+
+  /* fade */
+  .hidden{
+    display:none;
+  }
+
+  /* MAP + COMPASS SECTION */
+
+  #compassSection{
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.3s ease;
+  }
+  #compassSection.active{
+    opacity:1;
+    pointer-events:auto;
+  }
+
   .map-area{
-    --map-max-width: 950px;   /* bigger on desktop */
+    --map-max-width: 950px;
     position:relative;
     width:min(96vw, var(--map-max-width));
-    aspect-ratio:3 / 2;       /* keeps the same shape -> % coords stay correct */
+    aspect-ratio:3 / 2;
     margin:0 auto;
     border:2px solid #4b5563;
     border-radius:10px;
@@ -55,7 +157,6 @@
     touch-action:none;
   }
 
-  /* Compass shell – smaller now */
   #compass{
     position:absolute;
     width:40px;
@@ -115,7 +216,6 @@
     border-top:7px solid #111827;
   }
 
-  /* Spin + pulse when on target */
   .compass-body.spin{
     animation:spin 0.7s linear infinite;
   }
@@ -125,7 +225,6 @@
     to{ transform:rotate(360deg); }
   }
 
-  /* subtle pulse ring when on target (under the compass) */
   #compass.pulse::before{
     content:"";
     position:absolute;
@@ -144,27 +243,122 @@
 </head>
 <body>
 <div class="wrapper">
-  <h1>Last Known Position</h1>
-  <div class="instructions">
-    Drag the compass around the map. Its needle turns toward the nearest unseen point of interest.<br>
-    When you’re directly over one, the compass goes wild.
+
+  <!-- LOCK SECTION -->
+  <div id="lockSection">
+    <h1>Trail Kit Lock</h1>
+    <div class="sub">
+      The old metal box is secured with a four-digit combination lock.  
+      Spin the dials to try a code.
+    </div>
+
+    <div class="lock-box">
+      <div class="rollers" id="rollers">
+        <!-- rollers are created by JS -->
+      </div>
+      <button id="tryCodeBtn">Try the Code</button>
+      <div id="lockMessage"></div>
+    </div>
   </div>
 
-  <div id="mapArea" class="map-area">
-    <div id="compass">
-      <div id="compassBody" class="compass-body">
-        <div class="needle"></div>
+  <!-- COMPASS SECTION -->
+  <div id="compassSection" class="">
+    <h1>Last Known Position</h1>
+    <div class="sub">
+      Drag the compass around the map. Its needle turns toward the nearest unseen point of interest.<br>
+      When you’re directly over one, the compass goes wild.
+    </div>
+
+    <div id="mapArea" class="map-area">
+      <div id="compass">
+        <div id="compassBody" class="compass-body">
+          <div class="needle"></div>
+        </div>
       </div>
     </div>
   </div>
+
 </div>
 
 <script>
+  /*************** LOCK LOGIC ***************/
+  const correctCode = "6431";
+  const rollersContainer = document.getElementById('rollers');
+  const lockMessage = document.getElementById('lockMessage');
+  const tryCodeBtn = document.getElementById('tryCodeBtn');
+  const lockSection = document.getElementById('lockSection');
+  const compassSection = document.getElementById('compassSection');
+
+  const digits = [0,0,0,0];
+
+  function renderRollers(){
+    rollersContainer.innerHTML = "";
+    for(let i=0;i<4;i++){
+      const roller = document.createElement('div');
+      roller.className = 'roller';
+      roller.dataset.index = i;
+
+      const up = document.createElement('button');
+      up.textContent = '▲';
+      up.className = 'roll-up';
+
+      const digitDisplay = document.createElement('div');
+      digitDisplay.className = 'digit';
+      digitDisplay.textContent = digits[i];
+
+      const down = document.createElement('button');
+      down.textContent = '▼';
+      down.className = 'roll-down';
+
+      roller.appendChild(up);
+      roller.appendChild(digitDisplay);
+      roller.appendChild(down);
+      rollersContainer.appendChild(roller);
+    }
+  }
+
+  renderRollers();
+
+  rollersContainer.addEventListener('click', (e)=>{
+    const roller = e.target.closest('.roller');
+    if(!roller) return;
+    const idx = parseInt(roller.dataset.index,10);
+    if(e.target.classList.contains('roll-up')){
+      digits[idx] = (digits[idx] + 1) % 10;
+    } else if(e.target.classList.contains('roll-down')){
+      digits[idx] = (digits[idx] + 9) % 10; // -1 mod 10
+    } else {
+      return;
+    }
+    roller.querySelector('.digit').textContent = digits[idx];
+    lockMessage.textContent = "";
+    lockMessage.className = "";
+  });
+
+  tryCodeBtn.addEventListener('click', ()=>{
+    const entered = digits.join('');
+    if(entered === correctCode){
+      lockMessage.textContent = "The lock clicks open.";
+      lockMessage.className = "success";
+      // reveal compass section
+      lockSection.classList.add('hidden');
+      compassSection.classList.add('active');
+      // ensure map/compass layout is ready
+      setTimeout(()=>{
+        centerCompass();
+        updateCompassBearing();
+      }, 50);
+    } else {
+      lockMessage.textContent = "Hmmm... the lock doesn't budge.";
+      lockMessage.className = "error";
+    }
+  });
+
+  /*************** COMPASS / MAP LOGIC ***************/
   const mapArea     = document.getElementById('mapArea');
   const compass     = document.getElementById('compass');
   const compassBody = document.getElementById('compassBody');
 
-  // Your targets (percent of map width/height) – these stay in place
   const targets = [
     { x: 47.9, y: 71.7 },
     { x: 28.7, y: 56.2 },
@@ -179,8 +373,6 @@
     compass.style.left = rect.width / 2 + 'px';
     compass.style.top  = rect.height / 2 + 'px';
   }
-
-  centerCompass();
 
   let isOnTarget = false;
 
@@ -218,11 +410,10 @@
     const angleRad = Math.atan2(dy, dx);
     const angleDeg = angleRad * 180 / Math.PI + 90; // 0deg = up
 
-    const hitRadius = 40;  // when within this distance, call it "on target"
-    const snapRadius = 35; // when close, snap exactly to center
+    const hitRadius = 40;
+    const snapRadius = 35;
 
     if (dist <= snapRadius) {
-      // snap compass center to the target so it clearly "sits" on that square
       compass.style.left = nearest.tx + 'px';
       compass.style.top  = nearest.ty + 'px';
       if (!isOnTarget) {
@@ -240,7 +431,7 @@
     }
   }
 
-  // Dragging – mobile friendly
+  // dragging
   let dragging = false;
   let startX   = 0;
   let startY   = 0;
@@ -301,15 +492,14 @@
     compass.classList.remove('dragging');
   });
 
-  // Desktop keyboard nudging still works
+  // keyboard (desktop)
   const step = 8;
 
   window.addEventListener('keydown', (e) => {
+    if (compassSection.className.indexOf('active') === -1) return; // only when visible
+
     const key = e.key;
-    const valid = [
-      'ArrowUp','ArrowDown','ArrowLeft','ArrowRight',
-      'w','a','s','d','W','A','S','D'
-    ];
+    const valid = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'];
     if (!valid.includes(key)) return;
 
     e.preventDefault();
@@ -336,11 +526,11 @@
   });
 
   window.addEventListener('resize', () => {
-    centerCompass();
-    updateCompassBearing();
+    if (compassSection.className.indexOf('active') !== -1){
+      centerCompass();
+      updateCompassBearing();
+    }
   });
-
-  updateCompassBearing();
 </script>
 </body>
 </html>
