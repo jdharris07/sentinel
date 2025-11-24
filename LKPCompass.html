@@ -19,18 +19,18 @@
     color:#e5e7eb;
     font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
     padding:20px;
-    touch-action:none; /* help prevent scroll-while-dragging on mobile */
+    touch-action:none;
   }
 
   .wrapper{
-    max-width:900px;
+    max-width:1000px;
     width:100%;
     text-align:center;
   }
 
   h1{
-    font-size:1.6rem;
-    margin-bottom:0.5rem;
+    font-size:1.8rem;
+    margin-bottom:0.4rem;
   }
 
   .instructions{
@@ -41,10 +41,10 @@
   }
 
   .map-area{
-    --map-max-width: 720px;
+    --map-max-width: 950px;   /* bigger on desktop */
     position:relative;
     width:min(96vw, var(--map-max-width));
-    aspect-ratio:3 / 2;       /* keeps the same shape on all screens */
+    aspect-ratio:3 / 2;       /* keeps the same shape -> % coords stay correct */
     margin:0 auto;
     border:2px solid #4b5563;
     border-radius:10px;
@@ -52,18 +52,18 @@
     background-size:cover;
     background-position:center;
     overflow:hidden;
-    touch-action:none;        /* critical for smooth mobile dragging */
+    touch-action:none;
   }
 
-  /* Compass shell (smaller now) */
+  /* Compass shell – smaller now */
   #compass{
     position:absolute;
-    width:56px;
-    height:56px;
+    width:40px;
+    height:40px;
     border-radius:50%;
     background:radial-gradient(circle at 30% 30%, #1f2937 0, #020617 60%, #000 100%);
     border:2px solid #e5e7eb;
-    box-shadow:0 0 12px rgba(15,23,42,0.9);
+    box-shadow:0 0 10px rgba(15,23,42,0.9);
     transform:translate(-50%, -50%);
     cursor:grab;
     z-index:5;
@@ -74,7 +74,6 @@
     cursor:grabbing;
   }
 
-  /* Compass inner body that we rotate */
   .compass-body{
     position:relative;
     width:100%;
@@ -85,10 +84,9 @@
     transition:transform 0.08s linear;
   }
 
-  /* Needle */
   .needle{
     position:relative;
-    width:5px;
+    width:4px;
     height:60%;
     background:linear-gradient(to bottom, #ef4444 0 50%, #111827 50% 100%);
     border-radius:999px;
@@ -98,26 +96,26 @@
   .needle::before{
     content:"";
     position:absolute;
-    top:-12px;
+    top:-10px;
     left:50%;
     transform:translateX(-50%);
-    border-left:6px solid transparent;
-    border-right:6px solid transparent;
-    border-bottom:12px solid #ef4444;
+    border-left:5px solid transparent;
+    border-right:5px solid transparent;
+    border-bottom:10px solid #ef4444;
   }
 
   .needle::after{
     content:"";
     position:absolute;
-    bottom:-8px;
+    bottom:-7px;
     left:50%;
     transform:translateX(-50%);
-    border-left:5px solid transparent;
-    border-right:5px solid transparent;
-    border-top:8px solid #111827;
+    border-left:4px solid transparent;
+    border-right:4px solid transparent;
+    border-top:7px solid #111827;
   }
 
-  /* Spin when on top of a target */
+  /* Spin + pulse when on target */
   .compass-body.spin{
     animation:spin 0.7s linear infinite;
   }
@@ -126,18 +124,33 @@
     from{ transform:rotate(0deg); }
     to{ transform:rotate(360deg); }
   }
+
+  /* subtle pulse ring when on target (under the compass) */
+  #compass.pulse::before{
+    content:"";
+    position:absolute;
+    inset:-8px;
+    border-radius:50%;
+    border:2px solid rgba(252,211,77,0.9);
+    box-shadow:0 0 12px rgba(252,211,77,0.9);
+    animation:pulse 0.8s ease-out infinite;
+  }
+
+  @keyframes pulse{
+    from{ transform:scale(0.9); opacity:1; }
+    to{ transform:scale(1.15); opacity:0; }
+  }
 </style>
 </head>
 <body>
 <div class="wrapper">
   <h1>Last Known Position</h1>
   <div class="instructions">
-    Drag the compass around the map. Its needle will turn toward the nearest unseen point of interest.<br>
-    When you’re right on top of one, the compass goes wild.
+    Drag the compass around the map. Its needle turns toward the nearest unseen point of interest.<br>
+    When you’re directly over one, the compass goes wild.
   </div>
 
   <div id="mapArea" class="map-area">
-    <!-- Compass -->
     <div id="compass">
       <div id="compassBody" class="compass-body">
         <div class="needle"></div>
@@ -151,9 +164,7 @@
   const compass     = document.getElementById('compass');
   const compassBody = document.getElementById('compassBody');
 
-  /*************************************************
-   * 1. Targets – your coords from the picker
-   *************************************************/
+  // Your targets (percent of map width/height) – these stay in place
   const targets = [
     { x: 47.9, y: 71.7 },
     { x: 28.7, y: 56.2 },
@@ -163,9 +174,6 @@
     { x: 85.7, y: 49.7 }
   ];
 
-  /*************************************************
-   * 2. Position compass initially (center)
-   *************************************************/
   function centerCompass() {
     const rect = mapArea.getBoundingClientRect();
     compass.style.left = rect.width / 2 + 'px';
@@ -174,23 +182,18 @@
 
   centerCompass();
 
-  /*************************************************
-   * 3. Bearing + target detection
-   *************************************************/
   let isOnTarget = false;
 
   function updateCompassBearing() {
     const mapRect     = mapArea.getBoundingClientRect();
     const compassRect = compass.getBoundingClientRect();
 
-    // compass center relative to map
-    const cx = (compassRect.left + compassRect.width / 2) - mapRect.left;
-    const cy = (compassRect.top  + compassRect.height / 2) - mapRect.top;
+    let cx = (compassRect.left + compassRect.width / 2) - mapRect.left;
+    let cy = (compassRect.top  + compassRect.height / 2) - mapRect.top;
 
     const w = mapRect.width;
     const h = mapRect.height;
 
-    // Find nearest target
     let nearest = null;
     let minDistSq = Infinity;
 
@@ -215,27 +218,29 @@
     const angleRad = Math.atan2(dy, dx);
     const angleDeg = angleRad * 180 / Math.PI + 90; // 0deg = up
 
-    const hitRadius = 45; // bigger radius so it's easier on mobile
+    const hitRadius = 40;  // when within this distance, call it "on target"
+    const snapRadius = 35; // when close, snap exactly to center
 
-    if (dist <= hitRadius) {
+    if (dist <= snapRadius) {
+      // snap compass center to the target so it clearly "sits" on that square
+      compass.style.left = nearest.tx + 'px';
+      compass.style.top  = nearest.ty + 'px';
       if (!isOnTarget) {
         isOnTarget = true;
         compassBody.classList.add('spin');
+        compass.classList.add('pulse');
       }
-      // While spinning, CSS animation controls rotation
     } else {
-      if (isOnTarget) {
+      if (isOnTarget && dist > hitRadius) {
         isOnTarget = false;
         compassBody.classList.remove('spin');
+        compass.classList.remove('pulse');
       }
-      // Rotate needle toward nearest target
       compassBody.style.transform = `rotate(${angleDeg}deg)`;
     }
   }
 
-  /*************************************************
-   * 4. Dragging compass – mobile-friendly
-   *************************************************/
+  // Dragging – mobile friendly
   let dragging = false;
   let startX   = 0;
   let startY   = 0;
@@ -248,13 +253,12 @@
     compass.classList.add('dragging');
     compass.setPointerCapture(e.pointerId);
 
-    const mapRect = mapArea.getBoundingClientRect();
+    const mapRect  = mapArea.getBoundingClientRect();
     const compRect = compass.getBoundingClientRect();
 
     startX = e.clientX;
     startY = e.clientY;
 
-    // position relative to map container
     compStartLeft = compRect.left - mapRect.left + compRect.width / 2;
     compStartTop  = compRect.top  - mapRect.top  + compRect.height / 2;
   });
@@ -273,7 +277,6 @@
     let newLeft = compStartLeft + deltaX;
     let newTop  = compStartTop  + deltaY;
 
-    // Clamp within map
     newLeft = Math.max(cW/2, Math.min(newLeft, mapRect.width  - cW/2));
     newTop  = Math.max(cH/2, Math.min(newTop,  mapRect.height - cH/2));
 
@@ -298,10 +301,8 @@
     compass.classList.remove('dragging');
   });
 
-  /*************************************************
-   * 5. Keyboard nudging (still works on desktop)
-   *************************************************/
-  const step = 8; // px per keypress
+  // Desktop keyboard nudging still works
+  const step = 8;
 
   window.addEventListener('keydown', (e) => {
     const key = e.key;
@@ -335,12 +336,10 @@
   });
 
   window.addEventListener('resize', () => {
-    // Re-center and re-eval on resize
     centerCompass();
     updateCompassBearing();
   });
 
-  // Initial bearing
   updateCompassBearing();
 </script>
 </body>
