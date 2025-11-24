@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LKP Compass Puzzle</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#020617;
+    background-image:url("LPKpagebackground.png");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    color:#e5e7eb;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    padding:20px;
+  }
+
+  .wrapper{
+    max-width:800px;
+    width:100%;
+    text-align:center;
+  }
+
+  h1{
+    font-size:1.6rem;
+    margin-bottom:0.5rem;
+  }
+
+  .instructions{
+    font-size:0.95rem;
+    color:#d1d5db;
+    margin-bottom:1rem;
+  }
+
+  .map-area{
+    position:relative;
+    width:600px;     /* must match picker page */
+    height:400px;    /* must match picker page */
+    margin:0 auto;
+    border:2px solid #4b5563;
+    border-radius:10px;
+    background-image:url("LKPmap.png");
+    background-size:cover;
+    background-position:center;
+    overflow:hidden;
+  }
+
+  /* DEBUG: show targets for testing.
+     Delete or comment this block + the JS that creates .target divs
+     when you want the locations to be invisible to players. */
+  .target{
+    position:absolute;
+    width:18px;
+    height:18px;
+    border-radius:4px;
+    border:2px dashed rgba(148,163,184,0.7);
+    transform:translate(-50%, -50%);
+    pointer-events:none;
+    z-index:2;
+  }
+
+  /* Compass shell */
+  #compass{
+    position:absolute;
+    width:80px;
+    height:80px;
+    border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, #1f2937 0, #020617 60%, #000 100%);
+    border:2px solid #e5e7eb;
+    box-shadow:0 0 12px rgba(15,23,42,0.9);
+    transform:translate(-50%, -50%);
+    cursor:grab;
+    z-index:5;
+  }
+
+  #compass.dragging{
+    cursor:grabbing;
+  }
+
+  /* Compass inner body that we rotate */
+  .compass-body{
+    position:relative;
+    width:100%;
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* Simple needle */
+  .needle{
+    position:relative;
+    width:6px;
+    height:60%;
+    background:linear-gradient(to bottom, #ef4444 0 50%, #111827 50% 100%);
+    border-radius:999px;
+    box-shadow:0 0 4px rgba(239,68,68,0.7);
+  }
+
+  .needle::before{
+    content:"";
+    position:absolute;
+    top:-14px;
+    left:50%;
+    transform:translateX(-50%);
+    border-left:7px solid transparent;
+    border-right:7px solid transparent;
+    border-bottom:14px solid #ef4444;
+  }
+
+  .needle::after{
+    content:"";
+    position:absolute;
+    bottom:-10px;
+    left:50%;
+    transform:translateX(-50%);
+    border-left:6px solid transparent;
+    border-right:6px solid transparent;
+    border-top:10px solid #111827;
+  }
+
+  /* Spin when on top of a target */
+  .compass-body.spin{
+    animation:spin 0.7s linear infinite;
+  }
+
+  @keyframes spin{
+    from{ transform:rotate(0deg); }
+    to{ transform:rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <h1>Last Known Position</h1>
+  <div class="instructions">
+    Drag the compass around the map. Its needle will point toward the nearest marked location.<br>
+    When you place it directly over one of those spots, the compass will spin.
+  </div>
+
+  <div id="mapArea" class="map-area">
+    <!-- Compass -->
+    <div id="compass">
+      <div id="compassBody" class="compass-body">
+        <div class="needle"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const mapArea     = document.getElementById('mapArea');
+  const compass     = document.getElementById('compass');
+  const compassBody = document.getElementById('compassBody');
+
+  /*************************************************
+   * 1. Targets – your coords from the picker
+   *************************************************/
+  const targets = [
+    { x: 47.9, y: 71.7 },
+    { x: 28.7, y: 56.2 },
+    { x: 14.3, y: 13.6 },
+    { x: 61.7, y: 42.3 },
+    { x: 76.1, y: 13.8 },
+    { x: 85.7, y: 49.7 }
+  ];
+
+  // DEBUG: visualize targets; remove this loop in the final game if you want them hidden.
+  targets.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'target';
+    div.style.left = t.x + '%';
+    div.style.top  = t.y + '%';
+    mapArea.appendChild(div);
+  });
+
+  /*************************************************
+   * 2. Position compass initially (center)
+   *************************************************/
+  function centerCompass() {
+    const rect = mapArea.getBoundingClientRect();
+    compass.style.left = rect.width / 2 + 'px';
+    compass.style.top  = rect.height / 2 + 'px';
+  }
+
+  centerCompass();
+
+  /*************************************************
+   * 3. Bearing + target detection
+   *************************************************/
+  let isOnTarget = false;
+
+  function updateCompassBearing() {
+    const mapRect     = mapArea.getBoundingClientRect();
+    const compassRect = compass.getBoundingClientRect();
+
+    // compass center relative to map
+    const cx = (compassRect.left + compassRect.width / 2) - mapRect.left;
+    const cy = (compassRect.top  + compassRect.height / 2) - mapRect.top;
+
+    const w = mapRect.width;
+    const h = mapRect.height;
+
+    // Find nearest target
+    let nearest = null;
+    let minDistSq = Infinity;
+
+    targets.forEach(t => {
+      const tx = (t.x / 100) * w;
+      const ty = (t.y / 100) * h;
+      const dx = tx - cx;
+      const dy = ty - cy;
+      const distSq = dx*dx + dy*dy;
+      if (distSq < minDistSq) {
+        minDistSq = distSq;
+        nearest = { tx, ty, distSq };
+      }
+    });
+
+    if (!nearest) return;
+
+    const dx = nearest.tx - cx;
+    const dy = nearest.ty - cy;
+    const dist = Math.sqrt(nearest.distSq);
+
+    const angleRad = Math.atan2(dy, dx);
+    const angleDeg = angleRad * 180 / Math.PI + 90; // 0deg = up
+
+    const hitRadius = 30; // pixels distance to count as "on top"
+
+    if (dist <= hitRadius) {
+      if (!isOnTarget) {
+        isOnTarget = true;
+        compassBody.classList.add('spin');
+      }
+      // While spinning, we let CSS animation handle rotation
+    } else {
+      if (isOnTarget) {
+        isOnTarget = false;
+        compassBody.classList.remove('spin');
+      }
+      // Rotate needle toward nearest target
+      compassBody.style.transform = `rotate(${angleDeg}deg)`;
+    }
+  }
+
+  /*************************************************
+   * 4. Dragging compass
+   *************************************************/
+  let dragging = false;
+  let offsetX  = 0;
+  let offsetY  = 0;
+
+  compass.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    compass.classList.add('dragging');
+    compass.setPointerCapture(e.pointerId);
+
+    const rect = compass.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+  });
+
+  compass.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+
+    const mapRect = mapArea.getBoundingClientRect();
+
+    let newLeft = e.clientX - offsetX - mapRect.left;
+    let newTop  = e.clientY - offsetY - mapRect.top;
+
+    const cW = compass.offsetWidth;
+    const cH = compass.offsetHeight;
+
+    // Clamp within map
+    newLeft = Math.max(cW/2, Math.min(newLeft, mapRect.width  - cW/2));
+    newTop  = Math.max(cH/2, Math.min(newTop,  mapRect.height - cH/2));
+
+    compass.style.left = newLeft + 'px';
+    compass.style.top  = newTop  + 'px';
+
+    updateCompassBearing();
+  });
+
+  compass.addEventListener('pointerup', (e) => {
+    dragging = false;
+    compass.classList.remove('dragging');
+    compass.releasePointerCapture(e.pointerId);
+  });
+
+  compass.addEventListener('pointercancel', () => {
+    dragging = false;
+    compass.classList.remove('dragging');
+  });
+
+  /*************************************************
+   * 5. Keyboard nudging (optional)
+   *************************************************/
+  const step = 8; // px per keypress
+
+  window.addEventListener('keydown', (e) => {
+    const key = e.key;
+    const valid = [
+      'ArrowUp','ArrowDown','ArrowLeft','ArrowRight',
+      'w','a','s','d','W','A','S','D'
+    ];
+    if (!valid.includes(key)) return;
+
+    e.preventDefault();
+
+    const mapRect = mapArea.getBoundingClientRect();
+    const cW = compass.offsetWidth;
+    const cH = compass.offsetHeight;
+
+    let left = parseFloat(compass.style.left || '0');
+    let top  = parseFloat(compass.style.top  || '0');
+
+    if (key === 'ArrowUp'   || key === 'w' || key === 'W') top  -= step;
+    if (key === 'ArrowDown' || key === 's' || key === 'S') top  += step;
+    if (key === 'ArrowLeft' || key === 'a' || key === 'A') left -= step;
+    if (key === 'ArrowRight'|| key === 'd' || key === 'D') left += step;
+
+    left = Math.max(cW/2, Math.min(left, mapRect.width  - cW/2));
+    top  = Math.max(cH/2, Math.min(top,  mapRect.height - cH/2));
+
+    compass.style.left = left + 'px';
+    compass.style.top  = top  + 'px';
+
+    updateCompassBearing();
+  });
+
+  window.addEventListener('resize', () => {
+    centerCompass();
+    updateCompassBearing();
+  });
+
+  // Initial bearing
+  updateCompassBearing();
+</script>
+</body>
+</html>
