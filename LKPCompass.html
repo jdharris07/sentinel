@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>LKP Compass Puzzle</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Last Known Position</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <style>
   body{
     margin:0;
@@ -19,10 +19,11 @@
     color:#e5e7eb;
     font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
     padding:20px;
+    touch-action:none; /* help prevent scroll-while-dragging on mobile */
   }
 
   .wrapper{
-    max-width:800px;
+    max-width:900px;
     width:100%;
     text-align:center;
   }
@@ -36,12 +37,14 @@
     font-size:0.95rem;
     color:#d1d5db;
     margin-bottom:1rem;
+    padding:0 10px;
   }
 
   .map-area{
+    --map-max-width: 720px;
     position:relative;
-    width:600px;     /* must match picker page */
-    height:400px;    /* must match picker page */
+    width:min(96vw, var(--map-max-width));
+    aspect-ratio:3 / 2;       /* keeps the same shape on all screens */
     margin:0 auto;
     border:2px solid #4b5563;
     border-radius:10px;
@@ -49,27 +52,14 @@
     background-size:cover;
     background-position:center;
     overflow:hidden;
+    touch-action:none;        /* critical for smooth mobile dragging */
   }
 
-  /* DEBUG: show targets for testing.
-     Delete or comment this block + the JS that creates .target divs
-     when you want the locations to be invisible to players. */
-  .target{
-    position:absolute;
-    width:18px;
-    height:18px;
-    border-radius:4px;
-    border:2px dashed rgba(148,163,184,0.7);
-    transform:translate(-50%, -50%);
-    pointer-events:none;
-    z-index:2;
-  }
-
-  /* Compass shell */
+  /* Compass shell (smaller now) */
   #compass{
     position:absolute;
-    width:80px;
-    height:80px;
+    width:56px;
+    height:56px;
     border-radius:50%;
     background:radial-gradient(circle at 30% 30%, #1f2937 0, #020617 60%, #000 100%);
     border:2px solid #e5e7eb;
@@ -77,6 +67,7 @@
     transform:translate(-50%, -50%);
     cursor:grab;
     z-index:5;
+    touch-action:none;
   }
 
   #compass.dragging{
@@ -91,12 +82,13 @@
     display:flex;
     align-items:center;
     justify-content:center;
+    transition:transform 0.08s linear;
   }
 
-  /* Simple needle */
+  /* Needle */
   .needle{
     position:relative;
-    width:6px;
+    width:5px;
     height:60%;
     background:linear-gradient(to bottom, #ef4444 0 50%, #111827 50% 100%);
     border-radius:999px;
@@ -106,23 +98,23 @@
   .needle::before{
     content:"";
     position:absolute;
-    top:-14px;
+    top:-12px;
     left:50%;
     transform:translateX(-50%);
-    border-left:7px solid transparent;
-    border-right:7px solid transparent;
-    border-bottom:14px solid #ef4444;
+    border-left:6px solid transparent;
+    border-right:6px solid transparent;
+    border-bottom:12px solid #ef4444;
   }
 
   .needle::after{
     content:"";
     position:absolute;
-    bottom:-10px;
+    bottom:-8px;
     left:50%;
     transform:translateX(-50%);
-    border-left:6px solid transparent;
-    border-right:6px solid transparent;
-    border-top:10px solid #111827;
+    border-left:5px solid transparent;
+    border-right:5px solid transparent;
+    border-top:8px solid #111827;
   }
 
   /* Spin when on top of a target */
@@ -140,8 +132,8 @@
 <div class="wrapper">
   <h1>Last Known Position</h1>
   <div class="instructions">
-    Drag the compass around the map. Its needle will point toward the nearest marked location.<br>
-    When you place it directly over one of those spots, the compass will spin.
+    Drag the compass around the map. Its needle will turn toward the nearest unseen point of interest.<br>
+    When you’re right on top of one, the compass goes wild.
   </div>
 
   <div id="mapArea" class="map-area">
@@ -170,15 +162,6 @@
     { x: 76.1, y: 13.8 },
     { x: 85.7, y: 49.7 }
   ];
-
-  // DEBUG: visualize targets; remove this loop in the final game if you want them hidden.
-  targets.forEach(t => {
-    const div = document.createElement('div');
-    div.className = 'target';
-    div.style.left = t.x + '%';
-    div.style.top  = t.y + '%';
-    mapArea.appendChild(div);
-  });
 
   /*************************************************
    * 2. Position compass initially (center)
@@ -232,14 +215,14 @@
     const angleRad = Math.atan2(dy, dx);
     const angleDeg = angleRad * 180 / Math.PI + 90; // 0deg = up
 
-    const hitRadius = 30; // pixels distance to count as "on top"
+    const hitRadius = 45; // bigger radius so it's easier on mobile
 
     if (dist <= hitRadius) {
       if (!isOnTarget) {
         isOnTarget = true;
         compassBody.classList.add('spin');
       }
-      // While spinning, we let CSS animation handle rotation
+      // While spinning, CSS animation controls rotation
     } else {
       if (isOnTarget) {
         isOnTarget = false;
@@ -251,32 +234,44 @@
   }
 
   /*************************************************
-   * 4. Dragging compass
+   * 4. Dragging compass – mobile-friendly
    *************************************************/
   let dragging = false;
-  let offsetX  = 0;
-  let offsetY  = 0;
+  let startX   = 0;
+  let startY   = 0;
+  let compStartLeft = 0;
+  let compStartTop  = 0;
 
   compass.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
     dragging = true;
     compass.classList.add('dragging');
     compass.setPointerCapture(e.pointerId);
 
-    const rect = compass.getBoundingClientRect();
-    offsetX = e.clientX - rect.left;
-    offsetY = e.clientY - rect.top;
+    const mapRect = mapArea.getBoundingClientRect();
+    const compRect = compass.getBoundingClientRect();
+
+    startX = e.clientX;
+    startY = e.clientY;
+
+    // position relative to map container
+    compStartLeft = compRect.left - mapRect.left + compRect.width / 2;
+    compStartTop  = compRect.top  - mapRect.top  + compRect.height / 2;
   });
 
   compass.addEventListener('pointermove', (e) => {
     if (!dragging) return;
+    e.preventDefault();
 
     const mapRect = mapArea.getBoundingClientRect();
-
-    let newLeft = e.clientX - offsetX - mapRect.left;
-    let newTop  = e.clientY - offsetY - mapRect.top;
-
     const cW = compass.offsetWidth;
     const cH = compass.offsetHeight;
+
+    const deltaX = e.clientX - startX;
+    const deltaY = e.clientY - startY;
+
+    let newLeft = compStartLeft + deltaX;
+    let newTop  = compStartTop  + deltaY;
 
     // Clamp within map
     newLeft = Math.max(cW/2, Math.min(newLeft, mapRect.width  - cW/2));
@@ -289,18 +284,22 @@
   });
 
   compass.addEventListener('pointerup', (e) => {
+    if (!dragging) return;
+    e.preventDefault();
     dragging = false;
     compass.classList.remove('dragging');
     compass.releasePointerCapture(e.pointerId);
   });
 
-  compass.addEventListener('pointercancel', () => {
+  compass.addEventListener('pointercancel', (e) => {
+    if (!dragging) return;
+    e.preventDefault();
     dragging = false;
     compass.classList.remove('dragging');
   });
 
   /*************************************************
-   * 5. Keyboard nudging (optional)
+   * 5. Keyboard nudging (still works on desktop)
    *************************************************/
   const step = 8; // px per keypress
 
@@ -336,6 +335,7 @@
   });
 
   window.addEventListener('resize', () => {
+    // Re-center and re-eval on resize
     centerCompass();
     updateCompassBearing();
   });
