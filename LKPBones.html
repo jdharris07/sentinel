@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Last Known Position</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<style>
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#020617;
+    background-image:url("LKPpagebackground.png");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    color:#e5e7eb;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    padding:20px;
+    touch-action:none;
+  }
+
+  .wrapper{
+    max-width:900px;
+    width:100%;
+    text-align:center;
+  }
+
+  h1{
+    font-size:1.4rem;
+    margin-bottom:0.4rem;
+    text-shadow:0 2px 4px #000;
+  }
+
+  .instructions{
+    font-size:0.95rem;
+    color:#d1d5db;
+    margin-bottom:1rem;
+    text-shadow:0 1px 3px #000;
+  }
+
+  /* Bone puzzle area */
+  .bone-box{
+    position:relative;
+    margin:0 auto;
+    max-width:700px;
+    height:500px;
+    border-radius:12px;
+    background:rgba(15,23,42,0.4);
+    border:1px solid #1f2937;
+    overflow:hidden;
+    touch-action:none;
+  }
+
+  /* Bones = images only, no box */
+  .bone{
+    position:absolute;
+    width:260px;
+    max-width:80vw;
+    cursor:grab;
+    touch-action:none;
+    z-index:4;
+
+    /* A larger hidden "grab zone" for smooth pickup */
+  }
+  .bone img{
+    width:100%;
+    height:auto;
+    display:block;
+    pointer-events:none;
+  }
+
+  .bone.dragging{
+    cursor:grabbing;
+    z-index:10;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <h1>Bone Message Puzzle</h1>
+  <div class="instructions">
+    The bones have letters carved into them. Maybe there is a way to reveal the message hidden here.
+  </div>
+
+  <div id="boneBox" class="bone-box"></div>
+</div>
+
+<script>
+  const boneBox = document.getElementById('boneBox');
+  const boneIds = ["3","1","2","4"];
+
+  function initBones(){
+    const rect = boneBox.getBoundingClientRect();
+    const W = rect.width;
+    const H = rect.height;
+
+    boneIds.forEach((id, i) => {
+      const bone = document.createElement('div');
+      bone.className = 'bone';
+      bone.dataset.id = id;
+
+      const img = document.createElement('img');
+      img.src = `LKPbone${id}.png`;
+      bone.appendChild(img);
+
+      // Random layout
+      const x = Math.random() * (W - 260);
+      const y = (H / boneIds.length) * i + (Math.random() * 40 - 20);
+
+      bone.style.left = x + "px";
+      bone.style.top  = y + "px";
+
+      boneBox.appendChild(bone);
+    });
+  }
+
+  initBones();
+
+  // --- Smooth dragging ---
+  let dragging = null;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  boneBox.addEventListener('pointerdown', (e)=>{
+    const bone = e.target.closest('.bone');
+    if(!bone) return;
+
+    dragging = bone;
+    dragging.classList.add('dragging');
+    dragging.setPointerCapture(e.pointerId);
+
+    const r = dragging.getBoundingClientRect();
+    offsetX = e.clientX - r.left;
+    offsetY = e.clientY - r.top;
+  });
+
+  boneBox.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+
+    e.preventDefault();
+
+    const boxRect = boneBox.getBoundingClientRect();
+    const boneRect = dragging.getBoundingClientRect();
+
+    let newX = e.clientX - boxRect.left - offsetX;
+    let newY = e.clientY - boxRect.top  - offsetY;
+
+    // Keep bones inside the box
+    newX = Math.max(0, Math.min(newX, boxRect.width - boneRect.width));
+    newY = Math.max(0, Math.min(newY, boxRect.height - boneRect.height));
+
+    dragging.style.left = newX + "px";
+    dragging.style.top  = newY + "px";
+  });
+
+  boneBox.addEventListener('pointerup', (e)=>{
+    if(dragging){
+      dragging.classList.remove('dragging');
+      dragging.releasePointerCapture(e.pointerId);
+    }
+    dragging = null;
+  });
+
+  boneBox.addEventListener('pointercancel', ()=>{
+    if(dragging){
+      dragging.classList.remove('dragging');
+    }
+    dragging = null;
+  });
+
+  // Re-clamp positions on window resize
+  window.addEventListener('resize', ()=>{
+    const box = boneBox.getBoundingClientRect();
+    document.querySelectorAll('.bone').forEach(bone=>{
+      const r = bone.getBoundingClientRect();
+      let x = r.left - box.left;
+      let y = r.top  - box.top;
+
+      if(x + r.width > box.width) x = box.width - r.width;
+      if(y + r.height > box.height) y = box.height - r.height;
+      if(x < 0) x = 0;
+      if(y < 0) y = 0;
+
+      bone.style.left = x + "px";
+      bone.style.top  = y + "px";
+    });
+  });
+</script>
+</body>
+</html>
