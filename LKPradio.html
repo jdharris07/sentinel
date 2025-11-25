@@ -2,116 +2,120 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <title>Last Known Position - Radio</title>
 <style>
-  :root{ --bg:#0b0f14; --ink:#fff; --panel:#0e1422; --muted:#b7c2da; }
-  *{box-sizing:border-box}
-  html,body{height:100%}
   body{
-    margin:0; background:#000; color:var(--ink);
+    margin:0;
+    background:#000;
+    color:#fff;
     font-family:system-ui,Segoe UI,Roboto,Arial;
-    display:flex; align-items:center; justify-content:center;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
   }
 
-  /* Gate (prompt) */
   .gate{
-    width:min(92vw,720px);
+    width:min(92vw,600px);
     background:linear-gradient(180deg,#0f1629,#0a0f1b);
-    border:1px solid #1f2942; border-radius:16px;
-    box-shadow:0 10px 30px rgba(0,0,0,.45), inset 0 0 0 1px #0f1626;
-    padding:18px 16px 14px;
-    display:flex; flex-direction:column; gap:12px;
-    transform:translateY(0); opacity:1; transition:opacity .25s ease, transform .25s ease;
+    border:1px solid #1f2942;
+    border-radius:16px;
+    padding:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+    display:flex;
+    flex-direction:column;
+    gap:14px;
   }
-  .gate h1{ margin:2px 0 4px; font-size:20px; font-weight:700; letter-spacing:.2px; }
-  .gate p{ margin:0; color:#dfe7ff; font-size:16px; }
-  .gate .row{ display:flex; gap:10px; flex-wrap:wrap; }
-  .gate input[type="text"]{
-    flex:1 1 260px; min-width:200px;
-    padding:10px 12px; font-size:16px; color:#eaf1ff;
-    background:#0b1222; border:1px solid #2a3146; border-radius:10px; outline:none;
+
+  .gate h1{ margin:0; font-size:22px; }
+  .gate p { margin:0; font-size:16px; color:#cfd7f2; }
+
+  .row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
   }
+
+  input[type="text"]{
+    flex:1 1 260px;
+    padding:10px 12px;
+    font-size:16px;
+    border-radius:10px;
+    border:1px solid #2a3146;
+    background:#0b1222;
+    color:#eaf1ff;
+  }
+
   .btn{
-    padding:10px 14px; font-size:15px; font-weight:600;
-    border:1px solid #2a3146; border-radius:10px; background:#121a2e; color:#eaf1ff;
+    padding:10px 16px;
+    font-size:15px;
+    background:#121a2e;
+    color:#eaf1ff;
+    border-radius:10px;
+    border:1px solid #2a3146;
     cursor:pointer;
   }
-  .gateMsg{ min-height:20px; font-size:14px; color:#ffcccc; }
 
-  /* Audio area */
-  .audio-wrap{
-    margin-top:8px;
-    display:none;
+  .gateMsg{
+    min-height:20px;
     font-size:14px;
-    color:#cdd6f1;
+    color:#ffbbbb;
   }
-  .audio-wrap.visible{
-    display:block;
-  }
-  audio{
-    width:100%;
-    margin-top:4px;
-  }
+
+  /* Hide audio element */
+  audio { display:none; }
 </style>
 </head>
 <body>
 
-  <!-- Audio for successful contact -->
-  <!-- Make sure this filename matches exactly what's in your repo -->
-  <audio id="spiritAudio" src="LKPradioaudio.mp3" preload="auto" controls></audio>
+<!-- Hidden audio -->
+<audio id="spiritAudio" src="LPKradioaudio.mp3" preload="auto"></audio>
 
-  <!-- Gate screen -->
-  <section id="gate" class="gate" role="dialog" aria-labelledby="gateTitle" aria-describedby="gateDesc">
-    <h1 id="gateTitle">Contacting the Spirits</h1>
-    <p id="gateDesc">Who are you trying to communicate with?</p>
-    <div class="row">
-      <input id="gateInput" type="text" inputmode="text" autocomplete="off" placeholder="Type a name…" />
-      <button id="gateBtn" class="btn">Call Out</button>
-    </div>
-    <div id="gateMsg" class="gateMsg" aria-live="polite"></div>
+<section id="gate" class="gate">
+  <h1>Contacting the Spirits</h1>
+  <p>Who are you trying to communicate with?</p>
 
-    <div id="audioWrap" class="audio-wrap">
-      <div>The radio crackles and a voice pushes through the static…</div>
-      <!-- same audio element, just visually grouped -->
-      <audio id="spiritAudioVisible" src="LKPradioaudio.mp3" preload="auto" controls></audio>
-    </div>
-  </section>
+  <div class="row">
+    <input id="gateInput" type="text" placeholder="Type a name…" autocomplete="off">
+    <button id="gateBtn" class="btn">Call Out</button>
+  </div>
+
+  <div id="gateMsg" class="gateMsg"></div>
+</section>
 
 <script>
-(function(){
-  const gate      = document.getElementById('gate');
-  const gateInput = document.getElementById('gateInput');
-  const gateBtn   = document.getElementById('gateBtn');
-  const gateMsg   = document.getElementById('gateMsg');
-  const audioWrap = document.getElementById('audioWrap');
-  const spiritAudio = document.getElementById('spiritAudioVisible');
+const gate = document.getElementById('gate');
+const gateInput = document.getElementById('gateInput');
+const gateBtn = document.getElementById('gateBtn');
+const gateMsg = document.getElementById('gateMsg');
+const spiritAudio = document.getElementById('spiritAudio');
 
-  function playSpiritAudio(){
-    if (!spiritAudio) return;
+function handleSubmit(){
+  const v = gateInput.value.trim().toLowerCase();
+
+  if(v === "ezra"){
+    gateMsg.textContent = "";
+
+    // play audio
     spiritAudio.currentTime = 0;
-    spiritAudio.play().catch(()=>{ /* ignore autoplay errors */ });
-  }
+    spiritAudio.play().catch(()=>{});
 
-  function handleGateSubmit(){
-    const v = (gateInput.value || '').trim().toLowerCase();
-    if (v === 'ezra'){   // correct spirit name
-      gateMsg.textContent = '';
-      audioWrap.classList.add('visible');
-      playSpiritAudio();
-    } else {
-      gateMsg.textContent = 'The radio hisses with static. Whoever you called doesn’t answer.';
-    }
-  }
+    // fade out interface
+    gate.style.opacity = "0";
+    gate.style.transform = "translateY(-10px)";
+    setTimeout(()=> gate.style.display = "none", 400);
 
-  gateBtn.addEventListener('click', handleGateSubmit);
-  gateInput.addEventListener('keydown', (e)=>{
-    if (e.key === 'Enter'){
-      e.preventDefault();
-      handleGateSubmit();
-    }
-  });
-})();
+  } else {
+    gateMsg.textContent = "The radio hisses… no one answers.";
+  }
+}
+
+gateBtn.addEventListener("click", handleSubmit);
+gateInput.addEventListener("keypress", e => {
+  if(e.key === "Enter") handleSubmit();
+});
 </script>
+
 </body>
 </html>
