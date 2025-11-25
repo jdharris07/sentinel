@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>Last Known Position - Radio</title>
 <style>
   body{
@@ -16,8 +16,12 @@
     align-items:center;
   }
 
-  .gate{
+  .wrapper{
     width:min(92vw,600px);
+  }
+
+  .gate{
+    width:100%;
     background:linear-gradient(180deg,#0f1629,#0a0f1b);
     border:1px solid #1f2942;
     border-radius:16px;
@@ -26,6 +30,7 @@
     display:flex;
     flex-direction:column;
     gap:14px;
+    transition:opacity .35s ease, transform .35s ease;
   }
 
   .gate h1{ margin:0; font-size:22px; }
@@ -63,33 +68,59 @@
     color:#ffbbbb;
   }
 
-  /* Hide audio element */
-  audio { display:none; }
+  /* Audio area (hidden until unlocked) */
+  #audioPanel{
+    margin-top:18px;
+    padding:14px 16px;
+    border-radius:12px;
+    background:#050814;
+    border:1px solid #1f2937;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);
+    display:none;          /* shown when name is correct */
+  }
+
+  #audioPanel p{
+    margin:0 0 8px;
+    font-size:14px;
+    color:#e5e7eb;
+  }
+
+  #spiritAudio{
+    width:100%;
+  }
 </style>
 </head>
 <body>
+<div class="wrapper">
 
-<!-- Hidden audio -->
-<audio id="spiritAudio" src="LPKradioaudio.mp3" preload="auto"></audio>
+  <!-- Name prompt -->
+  <section id="gate" class="gate">
+    <h1>Contacting the Spirits</h1>
+    <p>Who are you trying to communicate with?</p>
 
-<section id="gate" class="gate">
-  <h1>Contacting the Spirits</h1>
-  <p>Who are you trying to communicate with?</p>
+    <div class="row">
+      <input id="gateInput" type="text" placeholder="Type a name…" autocomplete="off">
+      <button id="gateBtn" class="btn">Call Out</button>
+    </div>
 
-  <div class="row">
-    <input id="gateInput" type="text" placeholder="Type a name…" autocomplete="off">
-    <button id="gateBtn" class="btn">Call Out</button>
+    <div id="gateMsg" class="gateMsg"></div>
+  </section>
+
+  <!-- Audio panel (appears after correct name) -->
+  <div id="audioPanel">
+    <p>The radio crackles and a voice finally breaks through...</p>
+    <audio id="spiritAudio" src="LPKradioaudio.mp3" preload="auto" controls></audio>
   </div>
 
-  <div id="gateMsg" class="gateMsg"></div>
-</section>
+</div>
 
 <script>
-const gate = document.getElementById('gate');
-const gateInput = document.getElementById('gateInput');
-const gateBtn = document.getElementById('gateBtn');
-const gateMsg = document.getElementById('gateMsg');
-const spiritAudio = document.getElementById('spiritAudio');
+const gate       = document.getElementById('gate');
+const gateInput  = document.getElementById('gateInput');
+const gateBtn    = document.getElementById('gateBtn');
+const gateMsg    = document.getElementById('gateMsg');
+const audioPanel = document.getElementById('audioPanel');
+const spiritAudio= document.getElementById('spiritAudio');
 
 function handleSubmit(){
   const v = gateInput.value.trim().toLowerCase();
@@ -97,14 +128,17 @@ function handleSubmit(){
   if(v === "ezra"){
     gateMsg.textContent = "";
 
-    // play audio
-    spiritAudio.currentTime = 0;
-    spiritAudio.play().catch(()=>{});
-
-    // fade out interface
+    // Fade the prompt out
     gate.style.opacity = "0";
     gate.style.transform = "translateY(-10px)";
-    setTimeout(()=> gate.style.display = "none", 400);
+    setTimeout(()=>{ gate.style.display = "none"; }, 350);
+
+    // Show audio panel
+    audioPanel.style.display = "block";
+
+    // Start playback (user just interacted, so this should be allowed)
+    spiritAudio.currentTime = 0;
+    spiritAudio.play().catch(()=>{ /* ignore autoplay block */ });
 
   } else {
     gateMsg.textContent = "The radio hisses… no one answers.";
@@ -113,7 +147,10 @@ function handleSubmit(){
 
 gateBtn.addEventListener("click", handleSubmit);
 gateInput.addEventListener("keypress", e => {
-  if(e.key === "Enter") handleSubmit();
+  if(e.key === "Enter"){
+    e.preventDefault();
+    handleSubmit();
+  }
 });
 </script>
 
