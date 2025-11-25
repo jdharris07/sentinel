@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Last Known Position</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<style>
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#020617;
+    background-image:url("LKPpagebackground.png");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    color:#e5e7eb;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    padding:20px;
+    touch-action:none;
+  }
+
+  .wrapper{
+    max-width:900px;
+    width:100%;
+    text-align:center;
+  }
+
+  h1{
+    font-size:1.4rem;
+    margin-bottom:0.4rem;
+    text-shadow:0 2px 4px #000;
+  }
+
+  .instructions{
+    font-size:0.95rem;
+    color:#d1d5db;
+    margin-bottom:1rem;
+    text-shadow:0 1px 3px #000;
+  }
+
+  .catcher-box{
+    margin:0 auto;
+    width:min(92vw, 420px);
+    aspect-ratio:1/1;
+    border-radius:16px;
+    background:rgba(15,23,42,0.85);
+    border:1px solid #1f2937;
+    box-shadow:0 12px 40px rgba(0,0,0,0.9);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    touch-action:none;
+  }
+
+  svg{
+    width:95%;
+    height:95%;
+  }
+
+  .rim{
+    fill:none;
+    stroke:#9ca3af;
+    stroke-width:4;
+  }
+
+  .node-ring{
+    fill:rgba(15,23,42,0.0);
+    stroke:#e5e7eb;
+    stroke-width:2;
+  }
+
+  .node-hit{
+    cursor:pointer;
+  }
+
+  .node-hit.active .node-ring{
+    stroke:#fbbf24;
+    stroke-width:3;
+  }
+
+  /* strings (white) */
+  .web-line{
+    stroke:#f9fafb;
+    stroke-width:2.5;
+    stroke-linecap:round;
+  }
+
+  .letters{
+    font-size:18px;
+    fill:#e5e7eb;
+    text-anchor:middle;
+    dominant-baseline:middle;
+    pointer-events:none;
+  }
+
+  #status{
+    margin-top:0.5rem;
+    font-size:0.9rem;
+    color:#9ca3af;
+    min-height:1.3em;
+  }
+
+  #controls{
+    margin-top:0.3rem;
+  }
+
+  #clearStrandsBtn{
+    border:none;
+    border-radius:999px;
+    padding:5px 14px;
+    font-size:0.8rem;
+    font-weight:600;
+    cursor:pointer;
+    background:#111827;
+    color:#e5e7eb;
+    border:1px solid #4b5563;
+  }
+  #clearStrandsBtn:active{
+    transform:translateY(1px);
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <h1>Dreamcatcher Web</h1>
+  <div class="instructions">
+    Tap a symbol on the rim to begin a strand, then tap another symbol to anchor it.<br>
+    Each new strand starts from the last point. Use the web to reveal the hidden word.
+  </div>
+
+  <div class="catcher-box">
+    <svg id="dreamSvg" viewBox="0 0 400 400">
+      <!-- Outer rim -->
+      <circle class="rim" cx="200" cy="200" r="130" />
+
+      <!-- Letters group -->
+      <g id="lettersGroup" class="letters"></g>
+
+      <!-- Rim nodes (image symbols) -->
+      <g id="nodesGroup"></g>
+    </svg>
+  </div>
+
+  <div id="controls">
+    <button id="clearStrandsBtn">Clear Strands</button>
+  </div>
+  <div id="status"></div>
+</div>
+
+<script>
+  const svg             = document.getElementById('dreamSvg');
+  const nodesGroup      = document.getElementById('nodesGroup');
+  const lettersGroup    = document.getElementById('lettersGroup');
+  const statusEl        = document.getElementById('status');
+  const clearStrandsBtn = document.getElementById('clearStrandsBtn');
+
+  const centerX = 200;
+  const centerY = 200;
+  const radius  = 140;
+  const nodeRadius = 18; // slightly larger for the white backing
+
+  // Original rim symbols (order matters for how strands line up with letters)
+  const nodeSymbols = ["🌙","✶","☀","✧","✦","✙","●","❖"];
+
+  // SYMBOL → IMAGE mapping you provided
+  const symbolToImage = {
+    "🌙": "LKPdream4.png", // moon
+    "✶": "LKPdream2.png", // sun/starburst
+    "☀": "LKPdream7.png", // sun variant
+    "✧": "LKPdream5.png", // spark/fire-start
+    "✦": "LKPdream6.png", // flare
+    "✙": "LKPdream3.png", // man
+    "●": "LKPdream1.png", // dark orb/man
+    "❖": "LKPdream8.png"  // tent/home
+  };
+
+  // Build node positions around the rim
+  const nodes = nodeSymbols.map((symbol, i) => {
+    const angle = (Math.PI * 2 * i / nodeSymbols.length) - Math.PI / 2;
+    return {
+      id: "node" + i,
+      symbol,
+      img: symbolToImage[symbol],
+      angle,
+      cx: centerX + radius * Math.cos(angle),
+      cy: centerY + radius * Math.sin(angle)
+    };
+  });
+
+  // Draw rim nodes with white background + image
+  nodes.forEach(node => {
+    const group = document.createElementNS("http://www.w3.org/2000/svg","g");
+    group.classList.add("node-hit");
+    group.setAttribute("data-id", node.id);
+
+    // Hit ring + highlight outline
+    const ring = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    ring.setAttribute("class","node-ring");
+    ring.setAttribute("cx", node.cx);
+    ring.setAttribute("cy", node.cy);
+    ring.setAttribute("r", nodeRadius);
+
+    // White backing circle
+    const bg = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    bg.setAttribute("cx", node.cx);
+    bg.setAttribute("cy", node.cy);
+    bg.setAttribute("r", nodeRadius - 2);
+    bg.setAttribute("fill", "#ffffff");
+
+    // Symbol image
+    const imgSize = 26;
+    const img = document.createElementNS("http://www.w3.org/2000/svg","image");
+    img.setAttributeNS("http://www.w3.org/1999/xlink","href", node.img);
+    img.setAttribute("x", node.cx - imgSize / 2);
+    img.setAttribute("y", node.cy - imgSize / 2);
+    img.setAttribute("width", imgSize);
+    img.setAttribute("height", imgSize);
+    img.setAttribute("preserveAspectRatio","xMidYMid meet");
+
+    group.appendChild(ring);
+    group.appendChild(bg);
+    group.appendChild(img);
+    nodesGroup.appendChild(group);
+  });
+
+  // Letter positions (already tuned to your web pattern)
+  const letters = [
+    { id: 1,  ch: "T",  x: 157.6, y: 157.1 },
+    { id: 2,  ch: "O",  x: 227.1, y: 129.7 },
+    { id: 3,  ch: "K",  x: 239.8, y: 158.4 },
+    { id: 4,  ch: "E",  x: 257.8, y: 199.2 },
+    { id: 5,  ch: "H",  x: 199.0, y: 198.5 },
+    { id: 6,  ch: "A",  x: 144.2, y: 197.8 },
+    { id: 7,  ch: "I",  x: 128.8, y: 227.2 },
+    { id: 8,  ch: "N",  x: 156.9, y: 240.6 },
+    { id: 9,  ch: "A",  x: 123.5, y: 126.3 },
+    { id: 10, ch: "Z",  x: 235.1, y: 241.3 },
+    { id: 11, ch: "B",  x: 193.7, y: 288.7 },
+    { id: 12, ch: "W",  x: 187.6, y: 175.1 },
+    { id: 13, ch: "S",  x: 219.7, y: 175.8 },
+    { id: 14, ch: "T",  x: 197.7, y: 141.0 },
+    { id: 15, ch: "O",  x: 182.3, y: 216.6 },
+    { id: 16, ch: "R",  x: 114.8, y: 198.5 },
+    { id: 17, ch: "J",  x: 281.9, y: 169.1 },
+    { id: 18, ch: "L",  x: 292.6, y: 233.3 },
+    { id: 19, ch: "A",  x: 160.2, y: 99.6 },
+    { id: 20, ch: "Y",  x: 106.1, y: 157.7 },
+    { id: 21, ch: "P",  x: 150.9, y: 292.1 },
+    { id: 22, ch: "Q",  x: 198.3, y: 237.3 },
+    { id: 23, ch: "N",  x: 229.1, y: 294.1 },
+    { id: 24, ch: "S",  x: 236.4, y: 185.1 },
+    { id: 25, ch: "U",  x: 236.4, y: 105.6 },
+    { id: 26, ch: "V",  x: 108.1, y: 241.9 },
+  ];
+
+  // Draw letters
+  letters.forEach(letter => {
+    const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+    t.setAttribute("x", letter.x);
+    t.setAttribute("y", letter.y);
+    t.textContent = letter.ch;
+    lettersGroup.appendChild(t);
+  });
+
+  function getNodeById(id){
+    return nodes.find(n => n.id === id);
+  }
+
+  let startNodeId = null;
+  let strands = [];
+  const MAX_STRANDS = 6;
+
+  function setStatus(msg){
+    statusEl.textContent = msg || "";
+  }
+
+  // Continuous strand drawing (max 6 segments)
+  nodesGroup.addEventListener('pointerdown', (e) => {
+    const g = e.target.closest('.node-hit');
+    if (!g) return;
+    e.preventDefault();
+    const id = g.getAttribute('data-id');
+
+    // First click: set starting node
+    if (!startNodeId) {
+      startNodeId = id;
+      g.classList.add('active');
+      setStatus("Select another symbol to extend the strand.");
+      return;
+    }
+
+    // Reached max strands
+    if (strands.length >= MAX_STRANDS) {
+      setStatus("The web feels complete. Six strands are all it will hold.");
+      return;
+    }
+
+    // Same node: ignore
+    if (startNodeId === id) return;
+
+    const startNode = getNodeById(startNodeId);
+    const endNode   = getNodeById(id);
+
+    if (startNode && endNode) {
+      const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+      line.setAttribute("class","web-line");
+      line.setAttribute("x1", startNode.cx);
+      line.setAttribute("y1", startNode.cy);
+      line.setAttribute("x2", endNode.cx);
+      line.setAttribute("y2", endNode.cy);
+
+      // Place line behind nodes but above letters
+      svg.insertBefore(line, nodesGroup);
+      strands.push(line);
+
+      const prevActive = nodesGroup.querySelector(`[data-id="${startNodeId}"]`);
+      if (prevActive) prevActive.classList.remove('active');
+
+      startNodeId = id;
+      g.classList.add('active');
+
+      if (strands.length >= MAX_STRANDS) {
+        setStatus("The sixth strand snaps into place. Study the web carefully.");
+      } else {
+        setStatus("Strand extended. Keep going or clear strands to start over.");
+      }
+    }
+  });
+
+  // Clear strands
+  clearStrandsBtn.addEventListener('click', () => {
+    strands.forEach(line => svg.removeChild(line));
+    strands = [];
+    startNodeId = null;
+    nodesGroup.querySelectorAll('.node-hit').forEach(n => n.classList.remove('active'));
+    setStatus("Strands cleared. Tap any symbol to start a new one.");
+  });
+</script>
+</body>
+</html>
