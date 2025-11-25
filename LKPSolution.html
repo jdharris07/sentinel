@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Last Known Position</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<style>
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#020617;
+    background-image:url("LKPpagebackground.png");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    color:#e5e7eb;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    padding:20px;
+  }
+
+  .wrapper{
+    max-width:640px;
+    width:100%;
+  }
+
+  .panel{
+    background:rgba(15,23,42,0.92);
+    border-radius:16px;
+    border:1px solid #1f2937;
+    box-shadow:0 18px 40px rgba(0,0,0,0.8);
+    padding:18px 18px 16px;
+  }
+
+  h1{
+    font-size:1.3rem;
+    margin:0 0 0.6rem;
+    text-align:center;
+    text-shadow:0 2px 4px #000;
+  }
+
+  .prompt{
+    font-size:0.95rem;
+    color:#d1d5db;
+    line-height:1.45;
+    margin-bottom:1rem;
+  }
+
+  form{
+    display:flex;
+    flex-direction:column;
+    gap:0.6rem;
+  }
+
+  label{
+    font-size:0.85rem;
+    color:#9ca3af;
+    margin-bottom:0.15rem;
+  }
+
+  .field-group{
+    display:flex;
+    flex-direction:column;
+  }
+
+  input[type="text"]{
+    padding:8px 10px;
+    border-radius:10px;
+    border:1px solid #4b5563;
+    background:#020617;
+    color:#e5e7eb;
+    font-size:0.95rem;
+    outline:none;
+  }
+  input[type="text"]::placeholder{
+    color:#6b7280;
+  }
+  input[type="text"]:focus{
+    border-color:#fbbf24;
+    box-shadow:0 0 0 1px rgba(251,191,36,0.4);
+  }
+
+  button{
+    margin-top:4px;
+    align-self:flex-start;
+    border:none;
+    border-radius:999px;
+    padding:7px 18px;
+    font-size:0.9rem;
+    font-weight:600;
+    cursor:pointer;
+    background:#fbbf24;
+    color:#111827;
+    box-shadow:0 4px 10px rgba(0,0,0,0.6);
+  }
+  button:active{
+    transform:translateY(1px);
+    box-shadow:0 2px 6px rgba(0,0,0,0.7);
+  }
+
+  #message{
+    margin-top:0.6rem;
+    font-size:0.9rem;
+    min-height:1.3em;
+    color:#fca5a5;
+  }
+
+  @media (max-width:480px){
+    .panel{
+      padding:14px 12px 12px;
+    }
+    h1{
+      font-size:1.1rem;
+    }
+    .prompt{
+      font-size:0.9rem;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="panel">
+    <h1>Final Check</h1>
+    <div class="prompt">
+      Where does everything seem to point to on the map and what is the word of power Thomas says will stop The Pale Walker?
+    </div>
+
+    <form id="answerForm">
+      <div class="field-group">
+        <label for="coordInput">Grid coordinate on the map</label>
+        <input id="coordInput" type="text" placeholder="Grid letter followed by number">
+      </div>
+
+      <div class="field-group">
+        <label for="wordInput">Word of power</label>
+        <input id="wordInput" type="text" placeholder="Word of power">
+      </div>
+
+      <button type="submit">Submit</button>
+    </form>
+
+    <div id="message"></div>
+  </div>
+</div>
+
+<script>
+  const form       = document.getElementById('answerForm');
+  const coordInput = document.getElementById('coordInput');
+  const wordInput  = document.getElementById('wordInput');
+  const messageEl  = document.getElementById('message');
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+
+    const coordRaw = coordInput.value.trim().replace(/\s+/g, "");
+    const wordRaw  = wordInput.value.trim();
+
+    const coord = coordRaw.toUpperCase();
+    const word  = wordRaw.toLowerCase();
+
+    const correctCoord = "G10";
+    const correctWord  = "tokahein";
+
+    if (coord === correctCoord && word === correctWord){
+      messageEl.textContent = "";
+      // Open solution PDF in a new tab
+      window.open("LKPSolution.PDF", "_blank");
+    } else {
+      messageEl.textContent = "Hmm, that doesn't seem right. Check everything again.";
+    }
+  });
+</script>
+</body>
+</html>
