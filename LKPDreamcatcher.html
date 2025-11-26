@@ -55,9 +55,11 @@
     touch-action:none;
   }
 
+  /* SVG scales from the viewBox so coordinates stay aligned */
   svg{
     width:95%;
-    height:95%;
+    height:auto;
+    display:block;
   }
 
   .rim{
@@ -132,7 +134,7 @@
   </div>
 
   <div class="catcher-box">
-    <svg id="dreamSvg" viewBox="0 0 400 400">
+    <svg id="dreamSvg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
       <!-- Outer rim -->
       <circle class="rim" cx="200" cy="200" r="130" />
 
@@ -162,10 +164,9 @@
   const radius  = 140;
   const nodeRadius = 18; // slightly larger for the white backing
 
-  // Original rim symbols (order matters for how strands line up with letters)
+  // 8 rim positions (order matters!)
   const nodeSymbols = ["🌙","✶","☀","✧","✦","✙","●","❖"];
 
-  // SYMBOL → IMAGE mapping you provided
   const symbolToImage = {
     "🌙": "LKPdream4.png", // moon
     "✶": "LKPdream2.png", // sun/starburst
@@ -177,7 +178,6 @@
     "❖": "LKPdream8.png"  // tent/home
   };
 
-  // Build node positions around the rim
   const nodes = nodeSymbols.map((symbol, i) => {
     const angle = (Math.PI * 2 * i / nodeSymbols.length) - Math.PI / 2;
     return {
@@ -190,27 +190,24 @@
     };
   });
 
-  // Draw rim nodes with white background + image
+  // Draw rim nodes with white backing + image
   nodes.forEach(node => {
     const group = document.createElementNS("http://www.w3.org/2000/svg","g");
     group.classList.add("node-hit");
     group.setAttribute("data-id", node.id);
 
-    // Hit ring + highlight outline
     const ring = document.createElementNS("http://www.w3.org/2000/svg","circle");
     ring.setAttribute("class","node-ring");
     ring.setAttribute("cx", node.cx);
     ring.setAttribute("cy", node.cy);
     ring.setAttribute("r", nodeRadius);
 
-    // White backing circle
     const bg = document.createElementNS("http://www.w3.org/2000/svg","circle");
     bg.setAttribute("cx", node.cx);
     bg.setAttribute("cy", node.cy);
     bg.setAttribute("r", nodeRadius - 2);
     bg.setAttribute("fill", "#ffffff");
 
-    // Symbol image
     const imgSize = 26;
     const img = document.createElementNS("http://www.w3.org/2000/svg","image");
     img.setAttributeNS("http://www.w3.org/1999/xlink","href", node.img);
@@ -226,7 +223,7 @@
     nodesGroup.appendChild(group);
   });
 
-  // Letter positions (already tuned to your web pattern)
+  // Letter positions
   const letters = [
     { id: 1,  ch: "T",  x: 157.6, y: 157.1 },
     { id: 2,  ch: "O",  x: 227.1, y: 129.7 },
@@ -256,7 +253,6 @@
     { id: 26, ch: "V",  x: 108.1, y: 241.9 },
   ];
 
-  // Draw letters
   letters.forEach(letter => {
     const t = document.createElementNS("http://www.w3.org/2000/svg","text");
     t.setAttribute("x", letter.x);
@@ -271,20 +267,19 @@
 
   let startNodeId = null;
   let strands = [];
-  const MAX_STRANDS = 6;
+  const MAX_STRANDS = 6; // <-- six line segments allowed
 
   function setStatus(msg){
     statusEl.textContent = msg || "";
   }
 
-  // Continuous strand drawing (max 6 segments)
   nodesGroup.addEventListener('pointerdown', (e) => {
     const g = e.target.closest('.node-hit');
     if (!g) return;
     e.preventDefault();
     const id = g.getAttribute('data-id');
 
-    // First click: set starting node
+    // First click: starting node
     if (!startNodeId) {
       startNodeId = id;
       g.classList.add('active');
@@ -292,7 +287,7 @@
       return;
     }
 
-    // Reached max strands
+    // Already at max strands: block further
     if (strands.length >= MAX_STRANDS) {
       setStatus("The web feels complete. Six strands are all it will hold.");
       return;
@@ -312,7 +307,6 @@
       line.setAttribute("x2", endNode.cx);
       line.setAttribute("y2", endNode.cy);
 
-      // Place line behind nodes but above letters
       svg.insertBefore(line, nodesGroup);
       strands.push(line);
 
@@ -330,7 +324,6 @@
     }
   });
 
-  // Clear strands
   clearStrandsBtn.addEventListener('click', () => {
     strands.forEach(line => svg.removeChild(line));
     strands = [];
