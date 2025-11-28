@@ -23,6 +23,9 @@
     color:#e5e7eb;
     font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
     padding:20px;
+    -webkit-user-select:none;
+    user-select:none;
+    touch-action:none;
   }
 
   .wrapper{
@@ -47,8 +50,8 @@
 
   .play-area{
     position:relative;
-    width:600px;
-    height:400px;
+    width:min(95vw, 600px);
+    aspect-ratio:3/2;
     border:2px solid #4b5563;
     border-radius:10px;
     overflow:hidden;
@@ -57,6 +60,7 @@
     background-size:cover;
     background-position:center;
     background-repeat:no-repeat;
+    touch-action:none;
   }
 
   .symbol{
@@ -80,6 +84,8 @@
     cursor:grab;
     z-index:10;
     transform:translate(-50%, -50%);
+    touch-action:none;
+    -webkit-user-drag:none;
   }
 
   #arrowhead.dragging{
@@ -153,56 +159,70 @@
   });
 
   function centerArrow() {
-    arrow.style.left = playArea.clientWidth / 2 + 'px';
-    arrow.style.top  = playArea.clientHeight / 2 + 'px';
+    const box = playArea.getBoundingClientRect();
+    const centerX = box.width / 2;
+    const centerY = box.height / 2;
+    arrow.style.left = centerX + 'px';
+    arrow.style.top  = centerY + 'px';
   }
 
   centerArrow();
+  window.addEventListener('resize', centerArrow);
 
   let dragging = false;
   let offsetX = 0;
   let offsetY = 0;
 
   arrow.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
     dragging = true;
     arrow.classList.add('dragging');
-    arrow.setPointerCapture(e.pointerId);
 
     const rect = arrow.getBoundingClientRect();
-    offsetX = e.clientX - rect.left;
-    offsetY = e.clientY - rect.top;
+    // Offset from the arrow's center, so grab point stays fixed
+    offsetX = e.clientX - (rect.left + rect.width / 2);
+    offsetY = e.clientY - (rect.top  + rect.height / 2);
   });
 
-  arrow.addEventListener('pointermove', (e) => {
+  window.addEventListener('pointermove', (e) => {
     if (!dragging) return;
 
+    e.preventDefault();
     const box = playArea.getBoundingClientRect();
-    let newLeft = e.clientX - offsetX - box.left;
-    let newTop  = e.clientY - offsetY - box.top;
-
     const w = arrow.clientWidth;
     const h = arrow.clientHeight;
 
-    newLeft = Math.max(w/2, Math.min(newLeft, box.width - w/2));
-    newTop  = Math.max(h/2, Math.min(newTop, box.height - h/2));
+    // Desired center based on pointer, minus offset
+    let centerX = e.clientX - box.left - offsetX;
+    let centerY = e.clientY - box.top  - offsetY;
 
-    arrow.style.left = newLeft + "px";
-    arrow.style.top  = newTop + "px";
+    // Clamp center inside playArea
+    const minX = w / 2;
+    const maxX = box.width - w / 2;
+    const minY = h / 2;
+    const maxY = box.height - h / 2;
+
+    centerX = Math.max(minX, Math.min(centerX, maxX));
+    centerY = Math.max(minY, Math.min(centerY, maxY));
+
+    arrow.style.left = centerX + 'px';
+    arrow.style.top  = centerY + 'px';
   });
 
-  arrow.addEventListener('pointerup', (e) => {
+  window.addEventListener('pointerup', () => {
+    if (!dragging) return;
     dragging = false;
     arrow.classList.remove('dragging');
-    arrow.releasePointerCapture(e.pointerId);
   });
 
-  arrow.addEventListener('pointercancel', () => {
+  window.addEventListener('pointercancel', () => {
+    if (!dragging) return;
     dragging = false;
     arrow.classList.remove('dragging');
   });
 
+  // Keyboard movement still supported
   const step = 8;
-
   window.addEventListener('keydown', (e) => {
     const key = e.key;
     if (!["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","w","a","s","d","W","A","S","D"].includes(key)) return;
@@ -214,6 +234,13 @@
     let left = parseFloat(arrow.style.left);
     let top  = parseFloat(arrow.style.top);
 
+    if (isNaN(left) || isNaN(top)) {
+      // fallback: recenter if styles not yet set
+      centerArrow();
+      left = parseFloat(arrow.style.left);
+      top  = parseFloat(arrow.style.top);
+    }
+
     if (key === 'ArrowUp'   || key === 'w' || key === 'W') top  -= step;
     if (key === 'ArrowDown' || key === 's' || key === 'S') top  += step;
     if (key === 'ArrowLeft' || key === 'a' || key === 'A') left -= step;
@@ -222,14 +249,17 @@
     const w = rect.width;
     const h = rect.height;
 
-    left = Math.max(w/2, Math.min(left, box.width - w/2));
-    top  = Math.max(h/2, Math.min(top, box.height - h/2));
+    const minX = w / 2;
+    const maxX = box.width - w / 2;
+    const minY = h / 2;
+    const maxY = box.height - h / 2;
+
+    left = Math.max(minX, Math.min(left, maxX));
+    top  = Math.max(minY, Math.min(top, maxY));
 
     arrow.style.left = left + "px";
     arrow.style.top  = top + "px";
   });
-
-  window.addEventListener('resize', centerArrow);
 </script>
 </body>
 </html>
