@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8" />
 <title>Last Known Position</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <style>
@@ -28,119 +28,26 @@
     text-align:center;
   }
 
-  h1{
-    font-size:1.8rem;
-    margin-bottom:0.4rem;
-  }
-
-  .sub{
-    font-size:0.95rem;
-    color:#d1d5db;
-    margin-bottom:1rem;
-    padding:0 10px;
-  }
+  h1{ font-size:1.8rem; margin-bottom:0.4rem; }
+  .sub{ font-size:0.95rem; color:#d1d5db; margin-bottom:1rem; padding:0 10px; }
 
   /* LOCK SECTION */
-
-  #lockSection{
-    margin-bottom:20px;
-  }
-
-  .lock-box{
-    display:inline-block;
-    padding:18px 20px 22px;
-    border-radius:12px;
-    background:rgba(15,23,42,0.95);
-    border:1px solid #374151;
-    box-shadow:0 10px 30px rgba(0,0,0,0.7);
-  }
-
-  .rollers{
-    display:flex;
-    gap:10px;
-    justify-content:center;
-    margin:10px 0 14px;
-  }
-
-  .roller{
-    background:#0b1120;
-    border-radius:10px;
-    padding:6px 8px;
-    border:1px solid #4b5563;
-    width:54px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-  }
-
-  .roller button{
-    background:none;
-    border:none;
-    color:#e5e7eb;
-    font-size:1rem;
-    cursor:pointer;
-    padding:0;
-    line-height:1;
-    user-select:none;
-  }
-
-  .roller button:active{
-    transform:translateY(1px);
-  }
-
-  .digit{
-    font-size:1.4rem;
-    margin:4px 0;
-    font-weight:600;
-    letter-spacing:1px;
-  }
-
-  #tryCodeBtn{
-    margin-top:4px;
-    padding:6px 16px;
-    border-radius:999px;
-    border:none;
-    background:#f97316;
-    color:#111827;
-    font-weight:600;
-    cursor:pointer;
-    font-size:0.95rem;
-  }
-
-  #tryCodeBtn:active{
-    transform:translateY(1px);
-  }
-
-  #lockMessage{
-    margin-top:8px;
-    font-size:0.9rem;
-    min-height:1.2em;
-  }
-
-  #lockMessage.error{
-    color:#fca5a5;
-  }
-  #lockMessage.success{
-    color:#bbf7d0;
-  }
-
-  /* fade */
-  .hidden{
-    display:none;
-  }
+  #lockSection{ margin-bottom:20px; }
+  .lock-box{ display:inline-block; padding:18px 20px 22px; border-radius:12px;
+    background:rgba(15,23,42,0.95); border:1px solid #374151; box-shadow:0 10px 30px rgba(0,0,0,0.7); }
+  .rollers{ display:flex; gap:10px; justify-content:center; margin:10px 0 14px; }
+  .roller{ background:#0b1120; border-radius:10px; padding:6px 8px; border:1px solid #4b5563;
+    width:54px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .roller button{ background:none; border:none; color:#e5e7eb; font-size:1rem; cursor:pointer; padding:0; line-height:1; user-select:none; }
+  .digit{ font-size:1.4rem; margin:4px 0; font-weight:600; letter-spacing:1px; }
+  #tryCodeBtn{ margin-top:4px; padding:6px 16px; border-radius:999px; border:none; background:#f97316; color:#111827; font-weight:600; cursor:pointer; font-size:0.95rem; }
+  #lockMessage{ margin-top:8px; font-size:0.9rem; min-height:1.2em; }
+  #lockMessage.error{ color:#fca5a5; } #lockMessage.success{ color:#bbf7d0; }
+  .hidden{ display:none; }
 
   /* MAP + COMPASS SECTION */
-
-  #compassSection{
-    opacity:0;
-    pointer-events:none;
-    transition:opacity 0.3s ease;
-  }
-  #compassSection.active{
-    opacity:1;
-    pointer-events:auto;
-  }
+  #compassSection{ opacity:0; pointer-events:none; transition:opacity 0.3s ease; }
+  #compassSection.active{ opacity:1; pointer-events:auto; }
 
   .map-area{
     --map-max-width: 950px;
@@ -157,9 +64,11 @@
     background-repeat:no-repeat;
     overflow:hidden;
     touch-action:none;
+    /* IMPORTANT: we'll change visual scale with transform; keep origin centered for simpler UX */
+    transform-origin:center center;
   }
 
-  /* default compass size will be overridden by JS to match grid cells */
+  /* default compass size will be overridden by JS to match grid cells (in unscaled px) */
   #compass{
     position:absolute;
     width:40px;
@@ -174,59 +83,15 @@
     touch-action:none;
   }
 
-  #compass.dragging{
-    cursor:grabbing;
-  }
+  #compass.dragging{ cursor:grabbing; }
 
-  .compass-body{
-    position:relative;
-    width:100%;
-    height:100%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    transition:transform 0.08s linear;
-  }
+  .compass-body{ position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center; transition:transform 0.08s linear; }
+  .needle{ position:relative; width:4px; height:60%; background:linear-gradient(to bottom, #ef4444 0 50%, #111827 50% 100%); border-radius:999px; box-shadow:0 0 4px rgba(239,68,68,0.7); }
+  .needle::before{ content:""; position:absolute; top:-10px; left:50%; transform:translateX(-50%); border-left:5px solid transparent; border-right:5px solid transparent; border-bottom:10px solid #ef4444; }
+  .needle::after{ content:""; position:absolute; bottom:-7px; left:50%; transform:translateX(-50%); border-left:4px solid transparent; border-right:4px solid transparent; border-top:7px solid #111827; }
 
-  .needle{
-    position:relative;
-    width:4px;
-    height:60%;
-    background:linear-gradient(to bottom, #ef4444 0 50%, #111827 50% 100%);
-    border-radius:999px;
-    box-shadow:0 0 4px rgba(239,68,68,0.7);
-  }
-
-  .needle::before{
-    content:"";
-    position:absolute;
-    top:-10px;
-    left:50%;
-    transform:translateX(-50%);
-    border-left:5px solid transparent;
-    border-right:5px solid transparent;
-    border-bottom:10px solid #ef4444;
-  }
-
-  .needle::after{
-    content:"";
-    position:absolute;
-    bottom:-7px;
-    left:50%;
-    transform:translateX(-50%);
-    border-left:4px solid transparent;
-    border-right:4px solid transparent;
-    border-top:7px solid #111827;
-  }
-
-  .compass-body.spin{
-    animation:spin 0.7s linear infinite;
-  }
-
-  @keyframes spin{
-    from{ transform:rotate(0deg); }
-    to{ transform:rotate(360deg); }
-  }
+  .compass-body.spin{ animation:spin 0.7s linear infinite; }
+  @keyframes spin{ from{ transform:rotate(0deg);} to{ transform:rotate(360deg);} }
 
   #compass.pulse::before{
     content:"";
@@ -238,17 +103,12 @@
     animation:pulse 0.8s ease-out infinite;
   }
 
-  @keyframes pulse{
-    from{ transform:scale(0.9); opacity:1; }
-    to{ transform:scale(1.15); opacity:0; }
-  }
-
   /* TARGET MARKERS (red outlined circles) */
   .target-marker{
     position:absolute;
     width:18px;
     height:18px;
-    border:0px solid red;
+    border:2px solid red;
     border-radius:50%;
     transform:translate(-50%,-50%);
     box-sizing:border-box;
@@ -300,11 +160,9 @@
       When you’re directly over one, the compass goes wild.
     </div>
 
-    <div id="mapArea" class="map-area">
+    <div id="mapArea" class="map-area" >
       <div id="compass">
-        <div id="compassBody" class="compass-body">
-          <div class="needle"></div>
-        </div>
+        <div id="compassBody" class="compass-body"><div class="needle"></div></div>
       </div>
       <!-- target marker elements will be appended here by JS -->
     </div>
@@ -313,374 +171,441 @@
 </div>
 
 <script>
-  /*************** LOCK LOGIC ***************/
-  const correctCode = "6436";
-  const rollersContainer = document.getElementById('rollers');
-  const lockMessage = document.getElementById('lockMessage');
-  const tryCodeBtn = document.getElementById('tryCodeBtn');
-  const lockSection = document.getElementById('lockSection');
-  const compassSection = document.getElementById('compassSection');
+/*************** LOCK LOGIC ***************/
+const correctCode = "6436";
+const rollersContainer = document.getElementById('rollers');
+const lockMessage = document.getElementById('lockMessage');
+const tryCodeBtn = document.getElementById('tryCodeBtn');
+const lockSection = document.getElementById('lockSection');
+const compassSection = document.getElementById('compassSection');
 
-  const digits = [0,0,0,0];
+const digits = [0,0,0,0];
 
-  function renderRollers(){
-    rollersContainer.innerHTML = "";
-    for(let i=0;i<4;i++){
-      const roller = document.createElement('div');
-      roller.className = 'roller';
-      roller.dataset.index = i;
+function renderRollers(){
+  rollersContainer.innerHTML = "";
+  for(let i=0;i<4;i++){
+    const roller = document.createElement('div');
+    roller.className = 'roller';
+    roller.dataset.index = i;
 
-      const up = document.createElement('button');
-      up.textContent = '▲';
-      up.className = 'roll-up';
+    const up = document.createElement('button');
+    up.textContent = '▲';
+    up.className = 'roll-up';
 
-      const digitDisplay = document.createElement('div');
-      digitDisplay.className = 'digit';
-      digitDisplay.textContent = digits[i];
+    const digitDisplay = document.createElement('div');
+    digitDisplay.className = 'digit';
+    digitDisplay.textContent = digits[i];
 
-      const down = document.createElement('button');
-      down.textContent = '▼';
-      down.className = 'roll-down';
+    const down = document.createElement('button');
+    down.textContent = '▼';
+    down.className = 'roll-down';
 
-      roller.appendChild(up);
-      roller.appendChild(digitDisplay);
-      roller.appendChild(down);
-      rollersContainer.appendChild(roller);
-    }
+    roller.appendChild(up);
+    roller.appendChild(digitDisplay);
+    roller.appendChild(down);
+    rollersContainer.appendChild(roller);
   }
+}
+renderRollers();
 
-  renderRollers();
+rollersContainer.addEventListener('click', (e)=>{
+  const roller = e.target.closest('.roller');
+  if(!roller) return;
+  const idx = parseInt(roller.dataset.index,10);
+  if(e.target.classList.contains('roll-up')){
+    digits[idx] = (digits[idx] + 1) % 10;
+  } else if(e.target.classList.contains('roll-down')){
+    digits[idx] = (digits[idx] + 9) % 10; // -1 mod 10
+  } else {
+    return;
+  }
+  roller.querySelector('.digit').textContent = digits[idx];
+  lockMessage.textContent = "";
+  lockMessage.className = "";
+});
 
-  rollersContainer.addEventListener('click', (e)=>{
-    const roller = e.target.closest('.roller');
-    if(!roller) return;
-    const idx = parseInt(roller.dataset.index,10);
-    if(e.target.classList.contains('roll-up')){
-      digits[idx] = (digits[idx] + 1) % 10;
-    } else if(e.target.classList.contains('roll-down')){
-      digits[idx] = (digits[idx] + 9) % 10; // -1 mod 10
-    } else {
-      return;
+tryCodeBtn.addEventListener('click', ()=>{
+  const entered = digits.join('');
+  if(entered === correctCode){
+    lockMessage.textContent = "The lock clicks open.";
+    lockMessage.className = "success";
+    // reveal compass section
+    lockSection.classList.add('hidden');
+    compassSection.classList.add('active');
+    // ensure map/compass layout is ready
+    setTimeout(()=>{
+      centerCompass();
+      positionTargetMarkers();
+      setCompassSize();
+      updateCompassBearing();
+    }, 50);
+  } else {
+    lockMessage.textContent = "Hmmm... the lock doesn't budge.";
+    lockMessage.className = "error";
+  }
+});
+
+/*************** COMPASS / MAP LOGIC ***************/
+const mapArea     = document.getElementById('mapArea');
+const compass     = document.getElementById('compass');
+const compassBody = document.getElementById('compassBody');
+
+/* Zoom/scale variables:
+   - `scale` is the current visual scale applied to the mapArea via CSS transform.
+   - All stored style.left/top values are in *unscaled* pixels (map internal coordinates).
+*/
+let scale = 1;
+const SCALE_MIN = 0.6;
+const SCALE_MAX = 3.0;
+const SCALE_STEP = 0.06; // per wheel tick small step
+
+// responsive sizing config
+const GRID_COLS = 16;   // set to number of vertical grid columns in your map image
+const COMPASS_MIN = 24; // px - smallest unscaled diameter
+const COMPASS_MAX = 96; // px - largest unscaled diameter
+
+// percentage-based targets (x% , y%)
+const targets = [
+  { x: 47.9, y: 71.7 },
+  { x: 28.7, y: 56.2 },
+  { x: 14.3, y: 13.6 },
+  { x: 61.7, y: 42.3 },
+  { x: 76.1, y: 13.8 },
+  { x: 85.7, y: 49.7 }
+];
+
+// create marker elements (one per target) and keep refs so we can reposition
+const targetMarkers = [];
+
+function createTargetMarkers(){
+  targetMarkers.forEach(m => { if (m.el && m.el.parentNode) m.el.parentNode.removeChild(m.el); });
+  targetMarkers.length = 0;
+  targets.forEach((t, idx) => {
+    const el = document.createElement('div');
+    el.className = 'target-marker';
+    el.dataset.index = idx;
+    mapArea.appendChild(el);
+    targetMarkers.push({ data: t, el });
+  });
+}
+
+// position the markers based on current map size (use UN-SCALED coordinates)
+function positionTargetMarkers(){
+  const rect = mapArea.getBoundingClientRect();
+  const wScaled = rect.width;
+  const hScaled = rect.height;
+  const w = wScaled / scale; // unscaled width
+  const h = hScaled / scale;
+
+  targetMarkers.forEach(m => {
+    const tx = (m.data.x / 100) * w;
+    const ty = (m.data.y / 100) * h;
+    m.el.style.left = tx + 'px';
+    m.el.style.top  = ty + 'px';
+  });
+}
+
+function centerCompass() {
+  const rect = mapArea.getBoundingClientRect();
+  const w = rect.width / scale;
+  const h = rect.height / scale;
+  compass.style.left = (w / 2) + 'px';
+  compass.style.top  = (h / 2) + 'px';
+}
+
+let isOnTarget = false;
+
+/* NO-SNAP updateCompassBearing()
+   This uses getBoundingClientRect() (which reports scaled coordinates)
+   to compute distances in client pixels and produces the same behavior
+   as before but without snapping the compass to the target.
+*/
+function updateCompassBearing() {
+  const mapRect     = mapArea.getBoundingClientRect();
+  const compassRect = compass.getBoundingClientRect();
+
+  let cx = (compassRect.left + compassRect.width / 2) - mapRect.left;
+  let cy = (compassRect.top  + compassRect.height / 2) - mapRect.top;
+
+  const wScaled = mapRect.width;
+  const hScaled = mapRect.height;
+
+  let nearest = null;
+  let minDistSq = Infinity;
+
+  // compute px positions for targets (scaled)
+  targets.forEach(t => {
+    const tx = (t.x / 100) * wScaled / scale * scale; // keep scaled value: (t.x% * wScaled)
+    const ty = (t.y / 100) * hScaled / scale * scale; // simplified but explicit
+    // actually simpler: tx = (t.x/100) * wScaled; ty likewise
+    const tx2 = (t.x / 100) * wScaled;
+    const ty2 = (t.y / 100) * hScaled;
+    const dx = tx2 - cx;
+    const dy = ty2 - cy;
+    const distSq = dx*dx + dy*dy;
+    if (distSq < minDistSq) {
+      minDistSq = distSq;
+      nearest = { tx: tx2, ty: ty2, distSq };
     }
-    roller.querySelector('.digit').textContent = digits[idx];
-    lockMessage.textContent = "";
-    lockMessage.className = "";
   });
 
-  tryCodeBtn.addEventListener('click', ()=>{
-    const entered = digits.join('');
-    if(entered === correctCode){
-      lockMessage.textContent = "The lock clicks open.";
-      lockMessage.className = "success";
-      // reveal compass section
-      lockSection.classList.add('hidden');
-      compassSection.classList.add('active');
-      // ensure map/compass layout is ready
-      setTimeout(()=>{
-        centerCompass();
-        positionTargetMarkers();
-        setCompassSize();
-        updateCompassBearing();
-      }, 50);
-    } else {
-      lockMessage.textContent = "Hmmm... the lock doesn't budge.";
-      lockMessage.className = "error";
+  if (!nearest) return;
+
+  const dx = nearest.tx - cx;
+  const dy = nearest.ty - cy;
+  const dist = Math.sqrt(nearest.distSq);
+
+  const hitRadius = 40;   // client px threshold to exit 'on-target' when moved away
+  const snapRadius = 35;  // client px threshold to enter 'on-target' (but we don't reposition)
+
+  if (dist <= snapRadius) {
+    if (!isOnTarget) {
+      isOnTarget = true;
+      compassBody.classList.add('spin');
+      compass.classList.add('pulse');
     }
+    // while on-target we show spin; don't change rotation
+    return;
+  } else {
+    if (isOnTarget && dist > hitRadius) {
+      isOnTarget = false;
+      compassBody.classList.remove('spin');
+      compass.classList.remove('pulse');
+    }
+    // rotate needle to point at the target
+    const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+    compassBody.style.transform = `rotate(${angleDeg}deg)`;
+  }
+}
+
+// initialize markers
+createTargetMarkers();
+
+/* ---------- Responsive compass sizing (uses unscaled map width) ---------- */
+function setCompassSize() {
+  const rect = mapArea.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const mapUnscaledW = rect.width / scale;
+  const cellWidth = mapUnscaledW / GRID_COLS;
+  let diameter = Math.round(Math.max(COMPASS_MIN, Math.min(COMPASS_MAX, cellWidth * 0.85)));
+  compass.style.width  = diameter + 'px';
+  compass.style.height = diameter + 'px';
+  const needle = compassBody.querySelector('.needle');
+  if (needle) needle.style.height = Math.round(diameter * 0.60) + 'px';
+  targetMarkers.forEach(m => {
+    const markSize = Math.round(Math.max(10, Math.min(28, cellWidth * 0.45)));
+    m.el.style.width = markSize + 'px';
+    m.el.style.height = markSize + 'px';
   });
+}
 
-  /*************** COMPASS / MAP LOGIC ***************/
-  const mapArea     = document.getElementById('mapArea');
-  const compass     = document.getElementById('compass');
-  const compassBody = document.getElementById('compassBody');
+/* ---------- Zoom handling (wheel + pinch) ---------- */
+function applyScale(newScale) {
+  scale = Math.max(SCALE_MIN, Math.min(SCALE_MAX, newScale));
+  mapArea.style.transform = `scale(${scale})`;
+  // After changing scale, recalc sizes/positions using unscaled math
+  positionTargetMarkers();
+  setCompassSize();
+  updateCompassBearing();
+}
 
-  // responsive sizing config
-  const GRID_COLS = 16;   // set to number of vertical grid columns in your map image
-  const COMPASS_MIN = 24; // px - smallest diameter
-  const COMPASS_MAX = 96; // px - largest diameter
+/* wheel zoom: use Ctrl/Cmd+wheel or Meta for zooming (prevents conflicting with scroll) */
+mapArea.addEventListener('wheel', (e) => {
+  // if user holds ctrl/cmd or uses trackpad pinch (some browsers send ctrlKey), zoom
+  if (!(e.ctrlKey || e.metaKey)) return; // require modifier to avoid interfering with page scroll
+  e.preventDefault();
+  const delta = -e.deltaY; // positive when zooming in
+  const factor = 1 + (delta > 0 ? SCALE_STEP : -SCALE_STEP);
+  applyScale(scale * factor);
+}, { passive: false });
 
-  // percentage-based targets (x% , y%)
-  const targets = [
-    { x: 47.9, y: 71.7 },
-    { x: 28.7, y: 56.2 },
-    { x: 14.3, y: 13.6 },
-    { x: 61.7, y: 42.3 },
-    { x: 76.1, y: 13.8 },
-    { x: 85.7, y: 49.7 }
-  ];
+/* Pointer-based pinch-to-zoom implementation */
+const pointers = new Map();
+let initialPinchDistance = null;
+let initialPinchScale = null;
 
-  // create marker elements (one per target) and keep refs so we can reposition
-  const targetMarkers = [];
+function getDistance(p1, p2) {
+  const dx = p1.clientX - p2.clientX;
+  const dy = p1.clientY - p2.clientY;
+  return Math.hypot(dx, dy);
+}
 
-  function createTargetMarkers(){
-    // clear any existing markers
-    targetMarkers.forEach(m => {
-      if (m.el && m.el.parentNode) m.el.parentNode.removeChild(m.el);
-    });
-    targetMarkers.length = 0;
+mapArea.addEventListener('pointerdown', (e) => {
+  pointers.set(e.pointerId, e);
+  if (pointers.size === 2) {
+    // start pinch
+    const [a, b] = Array.from(pointers.values());
+    initialPinchDistance = getDistance(a, b);
+    initialPinchScale = scale;
+  }
+});
 
-    targets.forEach((t, idx) => {
-      const el = document.createElement('div');
-      el.className = 'target-marker';
-      el.dataset.index = idx;
-      // append to mapArea so positions are relative to it
-      mapArea.appendChild(el);
-      targetMarkers.push({ data: t, el });
-    });
+mapArea.addEventListener('pointermove', (e) => {
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, e);
+  if (pointers.size === 2 && initialPinchDistance && initialPinchScale != null) {
+    const [a, b] = Array.from(pointers.values());
+    const dist = getDistance(a, b);
+    const ratio = dist / initialPinchDistance;
+    applyScale(initialPinchScale * ratio);
+  }
+});
+
+mapArea.addEventListener('pointerup', (e) => {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) {
+    initialPinchDistance = null;
+    initialPinchScale = null;
+  }
+});
+mapArea.addEventListener('pointercancel', (e) => {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) {
+    initialPinchDistance = null;
+    initialPinchScale = null;
+  }
+});
+
+/* ---------- Dragging behavior (use UN-SCALED coordinates internally) ---------- */
+let dragging = false;
+let startX = 0, startY = 0;
+let compStartLeftUnscaled = 0, compStartTopUnscaled = 0;
+
+compass.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  dragging = true;
+  compass.classList.add('dragging');
+  compass.setPointerCapture(e.pointerId);
+
+  const mapRect = mapArea.getBoundingClientRect();
+  const compRect = compass.getBoundingClientRect();
+
+  startX = e.clientX;
+  startY = e.clientY;
+
+  compStartLeftUnscaled = (compRect.left + compRect.width/2 - mapRect.left) / scale;
+  compStartTopUnscaled  = (compRect.top  + compRect.height/2 - mapRect.top) / scale;
+
+  if (isOnTarget) {
+    isOnTarget = false;
+    compassBody.classList.remove('spin');
+    compass.classList.remove('pulse');
+  }
+});
+
+compass.addEventListener('pointermove', (e) => {
+  if (!dragging) return;
+  e.preventDefault();
+
+  const mapRect = mapArea.getBoundingClientRect();
+  const compRect = compass.getBoundingClientRect();
+
+  const deltaX = e.clientX - startX;
+  const deltaY = e.clientY - startY;
+
+  // delta in unscaled coords:
+  const newLeftUnscaled = compStartLeftUnscaled + (deltaX / scale);
+  const newTopUnscaled  = compStartTopUnscaled  + (deltaY / scale);
+
+  // compute unscaled map limits and unscaled compass size
+  const mapUnscaledW = mapRect.width / scale;
+  const mapUnscaledH = mapRect.height / scale;
+  const compUnscaledW = compRect.width / scale;
+  const compUnscaledH = compRect.height / scale;
+
+  const clampedLeft = Math.max(compUnscaledW/2, Math.min(newLeftUnscaled, mapUnscaledW - compUnscaledW/2));
+  const clampedTop  = Math.max(compUnscaledH/2, Math.min(newTopUnscaled, mapUnscaledH - compUnscaledH/2));
+
+  compass.style.left = clampedLeft + 'px';
+  compass.style.top  = clampedTop  + 'px';
+
+  updateCompassBearing();
+});
+
+compass.addEventListener('pointerup', (e) => {
+  if (!dragging) return;
+  e.preventDefault();
+  dragging = false;
+  compass.classList.remove('dragging');
+  try { compass.releasePointerCapture(e.pointerId); } catch(err){}
+  updateCompassBearing();
+});
+
+compass.addEventListener('pointercancel', (e) => {
+  if (!dragging) return;
+  e.preventDefault();
+  dragging = false;
+  compass.classList.remove('dragging');
+});
+
+/* ---------- Keyboard movement (works with unscaled stored left/top) ---------- */
+const step = 8;
+window.addEventListener('keydown', (e) => {
+  if (compassSection.className.indexOf('active') === -1) return;
+
+  const key = e.key;
+  const valid = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'];
+  if (!valid.includes(key)) return;
+
+  e.preventDefault();
+
+  if (isOnTarget) {
+    isOnTarget = false;
+    compassBody.classList.remove('spin');
+    compass.classList.remove('pulse');
   }
 
-  // position the markers based on current map size
-  function positionTargetMarkers(){
-    const rect = mapArea.getBoundingClientRect();
-    const w = rect.width;
-    const h = rect.height;
+  const mapRect = mapArea.getBoundingClientRect();
+  const mapUnscaledW = mapRect.width / scale;
+  const mapUnscaledH = mapRect.height / scale;
+  const compRect = compass.getBoundingClientRect();
+  const compUnscaledW = compRect.width / scale;
+  const compUnscaledH = compRect.height / scale;
 
-    targetMarkers.forEach(m => {
-      const tx = (m.data.x / 100) * w;
-      const ty = (m.data.y / 100) * h;
-      // position using left/top (mapArea is position:relative)
-      m.el.style.left = tx + 'px';
-      m.el.style.top  = ty + 'px';
-    });
-  }
+  let left = parseFloat(compass.style.left || '0');
+  let top  = parseFloat(compass.style.top  || '0');
 
-  function centerCompass() {
-    const rect = mapArea.getBoundingClientRect();
-    compass.style.left = rect.width / 2 + 'px';
-    compass.style.top  = rect.height / 2 + 'px';
-  }
+  if (key === 'ArrowUp'   || key === 'w' || key === 'W') top  -= step;
+  if (key === 'ArrowDown' || key === 's' || key === 'S') top  += step;
+  if (key === 'ArrowLeft' || key === 'a' || key === 'A') left -= step;
+  if (key === 'ArrowRight'|| key === 'd' || key === 'D') left += step;
 
-  let isOnTarget = false;
+  left = Math.max(compUnscaledW/2, Math.min(left, mapUnscaledW  - compUnscaledW/2));
+  top  = Math.max(compUnscaledH/2, Math.min(top,  mapUnscaledH - compUnscaledH/2));
 
-  // ---------- NO-SNAP updateCompassBearing ----------
-  function updateCompassBearing() {
-    const mapRect     = mapArea.getBoundingClientRect();
-    const compassRect = compass.getBoundingClientRect();
+  compass.style.left = left + 'px';
+  compass.style.top  = top  + 'px';
 
-    let cx = (compassRect.left + compassRect.width / 2) - mapRect.left;
-    let cy = (compassRect.top  + compassRect.height / 2) - mapRect.top;
+  updateCompassBearing();
+});
 
-    const w = mapRect.width;
-    const h = mapRect.height;
+/* Resize handling: reposition + rescale items */
+const ro = new ResizeObserver(() => {
+  positionTargetMarkers();
+  setCompassSize();
+  if (compassSection.classList.contains('active')) updateCompassBearing();
+});
+ro.observe(mapArea);
 
-    let nearest = null;
-    let minDistSq = Infinity;
-
-    // compute px positions for targets
-    targets.forEach(t => {
-      const tx = (t.x / 100) * w;
-      const ty = (t.y / 100) * h;
-      const dx = tx - cx;
-      const dy = ty - cy;
-      const distSq = dx*dx + dy*dy;
-      if (distSq < minDistSq) {
-        minDistSq = distSq;
-        nearest = { tx, ty, distSq };
-      }
-    });
-
-    if (!nearest) return;
-
-    const dx = nearest.tx - cx;
-    const dy = nearest.ty - cy;
-    const dist = Math.sqrt(nearest.distSq);
-
-    const hitRadius = 40;   // if you move outside this after being 'on target', it will unpin
-    const snapRadius = 35;  // within this radius we trigger the 'on-target' behavior but do NOT move the compass
-
-    if (dist <= snapRadius) {
-      // NO SNAPPING: keep compass where it is, but enter on-target visual state
-      if (!isOnTarget) {
-        isOnTarget = true;
-        compassBody.classList.add('spin');
-        compass.classList.add('pulse');
-      }
-      // while spinning we don't need to change the needle rotation
-      return;
-    } else {
-      // If previously pinned and moved past hitRadius, stop spin
-      if (isOnTarget && dist > hitRadius) {
-        isOnTarget = false;
-        compassBody.classList.remove('spin');
-        compass.classList.remove('pulse');
-      }
-      // rotate needle toward target (normal behavior)
-      const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-      compassBody.style.transform = `rotate(${angleDeg}deg)`;
-    }
-  }
-  // ---------- end updateCompassBearing ----------
-
-  // initialize markers (but don't position until map size known)
-  createTargetMarkers();
-
-  // ---------- Responsive compass sizing ----------
-  function setCompassSize() {
-    const rect = mapArea.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-
-    const cellWidth = rect.width / GRID_COLS;
-    // use 0.85 of cell width so the compass comfortably fits inside one grid cell
-    let diameter = Math.round(Math.max(COMPASS_MIN, Math.min(COMPASS_MAX, cellWidth * 0.85)));
-
-    compass.style.width  = diameter + 'px';
-    compass.style.height = diameter + 'px';
-
-    // adjust needle length proportionally
-    const needle = compassBody.querySelector('.needle');
-    if (needle) {
-      needle.style.height = Math.round(diameter * 0.60) + 'px';
-    }
-
-    // scale target markers so they remain visually consistent
-    targetMarkers.forEach(m => {
-      const markSize = Math.round(Math.max(10, Math.min(28, cellWidth * 0.45)));
-      m.el.style.width = markSize + 'px';
-      m.el.style.height = markSize + 'px';
-    });
-  }
-
-  // Use ResizeObserver to reposition markers responsively when map resizes
-  const ro = new ResizeObserver(() => {
+/* Initial layout when page loads */
+window.addEventListener('load', () => {
+  applyScale(scale); // apply initial transform and size logic
+  if (compassSection.classList.contains('active')) {
+    centerCompass();
     positionTargetMarkers();
     setCompassSize();
-    // if compass is visible, update bearing so transform calculations are correct
-    if (compassSection.classList.contains('active')) updateCompassBearing();
-  });
-  ro.observe(mapArea);
+    updateCompassBearing();
+  } else {
+    positionTargetMarkers();
+    setCompassSize();
+  }
+});
 
-  // call sizing immediately in case map is already sized
+/* Keep things updated on window resize too */
+window.addEventListener('resize', () => {
   setCompassSize();
-
-  // dragging
-  let dragging = false;
-  let startX   = 0;
-  let startY   = 0;
-  let compStartLeft = 0;
-  let compStartTop  = 0;
-
-  compass.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    dragging = true;
-    compass.classList.add('dragging');
-    compass.setPointerCapture(e.pointerId);
-
-    const mapRect  = mapArea.getBoundingClientRect();
-    const compRect = compass.getBoundingClientRect();
-
-    startX = e.clientX;
-    startY = e.clientY;
-
-    compStartLeft = compRect.left - mapRect.left + compRect.width / 2;
-    compStartTop  = compRect.top  - mapRect.top  + compRect.height / 2;
-
-    // If pinned, stop spin immediately so movement takes precedence.
-    if (isOnTarget) {
-      isOnTarget = false;
-      compassBody.classList.remove('spin');
-      compass.classList.remove('pulse');
-    }
-  });
-
-  compass.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
-    e.preventDefault();
-
-    const mapRect = mapArea.getBoundingClientRect();
-    const cW = compass.offsetWidth;
-    const cH = compass.offsetHeight;
-
-    const deltaX = e.clientX - startX;
-    const deltaY = e.clientY - startY;
-
-    let newLeft = compStartLeft + deltaX;
-    let newTop  = compStartTop  + deltaY;
-
-    newLeft = Math.max(cW/2, Math.min(newLeft, mapRect.width  - cW/2));
-    newTop  = Math.max(cH/2, Math.min(newTop,  mapRect.height - cH/2));
-
-    compass.style.left = newLeft + 'px';
-    compass.style.top  = newTop  + 'px';
-
-    updateCompassBearing();
-  });
-
-  compass.addEventListener('pointerup', (e) => {
-    if (!dragging) return;
-    e.preventDefault();
-    dragging = false;
-    compass.classList.remove('dragging');
-    try { compass.releasePointerCapture(e.pointerId); } catch (err) {}
-    updateCompassBearing(); // finalize orientation after drag
-  });
-
-  compass.addEventListener('pointercancel', (e) => {
-    if (!dragging) return;
-    e.preventDefault();
-    dragging = false;
-    compass.classList.remove('dragging');
-  });
-
-  // keyboard (desktop)
-  const step = 8;
-
-  window.addEventListener('keydown', (e) => {
-    if (compassSection.className.indexOf('active') === -1) return; // only when visible
-
-    const key = e.key;
-    const valid = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'];
-    if (!valid.includes(key)) return;
-
-    e.preventDefault();
-
-    // If pinned to a ritual, stop the spin immediately when user moves with keyboard.
-    if (isOnTarget) {
-      isOnTarget = false;
-      compassBody.classList.remove('spin');
-      compass.classList.remove('pulse');
-    }
-
-    const mapRect = mapArea.getBoundingClientRect();
-    const cW = compass.offsetWidth;
-    const cH = compass.offsetHeight;
-
-    let left = parseFloat(compass.style.left || '0');
-    let top  = parseFloat(compass.style.top  || '0');
-
-    if (key === 'ArrowUp'   || key === 'w' || key === 'W') top  -= step;
-    if (key === 'ArrowDown' || key === 's' || key === 'S') top  += step;
-    if (key === 'ArrowLeft' || key === 'a' || key === 'A') left -= step;
-    if (key === 'ArrowRight'|| key === 'd' || key === 'D') left += step;
-
-    left = Math.max(cW/2, Math.min(left, mapRect.width  - cW/2));
-    top  = Math.max(cH/2, Math.min(top,  mapRect.height - cH/2));
-
-    compass.style.left = left + 'px';
-    compass.style.top  = top  + 'px';
-
-    updateCompassBearing();
-  });
-
-  window.addEventListener('resize', () => {
-    setCompassSize();
-    if (compassSection.className.indexOf('active') !== -1){
-      centerCompass();
-      positionTargetMarkers();
-      updateCompassBearing();
-    }
-  });
-
-  // initial layout when page loads: center compass and position markers if visible
-  window.addEventListener('load', () => {
-    setCompassSize();
-    if (compassSection.classList.contains('active')) {
-      centerCompass();
-      positionTargetMarkers();
-      updateCompassBearing();
-    } else {
-      // position markers anyway so when revealed they are correct
-      positionTargetMarkers();
-    }
-  });
+  positionTargetMarkers();
+  updateCompassBearing();
+});
 
 </script>
 </body>
