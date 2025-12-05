@@ -66,7 +66,7 @@
   #compass.pulse::before{ content:""; position:absolute; inset:-8px; border-radius:50%; border:2px solid rgba(252,211,77,0.9); box-shadow:0 0 12px rgba(252,211,77,0.9); animation:pulse 0.8s ease-out infinite; }
 
   .target-marker{ position:absolute; width:18px; height:18px; border:0px transparent; border-radius:50%; transform:translate(-50%,-50%); box-sizing:border-box; pointer-events:none; z-index:4; background:transparent; }
-  .target-marker::after{ content:""; position:absolute; left:50%; top:50%; width:6px; height:6px; transform:translate(-50%,-50%); border-radius:50%; background: rgba(255,0,0,0.15); pointer-events:none; }
+  .target-marker::after{ content:""; position:absolute; left:50%; top:50%; width:6px; height:6px; transform:translate(-50%,-50%); border-radius:50%; background: rgba(0,0,0,0); pointer-events:none; }
 
   /* small helper for debug: add .hide-markers to body to hide the red circles (keeps them in DOM) */
   .hide-markers .target-marker{ border-color: transparent; }
@@ -408,4 +408,5 @@ window.addEventListener('resize', ()=> { setCompassSize(); positionTargetMarkers
 </script>
 </body>
 </html>
+
 
