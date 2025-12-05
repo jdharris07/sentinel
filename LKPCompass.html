@@ -59,16 +59,13 @@
     border-radius:10px;
     background-image:url("https://deadboltmysterysociety.com/lkpmap/");
     background-size:cover;
-    /* shifted slightly down so the top of the map image is less likely to be cropped */
     background-position:center 8%;
     background-repeat:no-repeat;
     overflow:hidden;
     touch-action:none;
-    /* IMPORTANT: we'll change visual scale with transform; keep origin centered for simpler UX */
     transform-origin:center center;
   }
 
-  /* default compass size will be overridden by JS to match grid cells (in unscaled px) */
   #compass{
     position:absolute;
     width:40px;
@@ -82,7 +79,6 @@
     z-index:5;
     touch-action:none;
   }
-
   #compass.dragging{ cursor:grabbing; }
 
   .compass-body{ position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center; transition:transform 0.08s linear; }
@@ -103,17 +99,16 @@
     animation:pulse 0.8s ease-out infinite;
   }
 
-  /* TARGET MARKERS (red outlined circles) */
   .target-marker{
     position:absolute;
     width:18px;
     height:18px;
-    border:0px solid red;
+    border:0px transparent;
     border-radius:50%;
     transform:translate(-50%,-50%);
     box-sizing:border-box;
-    pointer-events:none; /* don't block touches/clicks */
-    z-index:4; /* below compass (which is z-index:5) */
+    pointer-events:none;
+    z-index:4;
     background: transparent;
   }
 
@@ -144,9 +139,7 @@
     </div>
 
     <div class="lock-box">
-      <div class="rollers" id="rollers">
-        <!-- rollers are created by JS -->
-      </div>
+      <div class="rollers" id="rollers"></div>
       <button id="tryCodeBtn">Try the Code</button>
       <div id="lockMessage"></div>
     </div>
@@ -164,7 +157,6 @@
       <div id="compass">
         <div id="compassBody" class="compass-body"><div class="needle"></div></div>
       </div>
-      <!-- target marker elements will be appended here by JS -->
     </div>
   </div>
 
@@ -215,7 +207,7 @@ rollersContainer.addEventListener('click', (e)=>{
   if(e.target.classList.contains('roll-up')){
     digits[idx] = (digits[idx] + 1) % 10;
   } else if(e.target.classList.contains('roll-down')){
-    digits[idx] = (digits[idx] + 9) % 10; // -1 mod 10
+    digits[idx] = (digits[idx] + 9) % 10;
   } else {
     return;
   }
@@ -229,10 +221,8 @@ tryCodeBtn.addEventListener('click', ()=>{
   if(entered === correctCode){
     lockMessage.textContent = "The lock clicks open.";
     lockMessage.className = "success";
-    // reveal compass section
     lockSection.classList.add('hidden');
     compassSection.classList.add('active');
-    // ensure map/compass layout is ready
     setTimeout(()=>{
       centerCompass();
       positionTargetMarkers();
@@ -250,21 +240,18 @@ const mapArea     = document.getElementById('mapArea');
 const compass     = document.getElementById('compass');
 const compassBody = document.getElementById('compassBody');
 
-/* Zoom/scale variables:
-   - `scale` is the current visual scale applied to the mapArea via CSS transform.
-   - All stored style.left/top values are in *unscaled* pixels (map internal coordinates).
-*/
+/* Zoom/scale variables */
 let scale = 1;
 const SCALE_MIN = 0.6;
 const SCALE_MAX = 3.0;
-const SCALE_STEP = 0.06; // per wheel tick small step
+const SCALE_STEP = 0.06;
 
-// responsive sizing config
-const GRID_COLS = 16;   // set to number of vertical grid columns in your map image
-const COMPASS_MIN = 24; // px - smallest unscaled diameter
-const COMPASS_MAX = 96; // px - largest unscaled diameter
+/* responsive sizing config */
+const GRID_COLS = 16;
+const COMPASS_MIN = 24;
+const COMPASS_MAX = 96;
 
-// percentage-based targets (x% , y%)
+/* percentage-based targets */
 const targets = [
   { x: 47.9, y: 71.7 },
   { x: 28.7, y: 56.2 },
@@ -274,7 +261,6 @@ const targets = [
   { x: 85.7, y: 49.7 }
 ];
 
-// create marker elements (one per target) and keep refs so we can reposition
 const targetMarkers = [];
 
 function createTargetMarkers(){
@@ -288,13 +274,14 @@ function createTargetMarkers(){
     targetMarkers.push({ data: t, el });
   });
 }
+createTargetMarkers();
 
-// position the markers based on current map size (use UN-SCALED coordinates)
+/* position markers using UN-SCALED coordinates */
 function positionTargetMarkers(){
   const rect = mapArea.getBoundingClientRect();
   const wScaled = rect.width;
   const hScaled = rect.height;
-  const w = wScaled / scale; // unscaled width
+  const w = wScaled / scale;
   const h = hScaled / scale;
 
   targetMarkers.forEach(m => {
@@ -315,73 +302,75 @@ function centerCompass() {
 
 let isOnTarget = false;
 
-/* NO-SNAP updateCompassBearing()
-   This uses getBoundingClientRect() (which reports scaled coordinates)
-   to compute distances in client pixels and produces the same behavior
-   as before but without snapping the compass to the target.
-*/
+/* ---------- FIXED: updateCompassBearing uses UN-SCALED math for detection ---------- */
 function updateCompassBearing() {
-  const mapRect     = mapArea.getBoundingClientRect();
+  // map bounding in client px (scaled)
+  const mapRect = mapArea.getBoundingClientRect();
+
+  // compass bounding in client px (scaled)
   const compassRect = compass.getBoundingClientRect();
 
-  let cx = (compassRect.left + compassRect.width / 2) - mapRect.left;
-  let cy = (compassRect.top  + compassRect.height / 2) - mapRect.top;
+  // convert compass center to UN-SCALED map coordinates
+  // client offset of compass center relative to map top-left:
+  const cxClient = (compassRect.left + compassRect.width / 2) - mapRect.left;
+  const cyClient = (compassRect.top  + compassRect.height / 2) - mapRect.top;
+  // unscaled compass center:
+  const cx = cxClient / scale;
+  const cy = cyClient / scale;
 
-  const wScaled = mapRect.width;
-  const hScaled = mapRect.height;
+  // unscaled map dimensions
+  const mapUnscaledW = mapRect.width / scale;
+  const mapUnscaledH = mapRect.height / scale;
 
+  // find nearest target in unscaled coords
   let nearest = null;
   let minDistSq = Infinity;
-
-  // compute px positions for targets (scaled)
   targets.forEach(t => {
-    const tx = (t.x / 100) * wScaled / scale * scale; // keep scaled value: (t.x% * wScaled)
-    const ty = (t.y / 100) * hScaled / scale * scale; // simplified but explicit
-    // actually simpler: tx = (t.x/100) * wScaled; ty likewise
-    const tx2 = (t.x / 100) * wScaled;
-    const ty2 = (t.y / 100) * hScaled;
-    const dx = tx2 - cx;
-    const dy = ty2 - cy;
+    const tx = (t.x / 100) * mapUnscaledW;
+    const ty = (t.y / 100) * mapUnscaledH;
+    const dx = tx - cx;
+    const dy = ty - cy;
     const distSq = dx*dx + dy*dy;
     if (distSq < minDistSq) {
       minDistSq = distSq;
-      nearest = { tx: tx2, ty: ty2, distSq };
+      nearest = { tx, ty, distSq };
     }
   });
 
   if (!nearest) return;
 
+  // distances in UN-SCALED pixels
   const dx = nearest.tx - cx;
   const dy = nearest.ty - cy;
-  const dist = Math.sqrt(nearest.distSq);
+  const distUnscaled = Math.sqrt(nearest.distSq);
 
-  const hitRadius = 40;   // client px threshold to exit 'on-target' when moved away
-  const snapRadius = 35;  // client px threshold to enter 'on-target' (but we don't reposition)
+  // thresholds are UN-SCALED pixels (so they remain consistent visually when zooming)
+  const hitRadiusUnscaled = 40;   // move outside this to unpin
+  const snapRadiusUnscaled = 35;  // within this we go "on target" (but do not reposition)
 
-  if (dist <= snapRadius) {
+  if (distUnscaled <= snapRadiusUnscaled) {
     if (!isOnTarget) {
       isOnTarget = true;
       compassBody.classList.add('spin');
       compass.classList.add('pulse');
     }
-    // while on-target we show spin; don't change rotation
+    // when spinning we don't change rotation
     return;
   } else {
-    if (isOnTarget && dist > hitRadius) {
+    if (isOnTarget && distUnscaled > hitRadiusUnscaled) {
       isOnTarget = false;
       compassBody.classList.remove('spin');
       compass.classList.remove('pulse');
     }
-    // rotate needle to point at the target
+    // rotate needle toward target: compute angle using unscaled coordinates,
+    // but keep rotation applied to the compassBody (visuals are scaled by CSS transform).
     const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI + 90;
     compassBody.style.transform = `rotate(${angleDeg}deg)`;
   }
 }
+/* ---------- end fixed updateCompassBearing ---------- */
 
-// initialize markers
-createTargetMarkers();
-
-/* ---------- Responsive compass sizing (uses unscaled map width) ---------- */
+/* ---------- Responsive compass sizing (unscaled math) ---------- */
 function setCompassSize() {
   const rect = mapArea.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
@@ -403,69 +392,57 @@ function setCompassSize() {
 function applyScale(newScale) {
   scale = Math.max(SCALE_MIN, Math.min(SCALE_MAX, newScale));
   mapArea.style.transform = `scale(${scale})`;
-  // After changing scale, recalc sizes/positions using unscaled math
+  // After changing scale, recalc positions/sizes using unscaled math
   positionTargetMarkers();
   setCompassSize();
   updateCompassBearing();
 }
 
-/* wheel zoom: use Ctrl/Cmd+wheel or Meta for zooming (prevents conflicting with scroll) */
+/* wheel zoom (require ctrl/cmd to avoid page scroll conflicts) */
 mapArea.addEventListener('wheel', (e) => {
-  // if user holds ctrl/cmd or uses trackpad pinch (some browsers send ctrlKey), zoom
-  if (!(e.ctrlKey || e.metaKey)) return; // require modifier to avoid interfering with page scroll
+  if (!(e.ctrlKey || e.metaKey)) return;
   e.preventDefault();
-  const delta = -e.deltaY; // positive when zooming in
+  const delta = -e.deltaY;
   const factor = 1 + (delta > 0 ? SCALE_STEP : -SCALE_STEP);
   applyScale(scale * factor);
 }, { passive: false });
 
-/* Pointer-based pinch-to-zoom implementation */
+/* Pointer-based pinch-to-zoom */
 const pointers = new Map();
 let initialPinchDistance = null;
 let initialPinchScale = null;
-
 function getDistance(p1, p2) {
   const dx = p1.clientX - p2.clientX;
   const dy = p1.clientY - p2.clientY;
   return Math.hypot(dx, dy);
 }
-
 mapArea.addEventListener('pointerdown', (e) => {
   pointers.set(e.pointerId, e);
   if (pointers.size === 2) {
-    // start pinch
-    const [a, b] = Array.from(pointers.values());
-    initialPinchDistance = getDistance(a, b);
+    const [a,b] = Array.from(pointers.values());
+    initialPinchDistance = getDistance(a,b);
     initialPinchScale = scale;
   }
 });
-
 mapArea.addEventListener('pointermove', (e) => {
   if (pointers.has(e.pointerId)) pointers.set(e.pointerId, e);
   if (pointers.size === 2 && initialPinchDistance && initialPinchScale != null) {
-    const [a, b] = Array.from(pointers.values());
-    const dist = getDistance(a, b);
+    const [a,b] = Array.from(pointers.values());
+    const dist = getDistance(a,b);
     const ratio = dist / initialPinchDistance;
     applyScale(initialPinchScale * ratio);
   }
 });
-
 mapArea.addEventListener('pointerup', (e) => {
   pointers.delete(e.pointerId);
-  if (pointers.size < 2) {
-    initialPinchDistance = null;
-    initialPinchScale = null;
-  }
+  if (pointers.size < 2) { initialPinchDistance = null; initialPinchScale = null; }
 });
 mapArea.addEventListener('pointercancel', (e) => {
   pointers.delete(e.pointerId);
-  if (pointers.size < 2) {
-    initialPinchDistance = null;
-    initialPinchScale = null;
-  }
+  if (pointers.size < 2) { initialPinchDistance = null; initialPinchScale = null; }
 });
 
-/* ---------- Dragging behavior (use UN-SCALED coordinates internally) ---------- */
+/* ---------- Dragging behavior (unscaled coordinates) ---------- */
 let dragging = false;
 let startX = 0, startY = 0;
 let compStartLeftUnscaled = 0, compStartTopUnscaled = 0;
@@ -502,11 +479,9 @@ compass.addEventListener('pointermove', (e) => {
   const deltaX = e.clientX - startX;
   const deltaY = e.clientY - startY;
 
-  // delta in unscaled coords:
   const newLeftUnscaled = compStartLeftUnscaled + (deltaX / scale);
   const newTopUnscaled  = compStartTopUnscaled  + (deltaY / scale);
 
-  // compute unscaled map limits and unscaled compass size
   const mapUnscaledW = mapRect.width / scale;
   const mapUnscaledH = mapRect.height / scale;
   const compUnscaledW = compRect.width / scale;
@@ -537,15 +512,13 @@ compass.addEventListener('pointercancel', (e) => {
   compass.classList.remove('dragging');
 });
 
-/* ---------- Keyboard movement (works with unscaled stored left/top) ---------- */
+/* ---------- Keyboard movement (unscaled) ---------- */
 const step = 8;
 window.addEventListener('keydown', (e) => {
   if (compassSection.className.indexOf('active') === -1) return;
-
   const key = e.key;
   const valid = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'];
   if (!valid.includes(key)) return;
-
   e.preventDefault();
 
   if (isOnTarget) {
@@ -578,7 +551,7 @@ window.addEventListener('keydown', (e) => {
   updateCompassBearing();
 });
 
-/* Resize handling: reposition + rescale items */
+/* Resize observer and initial layout */
 const ro = new ResizeObserver(() => {
   positionTargetMarkers();
   setCompassSize();
@@ -586,9 +559,8 @@ const ro = new ResizeObserver(() => {
 });
 ro.observe(mapArea);
 
-/* Initial layout when page loads */
 window.addEventListener('load', () => {
-  applyScale(scale); // apply initial transform and size logic
+  applyScale(scale);
   if (compassSection.classList.contains('active')) {
     centerCompass();
     positionTargetMarkers();
@@ -599,15 +571,11 @@ window.addEventListener('load', () => {
     setCompassSize();
   }
 });
-
-/* Keep things updated on window resize too */
 window.addEventListener('resize', () => {
   setCompassSize();
   positionTargetMarkers();
   updateCompassBearing();
 });
-
 </script>
 </body>
 </html>
-
