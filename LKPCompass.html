@@ -12,7 +12,7 @@
     align-items:center;
     justify-content:center;
     background:#020617;
-    background-image:url("LKPpagebackground.png");
+    background-image:url("https://deadboltmysterysociety.com/lkppagebackground/");
     background-size:cover;
     background-position:center;
     background-repeat:no-repeat;
@@ -150,13 +150,16 @@
     margin:0 auto;
     border:2px solid #4b5563;
     border-radius:10px;
-    background-image:url("LKPmap.png");
+    background-image:url("https://deadboltmysterysociety.com/lkpmap/");
     background-size:cover;
-    background-position:center;
+    /* shifted slightly down so the top of the map image is less likely to be cropped */
+    background-position:center 8%;
+    background-repeat:no-repeat;
     overflow:hidden;
     touch-action:none;
   }
 
+  /* default compass size will be overridden by JS to match grid cells */
   #compass{
     position:absolute;
     width:40px;
@@ -239,6 +242,34 @@
     from{ transform:scale(0.9); opacity:1; }
     to{ transform:scale(1.15); opacity:0; }
   }
+
+  /* TARGET MARKERS (red outlined circles) */
+  .target-marker{
+    position:absolute;
+    width:18px;
+    height:18px;
+    border:0px solid red;
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    box-sizing:border-box;
+    pointer-events:none; /* don't block touches/clicks */
+    z-index:4; /* below compass (which is z-index:5) */
+    background: transparent;
+  }
+
+  .target-marker::after{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:6px;
+    height:6px;
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+    background: rgba(255,0,0,0.15);
+    pointer-events:none;
+  }
+
 </style>
 </head>
 <body>
@@ -265,7 +296,7 @@
   <div id="compassSection" class="">
     <h1>Last Known Position</h1>
     <div class="sub">
-      Drag the compass around the map. Its needle turns toward the nearest unseen point of interest.<br>
+      Drag the compass around the map. Its needle turns toward the nearest unseen ritual grounds.<br>
       When you’re directly over one, the compass goes wild.
     </div>
 
@@ -275,6 +306,7 @@
           <div class="needle"></div>
         </div>
       </div>
+      <!-- target marker elements will be appended here by JS -->
     </div>
   </div>
 
@@ -346,6 +378,8 @@
       // ensure map/compass layout is ready
       setTimeout(()=>{
         centerCompass();
+        positionTargetMarkers();
+        setCompassSize();
         updateCompassBearing();
       }, 50);
     } else {
@@ -359,6 +393,12 @@
   const compass     = document.getElementById('compass');
   const compassBody = document.getElementById('compassBody');
 
+  // responsive sizing config
+  const GRID_COLS = 16;   // set to number of vertical grid columns in your map image
+  const COMPASS_MIN = 24; // px - smallest diameter
+  const COMPASS_MAX = 96; // px - largest diameter
+
+  // percentage-based targets (x% , y%)
   const targets = [
     { x: 47.9, y: 71.7 },
     { x: 28.7, y: 56.2 },
@@ -368,6 +408,41 @@
     { x: 85.7, y: 49.7 }
   ];
 
+  // create marker elements (one per target) and keep refs so we can reposition
+  const targetMarkers = [];
+
+  function createTargetMarkers(){
+    // clear any existing markers
+    targetMarkers.forEach(m => {
+      if (m.el && m.el.parentNode) m.el.parentNode.removeChild(m.el);
+    });
+    targetMarkers.length = 0;
+
+    targets.forEach((t, idx) => {
+      const el = document.createElement('div');
+      el.className = 'target-marker';
+      el.dataset.index = idx;
+      // append to mapArea so positions are relative to it
+      mapArea.appendChild(el);
+      targetMarkers.push({ data: t, el });
+    });
+  }
+
+  // position the markers based on current map size
+  function positionTargetMarkers(){
+    const rect = mapArea.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+
+    targetMarkers.forEach(m => {
+      const tx = (m.data.x / 100) * w;
+      const ty = (m.data.y / 100) * h;
+      // position using left/top (mapArea is position:relative)
+      m.el.style.left = tx + 'px';
+      m.el.style.top  = ty + 'px';
+    });
+  }
+
   function centerCompass() {
     const rect = mapArea.getBoundingClientRect();
     compass.style.left = rect.width / 2 + 'px';
@@ -376,6 +451,7 @@
 
   let isOnTarget = false;
 
+  // ---------- NO-SNAP updateCompassBearing ----------
   function updateCompassBearing() {
     const mapRect     = mapArea.getBoundingClientRect();
     const compassRect = compass.getBoundingClientRect();
@@ -389,6 +465,7 @@
     let nearest = null;
     let minDistSq = Infinity;
 
+    // compute px positions for targets
     targets.forEach(t => {
       const tx = (t.x / 100) * w;
       const ty = (t.y / 100) * h;
@@ -407,29 +484,72 @@
     const dy = nearest.ty - cy;
     const dist = Math.sqrt(nearest.distSq);
 
-    const angleRad = Math.atan2(dy, dx);
-    const angleDeg = angleRad * 180 / Math.PI + 90; // 0deg = up
-
-    const hitRadius = 40;
-    const snapRadius = 35;
+    const hitRadius = 40;   // if you move outside this after being 'on target', it will unpin
+    const snapRadius = 35;  // within this radius we trigger the 'on-target' behavior but do NOT move the compass
 
     if (dist <= snapRadius) {
-      compass.style.left = nearest.tx + 'px';
-      compass.style.top  = nearest.ty + 'px';
+      // NO SNAPPING: keep compass where it is, but enter on-target visual state
       if (!isOnTarget) {
         isOnTarget = true;
         compassBody.classList.add('spin');
         compass.classList.add('pulse');
       }
+      // while spinning we don't need to change the needle rotation
+      return;
     } else {
+      // If previously pinned and moved past hitRadius, stop spin
       if (isOnTarget && dist > hitRadius) {
         isOnTarget = false;
         compassBody.classList.remove('spin');
         compass.classList.remove('pulse');
       }
+      // rotate needle toward target (normal behavior)
+      const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI + 90;
       compassBody.style.transform = `rotate(${angleDeg}deg)`;
     }
   }
+  // ---------- end updateCompassBearing ----------
+
+  // initialize markers (but don't position until map size known)
+  createTargetMarkers();
+
+  // ---------- Responsive compass sizing ----------
+  function setCompassSize() {
+    const rect = mapArea.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    const cellWidth = rect.width / GRID_COLS;
+    // use 0.85 of cell width so the compass comfortably fits inside one grid cell
+    let diameter = Math.round(Math.max(COMPASS_MIN, Math.min(COMPASS_MAX, cellWidth * 0.85)));
+
+    compass.style.width  = diameter + 'px';
+    compass.style.height = diameter + 'px';
+
+    // adjust needle length proportionally
+    const needle = compassBody.querySelector('.needle');
+    if (needle) {
+      needle.style.height = Math.round(diameter * 0.60) + 'px';
+    }
+
+    // scale target markers so they remain visually consistent
+    targetMarkers.forEach(m => {
+      const markSize = Math.round(Math.max(10, Math.min(28, cellWidth * 0.45)));
+      m.el.style.width = markSize + 'px';
+      m.el.style.height = markSize + 'px';
+    });
+  }
+
+  // Use ResizeObserver to reposition markers responsively when map resizes
+  const ro = new ResizeObserver(() => {
+    positionTargetMarkers();
+    setCompassSize();
+    // if compass is visible, update bearing so transform calculations are correct
+    if (compassSection.classList.contains('active')) updateCompassBearing();
+  });
+  ro.observe(mapArea);
+
+  // call sizing immediately in case map is already sized
+  setCompassSize();
 
   // dragging
   let dragging = false;
@@ -452,6 +572,13 @@
 
     compStartLeft = compRect.left - mapRect.left + compRect.width / 2;
     compStartTop  = compRect.top  - mapRect.top  + compRect.height / 2;
+
+    // If pinned, stop spin immediately so movement takes precedence.
+    if (isOnTarget) {
+      isOnTarget = false;
+      compassBody.classList.remove('spin');
+      compass.classList.remove('pulse');
+    }
   });
 
   compass.addEventListener('pointermove', (e) => {
@@ -482,7 +609,8 @@
     e.preventDefault();
     dragging = false;
     compass.classList.remove('dragging');
-    compass.releasePointerCapture(e.pointerId);
+    try { compass.releasePointerCapture(e.pointerId); } catch (err) {}
+    updateCompassBearing(); // finalize orientation after drag
   });
 
   compass.addEventListener('pointercancel', (e) => {
@@ -503,6 +631,13 @@
     if (!valid.includes(key)) return;
 
     e.preventDefault();
+
+    // If pinned to a ritual, stop the spin immediately when user moves with keyboard.
+    if (isOnTarget) {
+      isOnTarget = false;
+      compassBody.classList.remove('spin');
+      compass.classList.remove('pulse');
+    }
 
     const mapRect = mapArea.getBoundingClientRect();
     const cW = compass.offsetWidth;
@@ -526,13 +661,27 @@
   });
 
   window.addEventListener('resize', () => {
+    setCompassSize();
     if (compassSection.className.indexOf('active') !== -1){
       centerCompass();
+      positionTargetMarkers();
       updateCompassBearing();
     }
   });
+
+  // initial layout when page loads: center compass and position markers if visible
+  window.addEventListener('load', () => {
+    setCompassSize();
+    if (compassSection.classList.contains('active')) {
+      centerCompass();
+      positionTargetMarkers();
+      updateCompassBearing();
+    } else {
+      // position markers anyway so when revealed they are correct
+      positionTargetMarkers();
+    }
+  });
+
 </script>
 </body>
 </html>
-
-
