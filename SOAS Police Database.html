@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Valley Falls Police Database</title>
+<style>
+    body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        background-color: #0f172a;
+        color: #e5e7eb;
+    }
+
+    .container {
+        max-width: 420px;
+        margin: auto;
+        padding: 20px;
+    }
+
+    .header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .header h1 {
+        font-size: 1.2rem;
+        letter-spacing: 1px;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        opacity: 0.7;
+    }
+
+    .card {
+        background-color: #020617;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+
+    label {
+        font-size: 0.8rem;
+        opacity: 0.8;
+        display: block;
+        margin-top: 10px;
+    }
+
+    select, input {
+        width: 100%;
+        padding: 12px;
+        margin: 6px 0 14px;
+        border-radius: 6px;
+        border: none;
+        background-color: #111827;
+        color: #e5e7eb;
+        font-size: 1rem;
+    }
+
+    .row {
+        display: flex;
+        gap: 10px;
+    }
+
+    .checkbox-group {
+        margin: 10px 0 14px;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        row-gap: 10px;
+        column-gap: 12px;
+        align-items: center;
+    }
+
+    .checkbox-group label {
+        font-size: 0.85rem;
+        opacity: 0.9;
+        display: contents;
+    }
+
+    button {
+        width: 100%;
+        padding: 14px;
+        border-radius: 8px;
+        border: none;
+        background-color: #1d4ed8;
+        color: white;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+
+    button:active { background-color: #1e40af; }
+
+    .status {
+        text-align: center;
+        margin-top: 15px;
+        font-size: 0.9rem;
+        min-height: 20px;
+    }
+
+    .loading { color: #60a5fa; }
+    .error { color: #f87171; }
+
+    footer {
+        text-align: center;
+        font-size: 0.65rem;
+        opacity: 0.4;
+        margin-top: 20px;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Valley Falls Police Database</h1>
+        <div class="badge">Suspect Filtering System</div>
+    </div>
+
+    <div class="card">
+        <label>Gender</label>
+        <select id="gender">
+            <option value="">Select</option>
+            <option>Male</option>
+            <option>Female</option>
+            <option>Unknown</option>
+        </select>
+
+        <label>Age Range</label>
+        <div class="row">
+            <select id="ageMin">
+                <option value="">From</option>
+                <option>18</option><option>21</option><option>25</option>
+                <option>30</option><option>35</option><option>40</option>
+                <option>45</option><option>50</option><option>55</option>
+            </select>
+            <select id="ageMax">
+                <option value="">To</option>
+                <option>25</option><option>30</option><option>35</option>
+                <option>40</option><option>45</option><option>50</option>
+                <option>55</option><option>60</option>
+            </select>
+        </div>
+
+        <label>Height</label>
+        <select id="height">
+            <option value="">Select</option>
+            <option>5'0" – 5'4"</option>
+            <option>5'5" – 5'9"</option>
+            <option>5'10" – 6'2"</option>
+            <option>6'3"+</option>
+        </select>
+
+        <label>Weight</label>
+        <select id="weight">
+            <option value="">Select</option>
+            <option>120–150 lbs</option>
+            <option>151–180 lbs</option>
+            <option>181–220 lbs</option>
+            <option>221+ lbs</option>
+        </select>
+
+        <label>Special Characteristics</label>
+        <div class="checkbox-group">
+            <label><input type="checkbox" value="tattoo" class="feature"> Tattoo(s)</label>
+            <label><input type="checkbox" value="scars" class="feature"> Scar(s)</label>
+            <label><input type="checkbox" value="limp" class="feature"> Noticeable limp</label>
+            <label><input type="checkbox" value="piercing" class="feature"> Piercing(s)</label>
+            <label><input type="checkbox" value="facial hair" class="feature"> Distinct facial hair</label>
+        </div>
+
+        <button onclick="searchDatabase()">Search Database</button>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <footer>
+        Valley Falls PD • Internal Use Only
+    </footer>
+</div>
+
+<script>
+function searchDatabase() {
+    const status = document.getElementById("status");
+    status.className = "status loading";
+    status.textContent = "Searching Through Database...";
+
+    const gender = document.getElementById("gender").value;
+    const ageMin = document.getElementById("ageMin").value;
+    const ageMax = document.getElementById("ageMax").value;
+    const height = document.getElementById("height").value;
+    const weight = document.getElementById("weight").value;
+
+    const features = Array.from(document.querySelectorAll('.feature:checked'))
+        .map(cb => cb.value)
+        .sort()
+        .join(',');
+
+    // ✅ CORRECT ANSWERS (EDIT FOR YOUR GAME)
+    const correct = {
+        gender: "Male",
+        ageMin: "30",
+        ageMax: "40",
+        height: "5'10\" – 6'2\"",
+        weight: "181–220 lbs",
+        features: "scars,tattoo"
+    };
+
+    setTimeout(() => {
+        if (
+            gender === correct.gender &&
+            ageMin === correct.ageMin &&
+            ageMax === correct.ageMax &&
+            height === correct.height &&
+            weight === correct.weight &&
+            features === correct.features
+        ) {
+            window.location.href = "success.html";
+        } else {
+            status.className = "status error";
+            status.textContent = "No matching suspects found. Please refine search parameters.";
+        }
+    }, 1000);
+}
+</script>
+
+</body>
+</html>
