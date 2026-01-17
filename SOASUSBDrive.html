@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title> USB Drive</title>
+
+<style>
+body {
+    background:#0b0b0b;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    color:#fff;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    margin:0;
+}
+
+/* USB LOCK SCREEN */
+#lockScreen {
+    width:420px;
+    background:#111;
+    border:2px solid #333;
+    padding:20px;
+    text-align:center;
+}
+
+#lockScreen h2 {
+    margin-bottom:10px;
+    font-weight:600;
+}
+
+input[type="password"] {
+    width:80%;
+    padding:8px;
+    background:#000;
+    color:#0f0;
+    border:1px solid #444;
+}
+
+button {
+    margin-top:10px;
+    padding:6px 14px;
+    background:#222;
+    color:#fff;
+    border:1px solid #555;
+    cursor:pointer;
+}
+
+#status {
+    margin-top:12px;
+    font-size:14px;
+    color:#aaa;
+}
+
+/* DESKTOP */
+#desktop {
+    display:none;
+    width:600px;
+    height:350px;
+    background:#1a1a1a;
+    border:2px solid #444;
+    position:relative;
+    padding:10px;
+}
+
+.file {
+    width:80px;
+    text-align:center;
+    cursor:pointer;
+}
+
+.file-icon {
+    font-size:48px;
+}
+
+.file-name {
+    font-size:13px;
+    margin-top:4px;
+}
+
+/* NOTEPAD WINDOW */
+#notepad {
+    display:none;
+    position:absolute;
+    top:40px;
+    left:40px;
+    width:500px;
+    height:260px;
+    background:#f3f3f3;
+    color:#000;
+    border:2px solid #777;
+    box-shadow:4px 4px 10px rgba(0,0,0,0.6);
+}
+
+#notepad-header {
+    background:#e0e0e0;
+    padding:5px;
+    font-size:14px;
+    border-bottom:1px solid #aaa;
+}
+
+#notepad textarea {
+    width:100%;
+    height:calc(100% - 32px);
+    border:none;
+    resize:none;
+    padding:8px;
+    font-family: Consolas, monospace;
+    font-size:14px;
+    background:#fff;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOCK SCREEN -->
+<div id="lockScreen">
+    <h2>Encrypted USB Device</h2>
+    <p>Enter password to unlock contents:</p>
+    <input type="password" id="passwordInput" autofocus>
+    <br>
+    <button onclick="unlockUSB()">Unlock</button>
+    <div id="status"></div>
+</div>
+
+<!-- DESKTOP -->
+<div id="desktop">
+    <div class="file" id="textFile" onclick="openNotepad()">
+        <div class="file-icon">📄</div>
+        <div class="file-name">READ_ME.txt</div>
+    </div>
+
+    <div id="notepad">
+        <div id="notepad-header">READ_ME.txt - Notepad</div>
+        <textarea readonly>
+If you're reading this, it means you maybe aren't as incompetent as you seem. But a blind squirrel eventually finds a nut. 
+
+I will throw you a bone and tell you a little about this one. He put up more of a fight than I expected, but once the blade did it's job he lost all the fight he had. It didn't help that he weighed almost a hundred pounds more than me. I think I will stick to the fairer sex from now on. I rather enjoy watching them die at the hands of a man smarter and stronger than them. I will see you again soon. 
+        </textarea>
+    </div>
+</div>
+
+<script>
+const CORRECT_PASSWORD = "carotid";
+
+function unlockUSB() {
+    const input = document.getElementById("passwordInput").value;
+    const status = document.getElementById("status");
+
+    if (input.trim().toLowerCase() === CORRECT_PASSWORD) {
+        status.style.color = "#aaa";
+        status.textContent = "Decrypting USB...";
+
+        setTimeout(() => {
+            document.getElementById("lockScreen").style.display = "none";
+            document.getElementById("desktop").style.display = "block";
+
+            // Auto-click the text file after it appears
+            setTimeout(() => {
+                document.getElementById("textFile").click();
+            }, 800);
+
+        }, 1200);
+    } else {
+        status.style.color = "#f33";
+        status.textContent = "ACCESS DENIED";
+    }
+}
+
+function openNotepad() {
+    document.getElementById("notepad").style.display = "block";
+}
+</script>
+
+</body>
+</html>
