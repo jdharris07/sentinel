@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Valley Falls Police Database</title>
+<style>
+    body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        background-color: #0f172a;
+        color: #e5e7eb;
+    }
+
+    .container {
+        max-width: 420px;
+        margin: auto;
+        padding: 20px;
+    }
+
+    .header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .header h1 {
+        font-size: 1.2rem;
+        letter-spacing: 1px;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        opacity: 0.7;
+    }
+
+    .card {
+        background-color: #020617;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+
+    label {
+        font-size: 0.8rem;
+        opacity: 0.8;
+        display: block;
+        margin-top: 10px;
+    }
+
+    select {
+        width: 100%;
+        padding: 12px;
+        margin: 6px 0 14px;
+        border-radius: 6px;
+        border: none;
+        background-color: #111827;
+        color: #e5e7eb;
+        font-size: 1rem;
+    }
+
+    .row {
+        display: flex;
+        gap: 10px;
+    }
+
+    .checkbox-group {
+        margin: 10px 0 14px;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        row-gap: 10px;
+        column-gap: 12px;
+        align-items: center;
+    }
+
+    .checkbox-group label {
+        font-size: 0.85rem;
+        opacity: 0.9;
+        display: contents;
+    }
+
+    button {
+        width: 100%;
+        padding: 14px;
+        border-radius: 8px;
+        border: none;
+        background-color: #1d4ed8;
+        color: white;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+
+    button:active { background-color: #1e40af; }
+
+    .status {
+        text-align: center;
+        margin-top: 15px;
+        font-size: 0.9rem;
+        min-height: 20px;
+    }
+
+    .loading { color: #60a5fa; }
+    .error { color: #f87171; }
+
+    footer {
+        text-align: center;
+        font-size: 0.65rem;
+        opacity: 0.4;
+        margin-top: 20px;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Valley Falls Police Database</h1>
+        <div class="badge">Suspect Filtering System</div>
+    </div>
+
+    <div class="card">
+        <label>Gender</label>
+        <select id="gender">
+            <option value="">Select</option>
+            <option>Male</option>
+            <option>Female</option>
+            <option>Unknown</option>
+        </select>
+
+        <label>Age Range</label>
+        <div class="row">
+            <select id="ageMin"></select>
+            <select id="ageMax"></select>
+        </div>
+
+        <label>Height</label>
+        <select id="height"></select>
+
+        <label>Weight</label>
+        <select id="weight">
+            <option value="">Select</option>
+            <option>120 lbs</option>
+            <option>150 lbs</option>
+            <option>180 lbs</option>
+            <option>210 lbs</option>
+            <option>240+ lbs</option>
+        </select>
+
+        <label>Special Characteristics</label>
+        <div class="checkbox-group">
+            <label><input type="checkbox" value="scar" class="feature"> Scar</label>
+            <label><input type="checkbox" value="tattoo" class="feature"> Tattoo(s)</label>
+            <label><input type="checkbox" value="limp" class="feature"> Noticeable limp</label>
+            <label><input type="checkbox" value="piercing" class="feature"> Piercing(s)</label>
+            <label><input type="checkbox" value="facial hair" class="feature"> Distinct facial hair</label>
+        </div>
+
+        <button onclick="searchDatabase()">Search Database</button>
+        <div id="status" class="status"></div>
+    </div>
+
+    <footer>Valley Falls PD • Internal Use Only</footer>
+</div>
+
+<script>
+// Populate ages 1–99
+const ageMin = document.getElementById("ageMin");
+const ageMax = document.getElementById("ageMax");
+
+ageMin.innerHTML = '<option value="">From</option>';
+ageMax.innerHTML = '<option value="">To</option>';
+
+for (let i = 1; i <= 99; i++) {
+    ageMin.innerHTML += `<option>${i}</option>`;
+    ageMax.innerHTML += `<option>${i}</option>`;
+}
+
+// Populate heights 5'0" – 6'11"
+const heightSelect = document.getElementById("height");
+heightSelect.innerHTML = '<option value="">Select</option>';
+
+for (let feet = 5; feet <= 6; feet++) {
+    for (let inches = 0; inches <= 11; inches++) {
+        const label = inches === 0
+            ? `${feet}'`
+            : `${feet}'${inches}"`;
+        heightSelect.innerHTML += `<option>${label}</option>`;
+    }
+}
+
+function searchDatabase() {
+    const status = document.getElementById("status");
+    status.className = "status loading";
+    status.textContent = "Searching Through Database...";
+
+    const gender = document.getElementById("gender").value;
+    const minAge = document.getElementById("ageMin").value;
+    const maxAge = document.getElementById("ageMax").value;
+    const height = document.getElementById("height").value;
+    const weight = document.getElementById("weight").value;
+
+    const features = Array.from(document.querySelectorAll('.feature:checked'))
+        .map(cb => cb.value)
+        .sort()
+        .join(',');
+
+    setTimeout(() => {
+        if (
+            gender === "Male" &&
+            minAge === "38" &&
+            maxAge === "40" &&
+            height === "6'" &&
+            weight === "210 lbs" &&
+            features === "scar"
+        ) {
+            window.open("SOASsolution.pdf", "_blank");
+        } else {
+            status.className = "status error";
+            status.textContent =
+                "No matching suspects found. Please refine search parameters.";
+        }
+    }, 1000);
+}
+</script>
+
+</body>
+</html>
