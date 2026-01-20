@@ -47,7 +47,7 @@
         margin-top: 10px;
     }
 
-    select, input {
+    select {
         width: 100%;
         padding: 12px;
         margin: 6px 0 14px;
@@ -130,66 +130,73 @@
 
         <label>Age Range</label>
         <div class="row">
-            <select id="ageMin">
-                <option value="">From</option>
-                <option>18</option><option>21</option><option>25</option>
-                <option>30</option><option>35</option><option>40</option>
-                <option>45</option><option>50</option><option>55</option>
-            </select>
-            <select id="ageMax">
-                <option value="">To</option>
-                <option>25</option><option>30</option><option>35</option>
-                <option>40</option><option>45</option><option>50</option>
-                <option>55</option><option>60</option>
-            </select>
+            <select id="ageMin"></select>
+            <select id="ageMax"></select>
         </div>
 
         <label>Height</label>
-        <select id="height">
-            <option value="">Select</option>
-            <option>5'0" – 5'4"</option>
-            <option>5'5" – 5'9"</option>
-            <option>5'10" – 6'2"</option>
-            <option>6'3"+</option>
-        </select>
+        <select id="height"></select>
 
         <label>Weight</label>
         <select id="weight">
             <option value="">Select</option>
-            <option>120–150 lbs</option>
-            <option>151–180 lbs</option>
-            <option>181–220 lbs</option>
-            <option>221+ lbs</option>
+            <option>120 lbs</option>
+            <option>150 lbs</option>
+            <option>180 lbs</option>
+            <option>210 lbs</option>
+            <option>240+ lbs</option>
         </select>
 
         <label>Special Characteristics</label>
         <div class="checkbox-group">
+            <label><input type="checkbox" value="scar" class="feature"> Scar</label>
             <label><input type="checkbox" value="tattoo" class="feature"> Tattoo(s)</label>
-            <label><input type="checkbox" value="scars" class="feature"> Scar(s)</label>
             <label><input type="checkbox" value="limp" class="feature"> Noticeable limp</label>
             <label><input type="checkbox" value="piercing" class="feature"> Piercing(s)</label>
             <label><input type="checkbox" value="facial hair" class="feature"> Distinct facial hair</label>
         </div>
 
         <button onclick="searchDatabase()">Search Database</button>
-
         <div id="status" class="status"></div>
     </div>
 
-    <footer>
-        Valley Falls PD • Internal Use Only
-    </footer>
+    <footer>Valley Falls PD • Internal Use Only</footer>
 </div>
 
 <script>
+// Populate ages 1–99
+const ageMin = document.getElementById("ageMin");
+const ageMax = document.getElementById("ageMax");
+
+ageMin.innerHTML = '<option value="">From</option>';
+ageMax.innerHTML = '<option value="">To</option>';
+
+for (let i = 1; i <= 99; i++) {
+    ageMin.innerHTML += `<option>${i}</option>`;
+    ageMax.innerHTML += `<option>${i}</option>`;
+}
+
+// Populate heights 5'0" – 6'11"
+const heightSelect = document.getElementById("height");
+heightSelect.innerHTML = '<option value="">Select</option>';
+
+for (let feet = 5; feet <= 6; feet++) {
+    for (let inches = 0; inches <= 11; inches++) {
+        const label = inches === 0
+            ? `${feet}'`
+            : `${feet}'${inches}"`;
+        heightSelect.innerHTML += `<option>${label}</option>`;
+    }
+}
+
 function searchDatabase() {
     const status = document.getElementById("status");
     status.className = "status loading";
     status.textContent = "Searching Through Database...";
 
     const gender = document.getElementById("gender").value;
-    const ageMin = document.getElementById("ageMin").value;
-    const ageMax = document.getElementById("ageMax").value;
+    const minAge = document.getElementById("ageMin").value;
+    const maxAge = document.getElementById("ageMax").value;
     const height = document.getElementById("height").value;
     const weight = document.getElementById("weight").value;
 
@@ -198,29 +205,20 @@ function searchDatabase() {
         .sort()
         .join(',');
 
-    // ✅ CORRECT ANSWERS (EDIT FOR YOUR GAME)
-    const correct = {
-        gender: "Male",
-        ageMin: "30",
-        ageMax: "40",
-        height: "5'10\" – 6'2\"",
-        weight: "181–220 lbs",
-        features: "scars,tattoo"
-    };
-
     setTimeout(() => {
         if (
-            gender === correct.gender &&
-            ageMin === correct.ageMin &&
-            ageMax === correct.ageMax &&
-            height === correct.height &&
-            weight === correct.weight &&
-            features === correct.features
+            gender === "Male" &&
+            minAge === "38" &&
+            maxAge === "40" &&
+            height === "6'" &&
+            weight === "210 lbs" &&
+            features === "scar"
         ) {
-            window.location.href = "success.html";
+            window.open("SOASsolution.pdf", "_blank");
         } else {
             status.className = "status error";
-            status.textContent = "No matching suspects found. Please refine search parameters.";
+            status.textContent =
+                "No matching suspects found. Please refine search parameters.";
         }
     }, 1000);
 }
