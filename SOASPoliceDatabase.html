@@ -58,11 +58,6 @@
         font-size: 1rem;
     }
 
-    .row {
-        display: flex;
-        gap: 10px;
-    }
-
     .checkbox-group {
         margin: 10px 0 14px;
         display: grid;
@@ -128,11 +123,8 @@
             <option>Unknown</option>
         </select>
 
-        <label>Age Range</label>
-        <div class="row">
-            <select id="ageMin"></select>
-            <select id="ageMax"></select>
-        </div>
+        <label>Age</label>
+        <select id="age"></select>
 
         <label>Height</label>
         <select id="height"></select>
@@ -140,6 +132,8 @@
         <label>Weight</label>
         <select id="weight">
             <option value="">Select</option>
+            <option>-100 lbs</option>
+            <option>100 lbs</option>
             <option>120 lbs</option>
             <option>150 lbs</option>
             <option>180 lbs</option>
@@ -165,15 +159,11 @@
 
 <script>
 // Populate ages 1–99
-const ageMin = document.getElementById("ageMin");
-const ageMax = document.getElementById("ageMax");
-
-ageMin.innerHTML = '<option value="">From</option>';
-ageMax.innerHTML = '<option value="">To</option>';
+const ageSelect = document.getElementById("age");
+ageSelect.innerHTML = '<option value="">Select</option>';
 
 for (let i = 1; i <= 99; i++) {
-    ageMin.innerHTML += `<option>${i}</option>`;
-    ageMax.innerHTML += `<option>${i}</option>`;
+    ageSelect.innerHTML += `<option>${i}</option>`;
 }
 
 // Populate heights 5'0" – 6'11"
@@ -182,9 +172,7 @@ heightSelect.innerHTML = '<option value="">Select</option>';
 
 for (let feet = 5; feet <= 6; feet++) {
     for (let inches = 0; inches <= 11; inches++) {
-        const label = inches === 0
-            ? `${feet}'`
-            : `${feet}'${inches}"`;
+        const label = inches === 0 ? `${feet}'` : `${feet}'${inches}"`;
         heightSelect.innerHTML += `<option>${label}</option>`;
     }
 }
@@ -195,8 +183,7 @@ function searchDatabase() {
     status.textContent = "Searching Through Database...";
 
     const gender = document.getElementById("gender").value;
-    const minAge = document.getElementById("ageMin").value;
-    const maxAge = document.getElementById("ageMax").value;
+    const age = document.getElementById("age").value;
     const height = document.getElementById("height").value;
     const weight = document.getElementById("weight").value;
 
@@ -208,8 +195,7 @@ function searchDatabase() {
     setTimeout(() => {
         if (
             gender === "Male" &&
-            minAge === "38" &&
-            maxAge === "40" &&
+            age === "40" &&
             height === "6'" &&
             weight === "210 lbs" &&
             features === "scar"
