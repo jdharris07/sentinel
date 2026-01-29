@@ -200,7 +200,8 @@ function searchDatabase() {
             weight === "210 lbs" &&
             features === "scar"
         ) {
-            window.open("SOASsolution.pdf", "_blank");
+window.location.href = "SOASsolution.pdf";
+
         } else {
             status.className = "status error";
             status.textContent =
@@ -212,3 +213,4 @@ function searchDatabase() {
 
 </body>
 </html>
+
