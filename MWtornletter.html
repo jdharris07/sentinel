@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Torn Note – Evidence</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+    margin: 0;
+    padding: 20px;
+    background: #2b2b2b;
+    font-family: Arial, sans-serif;
+    color: #eee;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: normal;
+}
+
+.puzzle-container {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+    height: 420px;
+    margin: auto;
+    background: #3a3a3a;
+    border: 2px solid #111;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+    overflow: hidden;
+    touch-action: none;
+}
+
+.piece {
+    position: absolute;
+    width: 120px;
+    height: 140px;
+    background-image: url("MWtornnote.png");
+    background-size: 360px 420px;
+    cursor: grab;
+    touch-action: none;
+    z-index: 5;
+}
+
+.piece:active {
+    cursor: grabbing;
+    z-index: 20;
+}
+
+/* --- Perfectly torn edges, inner edges match --- */
+
+/* Top row */
+.top-left {
+    clip-path: polygon(0% 0%,100% 0%,100% 92%,88% 96%,64% 90%,36% 96%,12% 90%,0% 92%);
+}
+.top-middle {
+    clip-path: polygon(0% 0%,100% 0%,100% 92%,82% 96%,56% 90%,44% 96%,18% 90%,0% 92%);
+}
+.top-right {
+    clip-path: polygon(0% 0%,100% 0%,100% 92%,90% 96%,64% 90%,36% 96%,10% 90%,0% 92%);
+}
+
+/* Middle row */
+.mid-left {
+    clip-path: polygon(
+        0% 8%, 12% 4%, 36% 10%, 64% 4%, 88% 10%, 100% 8%, /* top jagged matches top-left bottom */
+        100% 92%, 88% 96%, 64% 90%, 36% 96%, 12% 90%, 0% 92% /* bottom jagged matches bot-left top */
+    );
+}
+.mid-center {
+    clip-path: polygon(
+        0% 8%, 18% 4%, 44% 10%, 56% 4%, 82% 10%, 100% 8%, /* top jagged matches top-middle bottom */
+        100% 92%, 82% 96%, 56% 90%, 44% 96%, 18% 90%, 0% 92% /* bottom jagged matches bot-middle top */
+    );
+}
+.mid-right {
+    clip-path: polygon(
+        0% 8%, 10% 4%, 36% 10%, 64% 4%, 88% 10%, 100% 8%, /* top jagged matches top-right bottom */
+        100% 92%, 90% 96%, 64% 90%, 36% 96%, 10% 90%, 0% 92% /* bottom jagged matches bot-right top */
+    );
+}
+
+/* Bottom row */
+.bot-left {
+    clip-path: polygon(0% 8%,12% 4%,36% 10%,64% 4%,88% 10%,100% 8%,100% 100%,0% 100%);
+}
+.bot-middle {
+    clip-path: polygon(0% 8%,18% 4%,44% 10%,56% 4%,82% 10%,100% 8%,100% 100%,0% 100%);
+}
+.bot-right {
+    clip-path: polygon(0% 8%,10% 4%,36% 10%,64% 4%,88% 10%,100% 8%,100% 100%,0% 100%);
+}
+</style>
+</head>
+<body>
+
+<h2>Torn Note</h2>
+
+<div class="puzzle-container" id="puzzle">
+    <div class="piece top-left"    style="background-position: 0px 0px;"></div>
+    <div class="piece top-middle"  style="background-position: -120px 0px;"></div>
+    <div class="piece top-right"   style="background-position: -240px 0px;"></div>
+
+    <div class="piece mid-left"    style="background-position: 0px -140px;"></div>
+    <div class="piece mid-center"  style="background-position: -120px -140px;"></div>
+    <div class="piece mid-right"   style="background-position: -240px -140px;"></div>
+
+    <div class="piece bot-left"    style="background-position: 0px -280px;"></div>
+    <div class="piece bot-middle"  style="background-position: -120px -280px;"></div>
+    <div class="piece bot-right"   style="background-position: -240px -280px;"></div>
+</div>
+
+<div class="hint">Drag the pieces to reconstruct the note.</div>
+
+<script>
+const pieces = document.querySelectorAll('.piece');
+const container = document.getElementById('puzzle');
+
+/* Random positions */
+pieces.forEach(piece => {
+    const maxX = container.clientWidth - piece.clientWidth;
+    const maxY = container.clientHeight - piece.clientHeight;
+    piece.style.left = Math.random() * maxX + 'px';
+    piece.style.top = Math.random() * maxY + 'px';
+});
+
+/* Drag logic */
+pieces.forEach(piece => {
+    let offsetX, offsetY, active = false;
+
+    piece.addEventListener('pointerdown', e => {
+        active = true;
+        piece.setPointerCapture(e.pointerId);
+        offsetX = e.clientX - piece.offsetLeft;
+        offsetY = e.clientY - piece.offsetTop;
+        piece.style.zIndex = 20;
+    });
+
+    piece.addEventListener('pointermove', e => {
+        if (!active) return;
+        let x = e.clientX - offsetX;
+        let y = e.clientY - offsetY;
+
+        x = Math.max(0, Math.min(x, container.clientWidth - piece.clientWidth));
+        y = Math.max(0, Math.min(y, container.clientHeight - piece.clientHeight));
+
+        piece.style.left = x + 'px';
+        piece.style.top = y + 'px';
+    });
+
+    piece.addEventListener('pointerup', () => {
+        active = false;
+        piece.style.zIndex = 5;
+    });
+});
+</script>
+
+</body>
+</html>

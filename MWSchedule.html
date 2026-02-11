@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Community Service Scheduling</title>
+
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+  padding: 16px;
+  margin: 0;
+}
+
+h1 { font-size: 1.4rem; }
+h2 { font-size: 1.1rem; margin-top: 20px; }
+
+ul { padding-left: 18px; font-size: 0.95rem; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+
+th, td {
+  border: 1px solid #334155;
+  padding: 6px;
+  text-align: center;
+}
+
+th { background: #1e293b; }
+td { background: #020617; }
+
+input { transform: scale(1.1); }
+
+button {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
+  font-size: 1rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+}
+
+#result {
+  margin-top: 12px;
+  font-weight: bold;
+}
+
+#puzzleContainer {
+  transition: opacity 0.5s ease;
+}
+
+#finalMessage {
+  display: none;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b1220;
+}
+
+.messageBox {
+  max-width: 700px;
+  background: #1e293b;
+  padding: 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  line-height: 1.5;
+  box-shadow: 0 0 20px rgba(0,0,0,0.6);
+}
+</style>
+</head>
+
+<body>
+
+<div id="puzzleContainer">
+
+<h1>Community Service Scheduling</h1>
+
+<p></p>
+
+<h2></h2>
+<ul>
+</li>
+</ul>
+
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th>
+<th>Fri</th><th>Sat</th><th>Sun</th>
+</tr>
+</thead>
+<tbody id="grid"></tbody>
+</table>
+
+<button onclick="check()">Check Schedule</button>
+<div id="result"></div>
+
+</div>
+
+<div id="finalMessage">
+  <div class="messageBox">
+    You hand Richard the schedule and he looks over it.<br><br>
+
+    "Looks good, I knew cops could be good for something. Okay, a deal is a deal. Like I said, when Mr. Tony was shot, I was helping one of the guys with something. Cowboy had brought me in on the down low to help move some counterfeit watches. Here, I snapped a picture of me wearing one because it looked so real. You can see him in the background and we were at Sal's Pawn Shop a few miles away from here. I don't know who killed him, but it wasn't Cowboy. Alright, I gotta go. If you decide you need a good watch, let me know!"
+  </div>
+</div>
+
+<script>
+const people = ["Richard","Lewis","Claire","Zara","Phillip","Marcus"];
+const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+const solution = {
+  Richard:["Mon","Wed","Thu","Fri"],
+  Lewis:["Mon","Wed","Thu","Sat","Fri"],
+  Claire:["Tue","Thu","Sat"],
+  Zara:["Wed","Fri","Sun"],
+  Phillip:["Mon","Tue"],
+  Marcus:["Sat","Sun"]
+};
+
+const grid = document.getElementById("grid");
+
+people.forEach(p=>{
+  const row=document.createElement("tr");
+  row.innerHTML=`<td>${p}</td>`;
+  days.forEach(d=>{
+    row.innerHTML+=`<td><input type="checkbox" data-p="${p}" data-d="${d}"></td>`;
+  });
+  grid.appendChild(row);
+});
+
+function check(){
+  const picks={};
+  people.forEach(p=>picks[p]=[]);
+  document.querySelectorAll("input:checked").forEach(c=>{
+    picks[c.dataset.p].push(c.dataset.d);
+  });
+
+  for(const p in solution){
+    if(picks[p].length !== solution[p].length){
+      result.textContent="❌ One or more rules are violated.";
+      return;
+    }
+    for(const d of solution[p]){
+      if(!picks[p].includes(d)){
+        result.textContent="❌ One or more rules are violated.";
+        return;
+      }
+    }
+  }
+
+  // SUCCESS — Replace entire screen
+  document.getElementById("puzzleContainer").style.display = "none";
+  document.getElementById("finalMessage").style.display = "flex";
+}
+</script>
+
+</body>
+</html>

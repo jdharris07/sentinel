@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Valley Falls Bank</title>
+
+<style>
+:root {
+    --bank-blue: #0f3d5e;
+    --light-gray: #f4f6f8;
+    --error-red: #b91c1c;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background-color: var(--light-gray);
+    color: #1f2937;
+}
+
+.container {
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 1.25rem;
+}
+
+.header {
+    text-align: center;
+    padding: 1.5rem 0;
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: white;
+    background-color: var(--bank-blue);
+}
+
+.card {
+    background: white;
+    padding: 1.25rem;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+label {
+    display: block;
+    margin-top: 1rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+input {
+    width: 100%;
+    padding: 0.6rem;
+    margin-top: 0.25rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+}
+
+input[readonly] {
+    background-color: #e5e7eb;
+}
+
+.password-wrapper {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.85rem;
+    color: var(--bank-blue);
+    cursor: pointer;
+    user-select: none;
+}
+
+button {
+    width: 100%;
+    margin-top: 1.25rem;
+    padding: 0.75rem;
+    background-color: var(--bank-blue);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.error {
+    margin-top: 0.75rem;
+    color: var(--error-red);
+    font-size: 0.9rem;
+    display: none;
+}
+
+/* Account page */
+.story-text {
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+.search-box {
+    margin-bottom: 1rem;
+}
+
+.transactions {
+    border-top: 1px solid #e5e7eb;
+}
+
+.transaction {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.9rem;
+}
+
+.transaction .details {
+    max-width: 70%;
+}
+
+.amount {
+    font-weight: 700;
+    white-space: nowrap;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">Valley Falls Bank</div>
+
+<div class="container">
+
+    <!-- LOGIN -->
+    <div id="loginCard" class="card">
+        <label>Username</label>
+        <input type="text" value="TMarco" readonly />
+
+        <label>Password</label>
+        <div class="password-wrapper">
+            <input type="password" id="passwordInput" />
+            <span class="toggle-password" onclick="togglePassword()">Show</span>
+        </div>
+
+        <button onclick="login()">Sign In</button>
+
+        <div id="errorMsg" class="error">Incorrect password</div>
+    </div>
+
+    <!-- STORY TEXT (NOT PART OF RESULTS) -->
+    <div id="storyText" class="story-text" style="display:none;">
+        Once you get into Tony's account you search through the transactions and find a few related to properties he had.
+        The results are just those seven fake ones, no need to allow anything else to be searched or used for now.
+    </div>
+
+    <!-- ACCOUNT -->
+    <div id="accountCard" class="card" style="display:none;">
+        <div class="search-box">
+            <input type="text" placeholder="Search transactions…" disabled />
+        </div>
+
+        <div class="transactions">
+            <div class="transaction">
+                <div class="details">Valley Falls Mortgage – Oak Ridge Dr</div>
+                <div class="amount">$1,250.00</div>
+            </div>
+
+            <div class="transaction">
+                <div class="details">VF Property Loan – Riverbend Ave</div>
+                <div class="amount">$1,480.00</div>
+            </div>
+
+            <div class="transaction">
+                <div class="details">Valley Falls Mortgage – Cedar Lane</div>
+                <div class="amount">$1,310.00</div>
+            </div>
+
+            <div class="transaction">
+                <div class="details">VF Holdings – Pinecrest Rd</div>
+                <div class="amount">$1,675.00</div>
+            </div>
+
+            <div class="transaction">
+                <div class="details">Valley Falls Mortgage – Willow Ct</div>
+                <div class="amount">$1,225.00</div>
+            </div>
+
+            <div class="transaction">
+                <div class="details">VF Property Services – Brookstone Way</div>
+                <div class="amount">$1,590.00</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+function login() {
+    const password = document.getElementById("passwordInput").value;
+    const errorMsg = document.getElementById("errorMsg");
+
+    if (password === "password123") {
+        document.getElementById("loginCard").style.display = "none";
+        document.getElementById("storyText").style.display = "block";
+        document.getElementById("accountCard").style.display = "block";
+    } else {
+        errorMsg.style.display = "block";
+        document.getElementById("passwordInput").value = "";
+    }
+}
+
+function togglePassword() {
+    const input = document.getElementById("passwordInput");
+    const toggle = document.querySelector(".toggle-password");
+
+    if (input.type === "password") {
+        input.type = "text";
+        toggle.textContent = "Hide";
+    } else {
+        input.type = "password";
+        toggle.textContent = "Show";
+    }
+}
+</script>
+
+</body>
+</html>
