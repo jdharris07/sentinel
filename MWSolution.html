@@ -83,7 +83,7 @@
 <div class="container">
     <div class="card">
         <h2>Solved all the puzzles and ready to close the case?</h2>
-        <p>Who is responsible for Tony Marco's murder? Give their full name, no nicknames.</p>
+        <p>Who is responsible for Tony Marco's murder? Give their nickname.</p>
         <input type="text" id="suspect" placeholder="Enter full name">
         <button onclick="checkAnswer()">Submit</button>
         <div id="status" class="status"></div>
@@ -94,7 +94,7 @@
 <script>
 function checkAnswer() {
     const input = document.getElementById('suspect').value.trim().toLowerCase().replace(/\s+/g,'');
-    const correct = 'anthonymarco';
+    const correct = 'hollywood';
     const status = document.getElementById('status');
 
     if(input === correct) {
@@ -112,3 +112,4 @@ function checkAnswer() {
 
 </body>
 </html>
+
