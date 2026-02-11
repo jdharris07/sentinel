@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case Closed</title>
+<style>
+    body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        background-color: black;
+        color: white;
+    }
+
+    .container {
+        max-width: 420px;
+        margin: auto;
+        padding: 20px;
+    }
+
+    .card {
+        background-color: #111;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 0 20px rgba(255,255,255,0.2);
+        text-align: center;
+    }
+
+    h2 {
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+    }
+
+    p {
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+    }
+
+    input {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        border: none;
+        margin-bottom: 15px;
+        font-size: 1rem;
+        background-color: #222;
+        color: white;
+    }
+
+    button {
+        width: 100%;
+        padding: 14px;
+        border-radius: 8px;
+        border: none;
+        background-color: #4be38f;
+        color: black;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    button:active { background-color: #3ad176; }
+
+    .status {
+        margin-top: 15px;
+        font-size: 0.9rem;
+        min-height: 20px;
+    }
+
+    .error { color: #ff6666; }
+    .success { color: #4be38f; }
+
+    footer {
+        text-align: center;
+        font-size: 0.65rem;
+        opacity: 0.4;
+        margin-top: 20px;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h2>Solved all the puzzles and ready to close the case?</h2>
+        <p>Who is responsible for Tony Marco's murder? Give their full name, no nicknames.</p>
+        <input type="text" id="suspect" placeholder="Enter full name">
+        <button onclick="checkAnswer()">Submit</button>
+        <div id="status" class="status"></div>
+    </div>
+    <footer>The Deadbolt Mystery Society.</footer>
+</div>
+
+<script>
+function checkAnswer() {
+    const input = document.getElementById('suspect').value.trim().toLowerCase().replace(/\s+/g,'');
+    const correct = 'anthonymarco';
+    const status = document.getElementById('status');
+
+    if(input === correct) {
+        status.className = 'status success';
+        status.textContent = "Correct! Opening solution...";
+
+        // Safari-friendly PDF open
+        window.location.href = "MWSolution.pdf";
+    } else {
+        status.className = 'status error';
+        status.textContent = "Incorrect. Try again!";
+    }
+}
+</script>
+
+</body>
+</html>
