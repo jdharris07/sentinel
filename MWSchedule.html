@@ -50,29 +50,53 @@ button {
 #result {
   margin-top: 12px;
   font-weight: bold;
+  color: #f87171;
 }
 
-#puzzleContainer {
-  transition: opacity 0.5s ease;
-}
-
-#finalMessage {
-  display: none;
-  height: 100vh;
+/* Modal Overlay */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0b1220;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  padding: 20px;
+  z-index: 9999;
 }
 
-.messageBox {
-  max-width: 700px;
+.modalOverlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modalBox {
   background: #1e293b;
+  max-width: 700px;
+  width: 100%;
   padding: 24px;
-  border-radius: 8px;
-  font-size: 1rem;
-  line-height: 1.5;
-  box-shadow: 0 0 20px rgba(0,0,0,0.6);
+  border-radius: 10px;
+  line-height: 1.6;
+  box-shadow: 0 0 30px rgba(0,0,0,0.6);
+  transform: scale(0.9);
+  transition: transform 0.3s ease;
+}
+
+.modalOverlay.active .modalBox {
+  transform: scale(1);
+}
+
+.closeBtn {
+  margin-top: 20px;
+  padding: 10px;
+  background: #334155;
+  border-radius: 6px;
+  text-align: center;
+  cursor: pointer;
 }
 </style>
 </head>
@@ -82,13 +106,6 @@ button {
 <div id="puzzleContainer">
 
 <h1>Community Service Scheduling</h1>
-
-<p></p>
-
-<h2></h2>
-<ul>
-</li>
-</ul>
 
 <table>
 <thead>
@@ -106,11 +123,14 @@ button {
 
 </div>
 
-<div id="finalMessage">
-  <div class="messageBox">
+<!-- MODAL -->
+<div class="modalOverlay" id="successModal">
+  <div class="modalBox">
     You hand Richard the schedule and he looks over it.<br><br>
 
     "Looks good, I knew cops could be good for something. Okay, a deal is a deal. Like I said, when Mr. Tony was shot, I was helping one of the guys with something. Cowboy had brought me in on the down low to help move some counterfeit watches. Here, I snapped a picture of me wearing one because it looked so real. You can see him in the background and we were at Sal's Pawn Shop a few miles away from here. I don't know who killed him, but it wasn't Cowboy. Alright, I gotta go. If you decide you need a good watch, let me know!"
+
+    <div class="closeBtn" onclick="closeModal()">Close</div>
   </div>
 </div>
 
@@ -128,6 +148,7 @@ const solution = {
 };
 
 const grid = document.getElementById("grid");
+const result = document.getElementById("result");
 
 people.forEach(p=>{
   const row=document.createElement("tr");
@@ -158,9 +179,19 @@ function check(){
     }
   }
 
-  // SUCCESS — Replace entire screen
-  document.getElementById("puzzleContainer").style.display = "none";
-  document.getElementById("finalMessage").style.display = "flex";
+  // SUCCESS
+  result.textContent="";
+  openModal();
+}
+
+function openModal(){
+  document.getElementById("successModal").classList.add("active");
+  document.body.style.overflow = "hidden";
+}
+
+function closeModal(){
+  document.getElementById("successModal").classList.remove("active");
+  document.body.style.overflow = "auto";
 }
 </script>
 
