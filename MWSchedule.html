@@ -128,16 +128,17 @@ button {
 </div>
 
 <script>
-const people = ["Richard","Marcus","Claire","Zara","Phillip"];
+const people = ["Richard","Marcus","Claire","Zara","Phillip", "Adam",];
 const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
 // ✅ One-solution schedule
 const solution = {
   Richard:["Mon","Wed","Fri","Sat","Sun"],
-  Marcus:["Thu","Fri","Sat","Sun"],
-  Claire:["Mon","Tue","Wed","Thu","Sat"],
-  Zara:["Tue","Thu","Fri","Sun"],
-  Phillip:["Mon","Tue","Wed"]
+  Marcus:["Mon","Wed","Fri","Sun"],
+  Claire:["Mon","Wed","Fri","Sun"],
+  Zara:["Tue","Thu","Sat"],
+  Phillip:["Tue","Thu"],
+  Adam:["Tue","Thu","Sat"]
 };
 
 const grid = document.getElementById("grid");
@@ -192,3 +193,4 @@ function closeModal(){
 
 </body>
 </html>
+
