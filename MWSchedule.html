@@ -135,16 +135,15 @@ button {
 </div>
 
 <script>
-const people = ["Richard","Lewis","Claire","Zara","Phillip","Marcus"];
+const people = ["Richard","Marcus","Claire","Zara","Phillip"];
 const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
 const solution = {
-  Richard:["Mon","Wed","Thu","Fri"],
-  Lewis:["Mon","Wed","Thu","Sat","Fri"],
-  Claire:["Tue","Thu","Sat"],
-  Zara:["Wed","Fri","Sun"],
-  Phillip:["Mon","Tue"],
-  Marcus:["Sat","Sun"]
+  Richard:["Mon","Wed","Fri","Sat","Sun"],
+  Marcus:["Fri","Sat","Sun"],
+  Claire:["Mon","Tue","Wed"],
+  Zara:["Tue","Fri","Sun"],
+  Phillip:["Mon","Tue","Wed"]
 };
 
 const grid = document.getElementById("grid");
@@ -179,7 +178,6 @@ function check(){
     }
   }
 
-  // SUCCESS
   result.textContent="";
   openModal();
 }
@@ -197,4 +195,5 @@ function closeModal(){
 
 </body>
 </html>
+
 
