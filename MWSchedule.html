@@ -15,10 +15,6 @@ body {
 }
 
 h1 { font-size: 1.4rem; }
-h2 { font-size: 1.1rem; margin-top: 20px; }
-
-ul { padding-left: 18px; font-size: 0.95rem; }
-
 table {
   width: 100%;
   border-collapse: collapse;
@@ -100,7 +96,6 @@ button {
 }
 </style>
 </head>
-
 <body>
 
 <div id="puzzleContainer">
@@ -127,9 +122,7 @@ button {
 <div class="modalOverlay" id="successModal">
   <div class="modalBox">
     You hand Richard the schedule and he looks over it.<br><br>
-
-    "Looks good, I knew cops could be good for something. Okay, a deal is a deal. Like I said, when Mr. Tony was shot, I was helping one of the guys with something. Cowboy had brought me in on the down low to help move some counterfeit watches. Here, I snapped a picture of me wearing one because it looked so real. You can see him in the background and we were at Sal's Pawn Shop a few miles away from here." Richard pulls out his phone and shows you a picture of him with a watch and there in the background is Santino along with the sign for Sal's Pawn. Checking the info on the picture confirms it. Richard take shis phone back before adding " I don't know who killed him, but it wasn't Cowboy. Alright, I gotta go. If you decide you need a good watch, let me know!"
-
+    "Looks good, I knew cops could be good for something. Okay, a deal is a deal. Like I said, when Mr. Tony was shot, I was helping one of the guys with something. Cowboy had brought me in on the down low to help move some counterfeit watches. Here, I snapped a picture of me wearing one because it looked so real. You can see him in the background and we were at Sal's Pawn Shop a few miles away from here." Richard pulls out his phone and shows you a picture of him with a watch and there in the background is Santino along with the sign for Sal's Pawn. Checking the info on the picture confirms it. Richard takes his phone back before adding, "I don't know who killed him, but it wasn't Cowboy. Alright, I gotta go. If you decide you need a good watch, let me know!"
     <div class="closeBtn" onclick="closeModal()">Close</div>
   </div>
 </div>
@@ -138,6 +131,7 @@ button {
 const people = ["Richard","Marcus","Claire","Zara","Phillip"];
 const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
+// ✅ One-solution schedule
 const solution = {
   Richard:["Mon","Wed","Fri","Sat","Sun"],
   Marcus:["Thu","Fri","Sat","Sun"],
@@ -146,40 +140,42 @@ const solution = {
   Phillip:["Mon","Tue","Wed"]
 };
 
-
 const grid = document.getElementById("grid");
 const result = document.getElementById("result");
 
+// Generate grid with checkboxes
 people.forEach(p=>{
-  const row=document.createElement("tr");
-  row.innerHTML=`<td>${p}</td>`;
+  const row = document.createElement("tr");
+  row.innerHTML = `<td>${p}</td>`;
   days.forEach(d=>{
-    row.innerHTML+=`<td><input type="checkbox" data-p="${p}" data-d="${d}"></td>`;
+    row.innerHTML += `<td><input type="checkbox" data-p="${p}" data-d="${d}"></td>`;
   });
   grid.appendChild(row);
 });
 
+// Check function validates exact one-solution schedule
 function check(){
-  const picks={};
-  people.forEach(p=>picks[p]=[]);
+  const picks = {};
+  people.forEach(p => picks[p] = []);
   document.querySelectorAll("input:checked").forEach(c=>{
     picks[c.dataset.p].push(c.dataset.d);
   });
 
   for(const p in solution){
     if(picks[p].length !== solution[p].length){
-      result.textContent="❌ One or more rules are violated.";
+      result.textContent = "❌ One or more rules are violated.";
       return;
     }
     for(const d of solution[p]){
       if(!picks[p].includes(d)){
-        result.textContent="❌ One or more rules are violated.";
+        result.textContent = "❌ One or more rules are violated.";
         return;
       }
     }
   }
 
-  result.textContent="";
+  // Success
+  result.textContent = "";
   openModal();
 }
 
@@ -196,6 +192,3 @@ function closeModal(){
 
 </body>
 </html>
-
-
-
