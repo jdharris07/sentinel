@@ -1,78 +1,158 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Outreach Tracker</title>
-  <style>
-    body { font-family: Arial; max-width: 600px; margin: 40px auto; }
-    input, select, textarea, button { width: 100%; margin: 8px 0; padding: 8px; }
-  </style>
+<title>Hexad Lead Gen</title>
+<style>
+body { font-family: Arial; max-width: 1100px; margin: 30px auto; }
+input, select, textarea, button {
+  margin: 5px;
+  padding: 6px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 6px;
+  font-size: 14px;
+}
+th { background: #f4f4f4; }
+</style>
 </head>
 <body>
 
-<h2>Add Contact</h2>
+<h1>Hexad Lead Gen</h1>
 
-<form id="contactForm">
-  <input type="text" id="user" placeholder="Your Name" required>
+<h3>Add Lead</h3>
 
-  <input type="text" id="company" placeholder="Company">
+<input id="user" placeholder="Your Name">
 
-  <input type="text" id="name" placeholder="Contact Name">
+<select id="company"></select>
 
-  <input type="text" id="phone" placeholder="Phone">
+<input id="name" placeholder="Contact Name">
+<input id="phone" placeholder="Phone">
+<input id="email" placeholder="Email">
 
-  <input type="email" id="email" placeholder="Email">
+<select id="method">
+<option>Phone</option>
+<option>Email</option>
+<option>LinkedIn</option>
+<option>In Person</option>
+</select>
 
-  <select id="method">
-    <option>Phone</option>
-    <option>Email</option>
-    <option>LinkedIn</option>
-    <option>In Person</option>
-  </select>
+<select id="status">
+<option>No Reply</option>
+<option>Not Interested</option>
+<option>Interested</option>
+<option>Meeting Set</option>
+</select>
 
-  <select id="status">
-    <option>No Reply</option>
-    <option>Not Interested</option>
-    <option>Interested</option>
-    <option>Meeting Set</option>
-  </select>
+<textarea id="notes" placeholder="Notes"></textarea>
 
-  <textarea id="notes" placeholder="Notes"></textarea>
+<button onclick="saveLead()">Save Lead</button>
+<p id="msg"></p>
 
-  <button type="submit">Save</button>
-</form>
+<hr>
 
-<p id="result"></p>
+<h3>Search</h3>
+<input id="search" placeholder="Search name, company, phone, email" onkeyup="filterTable()">
+
+<table id="leadsTable">
+<thead>
+<tr>
+<th>Date</th>
+<th>User</th>
+<th>Company</th>
+<th>Name</th>
+<th>Phone</th>
+<th>Email</th>
+<th>Method</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
 
 <script>
-const scriptURL = "https://script.google.com/macros/s/AKfycbyjkj9kAiIMvGMPyC56ohm2ZSmb3st7ysNt8xiAbLNkTmqWa9wUAbdYLU_kWYFR7QEQ1Q/exec ";
+const API = "https://script.google.com/macros/s/AKfycbyGbo9WMm7JHiBc5sIayWevuLtqJ5H2bPAUldm_apKrqWLQbXqmET-8fa3O65Iq_PTKSQ/exec";
 
-document.getElementById("contactForm").addEventListener("submit", e => {
-  e.preventDefault();
+let allData = [];
 
-  const data = {
-    user: document.getElementById("user").value,
-    company: document.getElementById("company").value,
-    name: document.getElementById("name").value,
-    phone: document.getElementById("phone").value,
-    email: document.getElementById("email").value,
-    method: document.getElementById("method").value,
-    status: document.getElementById("status").value,
-    notes: document.getElementById("notes").value
+async function loadCompanies() {
+  let res = await fetch(API + "?action=getCompanies");
+  let companies = await res.json();
+  let select = document.getElementById("company");
+
+  companies.forEach(c => {
+    let opt = document.createElement("option");
+    opt.text = c;
+    select.add(opt);
+  });
+}
+
+async function loadLeads() {
+  let res = await fetch(API + "?action=getLeads");
+  allData = await res.json();
+  renderTable(allData);
+}
+
+function renderTable(data) {
+  let tbody = document.querySelector("#leadsTable tbody");
+  tbody.innerHTML = "";
+
+  data.forEach(row => {
+    let tr = document.createElement("tr");
+    row.forEach(cell => {
+      let td = document.createElement("td");
+      td.textContent = cell;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function filterTable() {
+  let term = document.getElementById("search").value.toLowerCase();
+
+  let filtered = allData.filter(row =>
+    row.join(" ").toLowerCase().includes(term)
+  );
+
+  renderTable(filtered);
+}
+
+async function saveLead() {
+  let data = {
+    user: user.value,
+    company: company.value,
+    name: name.value,
+    phone: phone.value,
+    email: email.value,
+    method: method.value,
+    status: status.value,
+    notes: notes.value
   };
 
-  fetch(scriptURL, {
+  let res = await fetch(API, {
     method: "POST",
     body: JSON.stringify(data)
-  })
-  .then(response => response.json())
-  .then(() => {
-    document.getElementById("result").innerText = "Saved!";
-    document.getElementById("contactForm").reset();
-  })
-  .catch(error => {
-    document.getElementById("result").innerText = "Error saving";
   });
-});
+
+  let result = await res.json();
+
+  if (result.result === "duplicate") {
+    msg.innerText = "Duplicate detected (phone or email already exists)";
+  } else {
+    msg.innerText = "Lead saved";
+    loadLeads();
+  }
+}
+
+loadCompanies();
+loadLeads();
 </script>
 
 </body>
