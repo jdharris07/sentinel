@@ -9,6 +9,7 @@
   --dark: #0f172a;
   --card: #111827;
   --text: #e5e7eb;
+  --red: #7f1d1d;
 }
 
 body {
@@ -26,7 +27,6 @@ body {
 
 h1 {
   color: var(--green);
-  margin-bottom: 10px;
 }
 
 .card {
@@ -45,6 +45,15 @@ input, select, textarea {
   border: 1px solid #1f2937;
   color: white;
   border-radius: 6px;
+}
+
+select.placeholder {
+  color: #6b7280;
+}
+
+select.not-interested {
+  background: var(--red);
+  border-color: #ef4444;
 }
 
 button {
@@ -105,15 +114,16 @@ tr:hover {
 <input id="phone" placeholder="Phone">
 <input id="email" placeholder="Email">
 
-<select id="method">
-<option value="" disabled selected>Contact Method</option>
+<select id="method" class="placeholder">
+<option value="" disabled selected>Select Contact Method</option>
 <option>Phone</option>
 <option>Email</option>
 <option>LinkedIn</option>
 <option>In Person</option>
 </select>
 
-<select id="status">
+<select id="status" class="placeholder" onchange="statusColor()">
+<option value="" disabled selected>Select Status</option>
 <option>No Reply</option>
 <option>Not Interested</option>
 <option>Interested</option>
@@ -152,74 +162,50 @@ tr:hover {
 const API = "https://script.google.com/macros/s/AKfycbyll0r0Fu7O6jIyc3wRypxzx1hlpVjWvw1wc9CzEr3Fm-n5fLqbHXbNMeaFbj7U3kSHAw/exec";
 let allData = [];
 
-// Load company list into the select dropdown
+// Load Companies
 async function loadCompanies() {
-  try {
-    const res = await fetch(API + "?action=getCompanies");
-    const companies = await res.json();
-    company.innerHTML = companies.map(c => `<option>${c}</option>`).join("");
-  } catch (err) {
-    console.error("Error loading companies:", err);
-  }
+  const res = await fetch(API + "?action=getCompanies");
+  const companies = await res.json();
+  company.innerHTML = companies.map(c => `<option>${c}</option>`).join("");
 }
 
-// Load all leads from Google Sheets and render the table
+// Load Leads
 async function loadLeads() {
-  try {
-    const res = await fetch(API + "?action=getLeads");
-    allData = await res.json();
-
-    // Debug: check first row in console
-    console.log("Loaded leads:", allData[0]);
-
-    renderTable(allData);
-  } catch (err) {
-    console.error("Error loading leads:", err);
-  }
+  const res = await fetch(API + "?action=getLeads");
+  allData = await res.json();
+  renderTable(allData);
 }
 
-// Render the lead table
+// Render Table
 function renderTable(data) {
   tbody.innerHTML = "";
 
   data.forEach(r => {
-    // Safety: make sure array has enough elements
-    const rowNumber = r[0] || "";
-    const dateCreated = r[1] ? new Date(r[1]).toLocaleString() : "";
-    const userName = r[2] || "";
-    const companyName = r[3] || "";
-    const contactName = r[4] || "";
-    const phone = r[5] || "";
-    const email = r[6] || "";
-    const contactMethod = r[7] || "";
-    const status = r[8] || "";
-    const notes = r[9] || "";
-
     let tr = document.createElement("tr");
     tr.innerHTML = `
       <td><button class="edit-btn" onclick='editRow(${JSON.stringify(r)})'>Edit</button></td>
-      <td>${dateCreated}</td>
-      <td>${userName}</td>
-      <td>${companyName}</td>
-      <td>${contactName}</td>
-      <td>${phone}</td>
-      <td>${email}</td>
-      <td>${status}</td>
+      <td>${r[1] ? new Date(r[1]).toLocaleString() : ""}</td>
+      <td>${r[2] || ""}</td>
+      <td>${r[3] || ""}</td>
+      <td>${r[4] || ""}</td>
+      <td>${r[5] || ""}</td>
+      <td>${r[6] || ""}</td>
+      <td>${r[8] || ""}</td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-// Filter the table based on search input
+// Filter
 function filterTable() {
   const term = search.value.toLowerCase();
   const filtered = allData.filter(r => r.join(" ").toLowerCase().includes(term));
   renderTable(filtered);
 }
 
-// Populate form for editing a lead
+// Edit Row
 function editRow(r) {
-  row.value = r[0];          // Row number in sheet
+  row.value = r[0];
   user.value = r[2];
   company.value = r[3];
   name.value = r[4];
@@ -228,14 +214,35 @@ function editRow(r) {
   method.value = r[7] || "";
   status.value = r[8] || "";
   notes.value = r[9] || "";
-
+  statusColor();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Save a new lead or update an existing one
+// Status Color Logic
+function statusColor() {
+  status.classList.remove("not-interested");
+  status.classList.remove("placeholder");
+
+  if (status.value === "Not Interested") {
+    status.classList.add("not-interested");
+  }
+}
+
+// Duplicate Check (before save)
+function isDuplicate(phoneVal, emailVal, currentRow) {
+  return allData.some(r => {
+    if (currentRow && r[0] == currentRow) return false;
+    return (
+      (emailVal && r[6] === emailVal) ||
+      (phoneVal && r[5] === phoneVal)
+    );
+  });
+}
+
+// Save Lead
 async function saveLead() {
   const data = {
-    row: row.value,   // empty string = new row
+    row: row.value,
     user: user.value,
     company: company.value,
     name: name.value,
@@ -246,43 +253,40 @@ async function saveLead() {
     notes: notes.value
   };
 
-  try {
-    const res = await fetch(API, {
-      method: "POST",
-      body: JSON.stringify(data)
-    });
-
-    const result = await res.json();
-    msg.innerText = result.result;
-
-    // Clear form
-    row.value = "";
-    user.value = "";
-    company.value = "";
-    name.value = "";
-    phone.value = "";
-    email.value = "";
-    method.value = "";
-    status.value = "";
-    notes.value = "";
-
-    // Reload leads after a short delay to ensure appendRow commits
-    setTimeout(loadLeads, 150);
-  } catch (err) {
-    console.error("Error saving lead:", err);
-    msg.innerText = "Error saving lead.";
+  // Duplicate warning BEFORE save
+  if (isDuplicate(data.phone, data.email, data.row)) {
+    msg.innerText = "Duplicate found (same phone or email). Save cancelled.";
+    msg.style.color = "red";
+    return;
   }
+
+  const res = await fetch(API, {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+
+  const result = await res.json();
+  msg.innerText = result.result;
+  msg.style.color = "#6bb841";
+
+  // Reset form
+  row.value = "";
+  user.value = "";
+  name.value = "";
+  phone.value = "";
+  email.value = "";
+  notes.value = "";
+  method.selectedIndex = 0;
+  status.selectedIndex = 0;
+  status.classList.remove("not-interested");
+
+  setTimeout(loadLeads, 200);
 }
 
-// Initial load
+// Init
 loadCompanies();
 loadLeads();
 </script>
 
 </body>
 </html>
-
-
-
-
-
