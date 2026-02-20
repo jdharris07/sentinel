@@ -106,6 +106,7 @@ tr:hover {
 <input id="email" placeholder="Email">
 
 <select id="method">
+<option value="" disabled selected>Contact Method</option>
 <option>Phone</option>
 <option>Email</option>
 <option>LinkedIn</option>
@@ -171,13 +172,13 @@ function renderTable(data) {
 
     tr.innerHTML = `
       <td><button class="edit-btn" onclick='editRow(${JSON.stringify(r)})'>Edit</button></td>
-      <td>${new Date(r[1]).toLocaleDateString()}</td>
-      <td>${r[2]}</td>
-      <td>${r[3]}</td>
-      <td>${r[4]}</td>
-      <td>${r[5]}</td>
-      <td>${r[6]}</td>
-      <td>${r[8]}</td>
+      <td>${new Date(r[1]).toLocaleString()}</td>
+      <td>${r[2] || ""}</td>
+      <td>${r[3] || ""}</td>
+      <td>${r[4] || ""}</td>  <!-- Name -->
+      <td>${r[5] || ""}</td>
+      <td>${r[6] || ""}</td>
+      <td>${r[8] || ""}</td>  <!-- Status -->
     `;
 
     tbody.appendChild(tr);
@@ -197,9 +198,9 @@ function editRow(r) {
   name.value = r[4];
   phone.value = r[5];
   email.value = r[6];
-  method.value = r[7];
-  status.value = r[8];
-  notes.value = r[9];
+  method.value = r[7] || "";
+  status.value = r[8] || "";
+  notes.value = r[9] || "";
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -234,3 +235,4 @@ loadLeads();
 
 </body>
 </html>
+
