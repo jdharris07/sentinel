@@ -3,169 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <title>Hexad Lead Gen</title>
-
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
-  margin: 0;
-  padding: 20px;
-}
-
-h1 {
-  color: #6bb841;
-  margin-bottom: 10px;
-}
-
-.container {
-  width: 100%;
-}
-
-/* Collapsible form */
-.collapsible {
-  background: #1e293b;
-  color: #6bb841;
-  cursor: pointer;
-  padding: 12px;
-  width: 100%;
-  border: none;
-  text-align: left;
-  font-size: 16px;
-  border-radius: 6px;
-  margin-bottom: 10px;
-}
-
-.content {
-  display: none;
-  background: #1e293b;
-  padding: 10px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-}
-
-input, select, textarea {
-  padding: 6px;
-  margin: 4px;
-  border-radius: 6px;
-  border: none;
-}
-
-button.save {
-  background: #6bb841;
-  color: white;
-  padding: 8px 14px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-}
-
-button.save:hover {
-  opacity: 0.9;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #1e293b;
-}
-
-th {
-  background: #6bb841;
-  color: white;
-  padding: 8px;
-  text-align: left;
-  font-size: 14px;
-}
-
-td {
-  padding: 6px;
-  border-bottom: 1px solid #334155;
-  font-size: 13px;
-  vertical-align: top;
-}
-
-tr:hover {
-  background: #334155;
-}
-
-.status-red {
-  background: #7f1d1d;
-  color: #fff;
-  padding: 3px 6px;
-  border-radius: 4px;
-}
-
-.note-cell {
-  cursor: pointer;
-  color: #6bb841;
-}
-
-.search-box {
-  width: 300px;
-  padding: 8px;
-  margin-bottom: 10px;
-}
-
-/* Modal */
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 10;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.7);
-}
-
-.modal-content {
-  background: #1e293b;
-  margin: 10% auto;
-  padding: 20px;
-  width: 400px;
-  border-radius: 8px;
-}
-
-.close {
-  float: right;
-  cursor: pointer;
-  color: #6bb841;
-  font-size: 18px;
-}
+body { font-family: Arial; background: #0f172a; color: #e2e8f0; padding: 20px; }
+h1 { color: #6bb841; }
+input, select, textarea { padding: 6px; margin: 4px; border-radius: 6px; border: none; }
+button.save { background: #6bb841; color: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+table { width: 100%; border-collapse: collapse; background: #1e293b; }
+th { background: #6bb841; color: white; padding: 8px; }
+td { padding: 6px; border-bottom: 1px solid #334155; }
+.status-red { background: #7f1d1d; color: #fff; padding: 3px 6px; border-radius: 4px; }
+.note-cell { cursor: pointer; color: #6bb841; }
+.search-box { width: 300px; padding: 8px; margin-bottom: 10px; }
+.modal { display: none; position: fixed; z-index: 10; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.7); }
+.modal-content { background:#1e293b; margin:10% auto; padding:20px; width:400px; border-radius:8px; }
+.close { float:right; cursor:pointer; color:#6bb841; font-size:18px; }
+.collapsible { background: #1e293b; color:#6bb841; cursor:pointer; padding:12px; width:100%; border:none; text-align:left; font-size:16px; border-radius:6px; margin-bottom:10px; }
+.content { display:none; background:#1e293b; padding:10px; border-radius:6px; margin-bottom:20px; }
 </style>
 </head>
-
 <body>
-<div class="container">
-
 <h1>Hexad Lead Gen</h1>
-
 <input class="search-box" id="search" placeholder="Search name, company, phone or email..." onkeyup="loadLeads()">
-
 <button class="collapsible" onclick="toggleForm()">+ Add Lead</button>
-
 <div class="content" id="formSection">
   <input id="user" placeholder="Your Name">
   <select id="company"></select>
   <input id="name" placeholder="Contact Name">
   <input id="phone" placeholder="Phone">
   <input id="email" placeholder="Email">
-
   <select id="method">
     <option value="">Contact Method</option>
-    <option>Phone</option>
-    <option>Email</option>
-    <option>LinkedIn</option>
-    <option>In Person</option>
+    <option>Phone</option><option>Email</option><option>LinkedIn</option><option>In Person</option>
   </select>
-
   <select id="status">
     <option value="">Status</option>
-    <option>No Reply</option>
-    <option>Interested</option>
-    <option>Meeting Set</option>
-    <option>Not Interested</option>
+    <option>No Reply</option><option>Interested</option><option>Meeting Set</option><option>Not Interested</option>
   </select>
   <br>
   <textarea id="notes" placeholder="Notes" rows="3" cols="60"></textarea><br>
@@ -175,24 +47,13 @@ tr:hover {
 <table id="leadsTable">
 <thead>
 <tr>
-<th>Date</th>
-<th>User</th>
-<th>Company</th>
-<th>Name</th>
-<th>Phone</th>
-<th>Email</th>
-<th>Method</th>
-<th>Status</th>
-<th style="width:25%">Notes</th>
-<th>Edit</th>
+<th>Date</th><th>User</th><th>Company</th><th>Name</th><th>Phone</th><th>Email</th>
+<th>Method</th><th>Status</th><th style="width:25%">Notes</th><th>Edit</th>
 </tr>
 </thead>
 <tbody></tbody>
 </table>
 
-</div>
-
-<!-- Notes Modal -->
 <div id="noteModal" class="modal">
   <div class="modal-content">
     <span class="close" onclick="closeModal()">X</span>
@@ -202,161 +63,108 @@ tr:hover {
 </div>
 
 <script>
-const scriptURL = "https://script.google.com/macros/s/AKfycbz7DYwTUFvDtZj6fW5vFhQzxMYgEXbzcQJ3FCdiNp7ov2MtacGp2vx7y5yO5i8vuE4sOw/exec"; // 
+const scriptURL = "https://script.google.com/macros/s/AKfycbwvJs_LGOu_a4koD2TODZIb93SAj6hHqwKtDVTc_iCJ0TvhzynJYT8_VT-l9cD8TG9ABA/exec"; // replace with deployed Apps Script URL
 let editRow = null;
 
-// Wait for DOM to load
 window.onload = function(){
   loadCompanies();
   loadLeads();
 };
 
-// Toggle form visibility
 function toggleForm(){
-  let section = document.getElementById("formSection");
-  section.style.display = section.style.display === "block" ? "none" : "block";
+  const section = document.getElementById("formSection");
+  section.style.display = section.style.display==="block"?"none":"block";
 }
 
-// Load companies from backend
-async function loadCompanies(){
-  try {
-    let response = await fetch(scriptURL + "?action=getCompanies");
-    let data = await response.json();
-
-    let select = document.getElementById("company");
-    select.innerHTML = "<option value=''>Select Company</option>";
-
-    data.forEach(c=>{
-      let opt = document.createElement("option");
-      opt.value = c;
-      opt.text = c;
-      select.add(opt);
-    });
-  } catch(err) {
-    console.error("Failed to load companies:", err);
-    alert("Error loading companies. Check console.");
-  }
+function loadCompanies(){
+  fetch(scriptURL + "?action=getCompanies")
+  .then(r=>r.json())
+  .then(data=>{
+    const select = document.getElementById("company");
+    select.innerHTML="<option value=''>Select Company</option>";
+    data.forEach(c=>{ let opt=document.createElement("option"); opt.text=c; select.add(opt); });
+  })
+  .catch(err=>console.error("Failed to load companies:",err));
 }
 
-// Load leads from backend
-async function loadLeads(){
-  try {
-    let response = await fetch(scriptURL + "?action=getLeads");
-    let data = await response.json();
-
-    let search = document.getElementById("search").value.toLowerCase();
-    let tbody = document.querySelector("#leadsTable tbody");
-    tbody.innerHTML = "";
-
-    data.forEach(row => {
-      let text = row.join(" ").toLowerCase();
-      if (!text.includes(search)) return;
-
-      let statusClass = row[8] === "Not Interested" ? "status-red" : "";
-      let notePreview = (row[9] || "").substring(0, 60);
-
-      let tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${new Date(row[1]).toLocaleDateString()}</td>
-        <td>${row[2] || ""}</td>
-        <td>${row[3] || ""}</td>
-        <td>${row[4] || ""}</td>
-        <td>${row[5] || ""}</td>
-        <td>${row[6] || ""}</td>
-        <td>${row[7] || ""}</td>
-        <td class="${statusClass}">${row[8] || ""}</td>
-        <td class="note-cell" onclick="showNotes(\`${row[9] || ""}\`)">
-          ${notePreview}${row[9] && row[9].length > 60 ? "..." : ""}
-        </td>
-        <td><button onclick='editLead(${JSON.stringify(row)})'>Edit</button></td>
-      `;
+function loadLeads(){
+  fetch(scriptURL + "?action=getLeads")
+  .then(r=>r.json())
+  .then(data=>{
+    const search=document.getElementById("search").value.toLowerCase();
+    const tbody=document.querySelector("#leadsTable tbody");
+    tbody.innerHTML="";
+    data.forEach(row=>{
+      const text=row.join(" ").toLowerCase();
+      if(!text.includes(search)) return;
+      const statusClass=row[8]==="Not Interested"?"status-red":"";
+      const notePreview=(row[9]||"").substring(0,60);
+      const tr=document.createElement("tr");
+      tr.innerHTML=`<td>${new Date(row[1]).toLocaleDateString()}</td>
+        <td>${row[2]||""}</td>
+        <td>${row[3]||""}</td>
+        <td>${row[4]||""}</td>
+        <td>${row[5]||""}</td>
+        <td>${row[6]||""}</td>
+        <td>${row[7]||""}</td>
+        <td class="${statusClass}">${row[8]||""}</td>
+        <td class="note-cell" onclick="showNotes(\`${row[9]||""}\`)">${notePreview}${row[9]&&row[9].length>60?"...":""}</td>
+        <td><button onclick='editLead(${JSON.stringify(row)})'>Edit</button></td>`;
       tbody.appendChild(tr);
     });
-  } catch(err) {
-    console.error("Failed to load leads:", err);
-    alert("Error loading leads. Check console.");
-  }
+  })
+  .catch(err=>console.error("Failed to load leads:",err));
 }
 
-// Show notes modal
 function showNotes(text){
-  document.getElementById("modalText").innerText = text || "No notes";
-  document.getElementById("noteModal").style.display = "block";
+  document.getElementById("modalText").innerText=text||"No notes";
+  document.getElementById("noteModal").style.display="block";
 }
 
 function closeModal(){
-  document.getElementById("noteModal").style.display = "none";
+  document.getElementById("noteModal").style.display="none";
 }
 
-// Edit lead
 function editLead(row){
-  editRow = row[0];
-  document.getElementById("user").value = row[2];
-  
-  // Wait for companies to load before setting value
-  let companySelect = document.getElementById("company");
-  setTimeout(() => {
-    companySelect.value = row[3] || "";
-  }, 100);
-
-  document.getElementById("name").value = row[4];
-  document.getElementById("phone").value = row[5];
-  document.getElementById("email").value = row[6];
-  document.getElementById("method").value = row[7];
-  document.getElementById("status").value = row[8];
-  document.getElementById("notes").value = row[9];
-  document.getElementById("formSection").style.display = "block";
+  editRow=row[0];
+  document.getElementById("user").value=row[2];
+  document.getElementById("company").value=row[3];
+  document.getElementById("name").value=row[4];
+  document.getElementById("phone").value=row[5];
+  document.getElementById("email").value=row[6];
+  document.getElementById("method").value=row[7];
+  document.getElementById("status").value=row[8];
+  document.getElementById("notes").value=row[9];
+  document.getElementById("formSection").style.display="block";
 }
 
-// Save lead
-async function saveLead(){
-  const data = {
+function saveLead(){
+  const data={
     row: editRow,
-    user: document.getElementById("user").value,
-    company: document.getElementById("company").value,
-    name: document.getElementById("name").value,
-    phone: document.getElementById("phone").value,
-    email: document.getElementById("email").value,
-    method: document.getElementById("method").value,
-    status: document.getElementById("status").value,
-    notes: document.getElementById("notes").value
+    user: user.value,
+    company: company.value,
+    name: name.value,
+    phone: phone.value,
+    email: email.value,
+    method: method.value,
+    status: status.value,
+    notes: notes.value
   };
-
-  try {
-    let response = await fetch(scriptURL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(data)
-    });
-    let res = await response.json();
-
-    if(res.result === "duplicate"){
-      alert("Duplicate email or phone exists!");
-      return;
-    }
-
+  fetch(scriptURL,{
+    method:"POST",
+    body:JSON.stringify(data)
+  })
+  .then(r=>r.json())
+  .then(res=>{
+    if(res.result==="duplicate"){ alert("Duplicate email or phone exists!"); return; }
     alert("Saved!");
-    editRow = null;
-
-    // Clear form
-    document.querySelectorAll("input, textarea").forEach(i=>i.value="");
-    document.getElementById("company").value = "";
-    document.getElementById("method").value = "";
-    document.getElementById("status").value = "";
-    document.getElementById("formSection").style.display = "none";
-
+    editRow=null;
+    document.querySelectorAll("input,textarea").forEach(i=>i.value="");
+    document.getElementById("formSection").style.display="none";
     loadLeads();
-  } catch(err) {
-    console.error("Failed to save lead:", err);
-    alert("Error saving lead. Check console.");
-  }
+  })
+  .catch(err=>console.error("Failed to save lead:",err));
 }
 </script>
-
 </body>
 </html>
-
-
-
