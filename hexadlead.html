@@ -155,8 +155,8 @@ let allData = [];
 // Load company list into the select dropdown
 async function loadCompanies() {
   try {
-    let res = await fetch(API + "?action=getCompanies");
-    let companies = await res.json();
+    const res = await fetch(API + "?action=getCompanies");
+    const companies = await res.json();
     company.innerHTML = companies.map(c => `<option>${c}</option>`).join("");
   } catch (err) {
     console.error("Error loading companies:", err);
@@ -166,8 +166,12 @@ async function loadCompanies() {
 // Load all leads from Google Sheets and render the table
 async function loadLeads() {
   try {
-    let res = await fetch(API + "?action=getLeads");
+    const res = await fetch(API + "?action=getLeads");
     allData = await res.json();
+
+    // Debug: check first row in console
+    console.log("Loaded leads:", allData[0]);
+
     renderTable(allData);
   } catch (err) {
     console.error("Error loading leads:", err);
@@ -179,17 +183,28 @@ function renderTable(data) {
   tbody.innerHTML = "";
 
   data.forEach(r => {
-    let tr = document.createElement("tr");
+    // Safety: make sure array has enough elements
+    const rowNumber = r[0] || "";
+    const dateCreated = r[1] ? new Date(r[1]).toLocaleString() : "";
+    const userName = r[2] || "";
+    const companyName = r[3] || "";
+    const contactName = r[4] || "";
+    const phone = r[5] || "";
+    const email = r[6] || "";
+    const contactMethod = r[7] || "";
+    const status = r[8] || "";
+    const notes = r[9] || "";
 
+    let tr = document.createElement("tr");
     tr.innerHTML = `
       <td><button class="edit-btn" onclick='editRow(${JSON.stringify(r)})'>Edit</button></td>
-      <td>${new Date(r[1]).toLocaleString()}</td>   <!-- Date Created -->
-      <td>${r[2] || ""}</td>                        <!-- User -->
-      <td>${r[3] || ""}</td>                        <!-- Company -->
-      <td>${r[4] || ""}</td>                        <!-- Name -->
-      <td>${r[5] || ""}</td>                        <!-- Phone -->
-      <td>${r[6] || ""}</td>                        <!-- Email -->
-      <td>${r[8] || ""}</td>                        <!-- Status -->
+      <td>${dateCreated}</td>
+      <td>${userName}</td>
+      <td>${companyName}</td>
+      <td>${contactName}</td>
+      <td>${phone}</td>
+      <td>${email}</td>
+      <td>${status}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -197,14 +212,14 @@ function renderTable(data) {
 
 // Filter the table based on search input
 function filterTable() {
-  let term = search.value.toLowerCase();
-  let filtered = allData.filter(r => r.join(" ").toLowerCase().includes(term));
+  const term = search.value.toLowerCase();
+  const filtered = allData.filter(r => r.join(" ").toLowerCase().includes(term));
   renderTable(filtered);
 }
 
 // Populate form for editing a lead
 function editRow(r) {
-  row.value = r[0];        // Row number in sheet
+  row.value = r[0];          // Row number in sheet
   user.value = r[2];
   company.value = r[3];
   name.value = r[4];
@@ -219,7 +234,7 @@ function editRow(r) {
 
 // Save a new lead or update an existing one
 async function saveLead() {
-  let data = {
+  const data = {
     row: row.value,   // empty string = new row
     user: user.value,
     company: company.value,
@@ -232,12 +247,12 @@ async function saveLead() {
   };
 
   try {
-    let res = await fetch(API, {
+    const res = await fetch(API, {
       method: "POST",
       body: JSON.stringify(data)
     });
 
-    let result = await res.json();
+    const result = await res.json();
     msg.innerText = result.result;
 
     // Clear form
@@ -266,5 +281,6 @@ loadLeads();
 
 </body>
 </html>
+
 
 
