@@ -2,35 +2,105 @@
 <html>
 <head>
 <title>Hexad Lead Gen</title>
+
 <style>
-body { font-family: Arial; max-width: 1100px; margin: 30px auto; }
-input, select, textarea, button {
-  margin: 5px;
-  padding: 6px;f
+:root {
+  --green: #6bb841;
+  --dark: #0f172a;
+  --card: #111827;
+  --text: #e5e7eb;
 }
+
+body {
+  font-family: system-ui;
+  background: var(--dark);
+  color: var(--text);
+  margin: 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 30px;
+}
+
+h1 {
+  color: var(--green);
+  margin-bottom: 10px;
+}
+
+.card {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  box-shadow: 0 0 20px rgba(0,0,0,.4);
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 8px;
+  margin: 6px 0;
+  background: #020617;
+  border: 1px solid #1f2937;
+  color: white;
+  border-radius: 6px;
+}
+
+button {
+  background: var(--green);
+  border: none;
+  padding: 10px 16px;
+  color: black;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.1);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
 }
-th, td {
-  border: 1px solid #ccc;
+
+th {
+  background: #020617;
+  color: var(--green);
+  padding: 8px;
+}
+
+td {
   padding: 6px;
-  font-size: 14px;
+  border-bottom: 1px solid #1f2937;
 }
-th { background: #f4f4f4; }
+
+tr:hover {
+  background: #020617;
+}
+
+.edit-btn {
+  background: #1f2937;
+  color: var(--green);
+  padding: 4px 8px;
+  font-size: 12px;
+}
 </style>
 </head>
 <body>
 
+<div class="container">
+
 <h1>Hexad Lead Gen</h1>
 
-<h3>Add Lead</h3>
+<div class="card">
+<h3>Add / Edit Lead</h3>
 
+<input id="row" type="hidden">
 <input id="user" placeholder="Your Name">
-
 <select id="company"></select>
-
 <input id="name" placeholder="Contact Name">
 <input id="phone" placeholder="Phone">
 <input id="email" placeholder="Email">
@@ -51,46 +121,40 @@ th { background: #f4f4f4; }
 
 <textarea id="notes" placeholder="Notes"></textarea>
 
-<button onclick="saveLead()">Save Lead</button>
+<button onclick="saveLead()">Save</button>
 <p id="msg"></p>
+</div>
 
-<hr>
-
-<h3>Search</h3>
+<div class="card">
 <input id="search" placeholder="Search name, company, phone, email" onkeyup="filterTable()">
 
-<table id="leadsTable">
+<table>
 <thead>
 <tr>
+<th>Edit</th>
 <th>Date</th>
 <th>User</th>
 <th>Company</th>
 <th>Name</th>
 <th>Phone</th>
 <th>Email</th>
-<th>Method</th>
 <th>Status</th>
-<th>Notes</th>
 </tr>
 </thead>
-<tbody></tbody>
+<tbody id="tbody"></tbody>
 </table>
+</div>
+
+</div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbzvyFeZscaROfOTFdpcRV6iu-lhIR1Z3RZ4GL8xEXKD7TyrIg5g-onRVIw_9xgnadQ-uA/exec";
-
+const API = "https://script.google.com/macros/s/AKfycbyGPic4U9HyDIWORhlrW7y3hwrUnjswMsix6ePXl5Z3stEWX5bk6DeHuPl89j-5UaFwBw/exec";
 let allData = [];
 
 async function loadCompanies() {
   let res = await fetch(API + "?action=getCompanies");
   let companies = await res.json();
-  let select = document.getElementById("company");
-
-  companies.forEach(c => {
-    let opt = document.createElement("option");
-    opt.text = c;
-    select.add(opt);
-  });
+  company.innerHTML = companies.map(c => `<option>${c}</option>`).join("");
 }
 
 async function loadLeads() {
@@ -100,32 +164,49 @@ async function loadLeads() {
 }
 
 function renderTable(data) {
-  let tbody = document.querySelector("#leadsTable tbody");
   tbody.innerHTML = "";
 
-  data.forEach(row => {
+  data.forEach(r => {
     let tr = document.createElement("tr");
-    row.forEach(cell => {
-      let td = document.createElement("td");
-      td.textContent = cell;
-      tr.appendChild(td);
-    });
+
+    tr.innerHTML = `
+      <td><button class="edit-btn" onclick='editRow(${JSON.stringify(r)})'>Edit</button></td>
+      <td>${new Date(r[1]).toLocaleDateString()}</td>
+      <td>${r[2]}</td>
+      <td>${r[3]}</td>
+      <td>${r[4]}</td>
+      <td>${r[5]}</td>
+      <td>${r[6]}</td>
+      <td>${r[8]}</td>
+    `;
+
     tbody.appendChild(tr);
   });
 }
 
 function filterTable() {
-  let term = document.getElementById("search").value.toLowerCase();
-
-  let filtered = allData.filter(row =>
-    row.join(" ").toLowerCase().includes(term)
-  );
-
+  let term = search.value.toLowerCase();
+  let filtered = allData.filter(r => r.join(" ").toLowerCase().includes(term));
   renderTable(filtered);
+}
+
+function editRow(r) {
+  row.value = r[0];
+  user.value = r[2];
+  company.value = r[3];
+  name.value = r[4];
+  phone.value = r[5];
+  email.value = r[6];
+  method.value = r[7];
+  status.value = r[8];
+  notes.value = r[9];
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 async function saveLead() {
   let data = {
+    row: row.value,
     user: user.value,
     company: company.value,
     name: name.value,
@@ -142,13 +223,9 @@ async function saveLead() {
   });
 
   let result = await res.json();
-
-  if (result.result === "duplicate") {
-    msg.innerText = "Duplicate detected (phone or email already exists)";
-  } else {
-    msg.innerText = "Lead saved";
-    loadLeads();
-  }
+  msg.innerText = result.result;
+  row.value = "";
+  loadLeads();
 }
 
 loadCompanies();
@@ -157,5 +234,3 @@ loadLeads();
 
 </body>
 </html>
-
-
