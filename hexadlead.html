@@ -122,7 +122,7 @@ tr:hover {
 <option>In Person</option>
 </select>
 
-<select id="status" class="placeholder" onchange="statusColor()">
+<select id="status">
 <option value="" disabled selected>Select Status</option>
 <option>No Reply</option>
 <option>Not Interested</option>
@@ -242,17 +242,53 @@ function isDuplicate(phoneVal, emailVal, currentRow) {
 // Save Lead
 async function saveLead() {
   const data = {
-    row: row.value,
-    user: user.value,
-    company: company.value,
-    name: name.value,
-    phone: phone.value,
-    email: email.value,
-    method: method.value,
-    status: status.value,
-    notes: notes.value
+    row: document.getElementById("row").value,
+    user: document.getElementById("user").value.trim(),
+    company: document.getElementById("company").value,
+    name: document.getElementById("name").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    method: document.getElementById("method").value,
+    status: document.getElementById("status").value,
+    notes: document.getElementById("notes").value.trim()
   };
 
+  // Basic validation
+  if (!data.name) {
+    msg.innerText = "Contact name is required";
+    return;
+  }
+
+  if (!data.status) {
+    msg.innerText = "Please select a status";
+    return;
+  }
+
+  try {
+    const res = await fetch(API, {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+    msg.innerText = result.result;
+
+    // Clear form
+    document.getElementById("row").value = "";
+    document.getElementById("name").value = "";
+    document.getElementById("phone").value = "";
+    document.getElementById("email").value = "";
+    document.getElementById("method").value = "";
+    document.getElementById("status").value = "";
+    document.getElementById("notes").value = "";
+
+    loadLeads();
+
+  } catch (err) {
+    console.error(err);
+    msg.innerText = "Error saving lead";
+  }
+}
   // Duplicate warning BEFORE save
   if (isDuplicate(data.phone, data.email, data.row)) {
     msg.innerText = "Duplicate found (same phone or email). Save cancelled.";
@@ -286,8 +322,17 @@ async function saveLead() {
 // Init
 loadCompanies();
 loadLeads();
+
+  document.getElementById("status").addEventListener("change", function() {
+  if (this.value === "Not Interested") {
+    this.style.background = "#7f1d1d";
+  } else {
+    this.style.background = "";
+  }
+});
 </script>
 
 </body>
 </html>
+
 
