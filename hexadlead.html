@@ -202,37 +202,48 @@ tr:hover {
 </div>
 
 <script>
-const scriptURL = "YOUR_WEB_APP_URL";
+const scriptURL = "YOUR_WEB_APP_URL"; // <-- Replace this with your actual backend URL
 let editRow = null;
 
+// Wait for DOM to load
 window.onload = function(){
   loadCompanies();
   loadLeads();
 };
 
+// Toggle form visibility
 function toggleForm(){
   let section = document.getElementById("formSection");
   section.style.display = section.style.display === "block" ? "none" : "block";
 }
 
-function loadCompanies(){
-  fetch(scriptURL + "?action=getCompanies")
-  .then(r => r.json())
-  .then(data => {
+// Load companies from backend
+async function loadCompanies(){
+  try {
+    let response = await fetch(scriptURL + "?action=getCompanies");
+    let data = await response.json();
+
     let select = document.getElementById("company");
     select.innerHTML = "<option value=''>Select Company</option>";
+
     data.forEach(c=>{
       let opt = document.createElement("option");
+      opt.value = c;
       opt.text = c;
       select.add(opt);
     });
-  });
+  } catch(err) {
+    console.error("Failed to load companies:", err);
+    alert("Error loading companies. Check console.");
+  }
 }
 
-function loadLeads(){
-  fetch(scriptURL + "?action=getLeads")
-  .then(r => r.json())
-  .then(data => {
+// Load leads from backend
+async function loadLeads(){
+  try {
+    let response = await fetch(scriptURL + "?action=getLeads");
+    let data = await response.json();
+
     let search = document.getElementById("search").value.toLowerCase();
     let tbody = document.querySelector("#leadsTable tbody");
     tbody.innerHTML = "";
@@ -261,9 +272,13 @@ function loadLeads(){
       `;
       tbody.appendChild(tr);
     });
-  });
+  } catch(err) {
+    console.error("Failed to load leads:", err);
+    alert("Error loading leads. Check console.");
+  }
 }
 
+// Show notes modal
 function showNotes(text){
   document.getElementById("modalText").innerText = text || "No notes";
   document.getElementById("noteModal").style.display = "block";
@@ -273,10 +288,17 @@ function closeModal(){
   document.getElementById("noteModal").style.display = "none";
 }
 
+// Edit lead
 function editLead(row){
   editRow = row[0];
   document.getElementById("user").value = row[2];
-  document.getElementById("company").value = row[3];
+  
+  // Wait for companies to load before setting value
+  let companySelect = document.getElementById("company");
+  setTimeout(() => {
+    companySelect.value = row[3] || "";
+  }, 100);
+
   document.getElementById("name").value = row[4];
   document.getElementById("phone").value = row[5];
   document.getElementById("email").value = row[6];
@@ -286,25 +308,30 @@ function editLead(row){
   document.getElementById("formSection").style.display = "block";
 }
 
-function saveLead(){
-  let data = {
+// Save lead
+async function saveLead(){
+  const data = {
     row: editRow,
-    user: user.value,
-    company: company.value,
-    name: name.value,
-    phone: phone.value,
-    email: email.value,
-    method: method.value,
-    status: status.value,
-    notes: notes.value
+    user: document.getElementById("user").value,
+    company: document.getElementById("company").value,
+    name: document.getElementById("name").value,
+    phone: document.getElementById("phone").value,
+    email: document.getElementById("email").value,
+    method: document.getElementById("method").value,
+    status: document.getElementById("status").value,
+    notes: document.getElementById("notes").value
   };
 
-  fetch(scriptURL, {
-    method: "POST",
-    body: JSON.stringify(data)
-  })
-  .then(r=>r.json())
-  .then(res=>{
+  try {
+    let response = await fetch(scriptURL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+    let res = await response.json();
+
     if(res.result === "duplicate"){
       alert("Duplicate email or phone exists!");
       return;
@@ -312,10 +339,19 @@ function saveLead(){
 
     alert("Saved!");
     editRow = null;
+
+    // Clear form
     document.querySelectorAll("input, textarea").forEach(i=>i.value="");
+    document.getElementById("company").value = "";
+    document.getElementById("method").value = "";
+    document.getElementById("status").value = "";
     document.getElementById("formSection").style.display = "none";
+
     loadLeads();
-  });
+  } catch(err) {
+    console.error("Failed to save lead:", err);
+    alert("Error saving lead. Check console.");
+  }
 }
 </script>
 
