@@ -152,18 +152,29 @@ tr:hover {
 const API = "https://script.google.com/macros/s/AKfycbyGPic4U9HyDIWORhlrW7y3hwrUnjswMsix6ePXl5Z3stEWX5bk6DeHuPl89j-5UaFwBw/exec";
 let allData = [];
 
+// Load company list into the select dropdown
 async function loadCompanies() {
-  let res = await fetch(API + "?action=getCompanies");
-  let companies = await res.json();
-  company.innerHTML = companies.map(c => `<option>${c}</option>`).join("");
+  try {
+    let res = await fetch(API + "?action=getCompanies");
+    let companies = await res.json();
+    company.innerHTML = companies.map(c => `<option>${c}</option>`).join("");
+  } catch (err) {
+    console.error("Error loading companies:", err);
+  }
 }
 
+// Load all leads from Google Sheets and render the table
 async function loadLeads() {
-  let res = await fetch(API + "?action=getLeads");
-  allData = await res.json();
-  renderTable(allData);
+  try {
+    let res = await fetch(API + "?action=getLeads");
+    allData = await res.json();
+    renderTable(allData);
+  } catch (err) {
+    console.error("Error loading leads:", err);
+  }
 }
 
+// Render the lead table
 function renderTable(data) {
   tbody.innerHTML = "";
 
@@ -172,27 +183,28 @@ function renderTable(data) {
 
     tr.innerHTML = `
       <td><button class="edit-btn" onclick='editRow(${JSON.stringify(r)})'>Edit</button></td>
-      <td>${new Date(r[1]).toLocaleString()}</td>
-      <td>${r[2] || ""}</td>
-      <td>${r[3] || ""}</td>
-      <td>${r[4] || ""}</td>  <!-- Name -->
-      <td>${r[5] || ""}</td>
-      <td>${r[6] || ""}</td>
-      <td>${r[8] || ""}</td>  <!-- Status -->
+      <td>${new Date(r[1]).toLocaleString()}</td>   <!-- Date Created -->
+      <td>${r[2] || ""}</td>                        <!-- User -->
+      <td>${r[3] || ""}</td>                        <!-- Company -->
+      <td>${r[4] || ""}</td>                        <!-- Name -->
+      <td>${r[5] || ""}</td>                        <!-- Phone -->
+      <td>${r[6] || ""}</td>                        <!-- Email -->
+      <td>${r[8] || ""}</td>                        <!-- Status -->
     `;
-
     tbody.appendChild(tr);
   });
 }
 
+// Filter the table based on search input
 function filterTable() {
   let term = search.value.toLowerCase();
   let filtered = allData.filter(r => r.join(" ").toLowerCase().includes(term));
   renderTable(filtered);
 }
 
+// Populate form for editing a lead
 function editRow(r) {
-  row.value = r[0];
+  row.value = r[0];        // Row number in sheet
   user.value = r[2];
   company.value = r[3];
   name.value = r[4];
@@ -205,9 +217,10 @@ function editRow(r) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// Save a new lead or update an existing one
 async function saveLead() {
   let data = {
-    row: row.value,
+    row: row.value,   // empty string = new row
     user: user.value,
     company: company.value,
     name: name.value,
@@ -218,21 +231,40 @@ async function saveLead() {
     notes: notes.value
   };
 
-  let res = await fetch(API, {
-    method: "POST",
-    body: JSON.stringify(data)
-  });
+  try {
+    let res = await fetch(API, {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
 
-  let result = await res.json();
-  msg.innerText = result.result;
-  row.value = "";
-  loadLeads();
+    let result = await res.json();
+    msg.innerText = result.result;
+
+    // Clear form
+    row.value = "";
+    user.value = "";
+    company.value = "";
+    name.value = "";
+    phone.value = "";
+    email.value = "";
+    method.value = "";
+    status.value = "";
+    notes.value = "";
+
+    // Reload leads after a short delay to ensure appendRow commits
+    setTimeout(loadLeads, 150);
+  } catch (err) {
+    console.error("Error saving lead:", err);
+    msg.innerText = "Error saving lead.";
+  }
 }
 
+// Initial load
 loadCompanies();
 loadLeads();
 </script>
 
 </body>
 </html>
+
 
