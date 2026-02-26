@@ -2,68 +2,350 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Hexad Lead Gen</title>
+<title>GreenLead</title>
 <style>
-body { font-family: Arial; background: #0f172a; color: #e2e8f0; padding: 20px; }
-h1 { color: #6bb841; }
-input, select, textarea { padding: 6px; margin: 4px; border-radius: 6px; border: none; }
-button.save { background: #6bb841; color: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
-table { width: 100%; border-collapse: collapse; background: #1e293b; }
-th { background: #6bb841; color: white; padding: 8px; }
-td { padding: 6px; border-bottom: 1px solid #334155; }
-.status-red { background: #7f1d1d; color: #fff; padding: 3px 6px; border-radius: 4px; }
-.note-cell { cursor: pointer; color: #6bb841; }
-.search-box { width: 300px; padding: 8px; margin-bottom: 10px; }
-.modal { display: none; position: fixed; z-index: 10; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.7); }
-.modal-content { background:#1e293b; margin:10% auto; padding:20px; width:400px; border-radius:8px; }
-.close { float:right; cursor:pointer; color:#6bb841; font-size:18px; }
-.collapsible { background: #1e293b; color:#6bb841; cursor:pointer; padding:12px; width:100%; border:none; text-align:left; font-size:16px; border-radius:6px; margin-bottom:10px; }
-.content { display:none; background:#1e293b; padding:10px; border-radius:6px; margin-bottom:20px; }
+:root{
+  --brand:#6dc84d;
+  --bg:#0f172a;
+  --panel:#1e293b;
+  --panel2:#111827;
+  --border:#334155;
+  --text:#e2e8f0;
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin:0;
+}
+
+/* ===== Header ===== */
+.header{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 22px;
+  background: var(--panel2);
+  border-bottom:1px solid var(--border);
+}
+
+.logo{
+  height:44px;
+  width:auto;
+  object-fit:contain;
+  filter: drop-shadow(0 0 8px rgba(109,200,77,.35));
+}
+
+.brand{
+  display:flex;
+  flex-direction:column;
+  line-height:1.1;
+}
+
+.brand .title{
+  font-size:20px;
+  font-weight:700;
+  letter-spacing:.3px;
+}
+
+.brand .subtitle{
+  font-size:12px;
+  color:#9ca3af;
+}
+
+/* ===== Layout ===== */
+.container{
+  max-width:1400px;
+  margin:0 auto;
+  padding:22px;
+}
+
+/* ===== Controls ===== */
+.controls{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+
+.search-box{
+  width:min(520px, 100%);
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background: var(--panel);
+  color:white;
+  outline:none;
+}
+
+.search-box:focus{
+  border-color: rgba(109,200,77,.7);
+  box-shadow: 0 0 0 3px rgba(109,200,77,.15);
+}
+
+/* ===== Collapsible form ===== */
+.collapsible{
+  background: var(--brand);
+  color:#0b1220;
+  cursor:pointer;
+  padding:10px 14px;
+  border:none;
+  text-align:left;
+  font-weight:700;
+  font-size:14px;
+  border-radius:10px;
+  transition: filter .15s ease;
+}
+.collapsible:hover{ filter:brightness(1.05); }
+
+.content{
+  display:none;
+  background: var(--panel);
+  border:1px solid var(--border);
+  padding:14px;
+  border-radius:12px;
+  margin: 10px 0 18px 0;
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns: repeat(6, minmax(0,1fr));
+  gap:10px;
+}
+
+@media (max-width:1100px){
+  .form-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+@media (max-width:700px){
+  .form-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+
+input, select, textarea{
+  padding:10px 10px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:#0b1220;
+  color:white;
+  outline:none;
+  width:100%;
+}
+
+input:focus, select:focus, textarea:focus{
+  border-color: rgba(109,200,77,.7);
+  box-shadow: 0 0 0 3px rgba(109,200,77,.15);
+}
+
+textarea{
+  grid-column: 1 / -1;
+  resize: vertical;
+  min-height: 90px;
+}
+
+button.save{
+  background: var(--brand);
+  color:#0b1220;
+  padding:10px 14px;
+  border-radius:10px;
+  cursor:pointer;
+  border:none;
+  font-weight:800;
+  width:fit-content;
+}
+button.save:hover{ filter:brightness(1.05); }
+
+/* ===== Table ===== */
+.table-wrap{
+  background: var(--panel);
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+}
+
+table{
+  width:100%;
+  border-collapse: collapse;
+}
+
+th{
+  background: var(--panel2);
+  color: var(--brand);
+  padding:10px;
+  text-align:left;
+  font-size:13px;
+  border-bottom:1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+td{
+  padding:9px 10px;
+  border-bottom:1px solid var(--border);
+  font-size:13px;
+  vertical-align: top;
+}
+
+tr:hover{ background:#0b1220; }
+
+td.actions button{
+  background:#0b1220;
+  border:1px solid var(--border);
+  color: var(--brand);
+  padding:6px 10px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:700;
+}
+td.actions button:hover{
+  border-color: rgba(109,200,77,.7);
+}
+
+/* Status styling */
+.status-red{
+  background:#7f1d1d;
+  color:#fff;
+  padding:3px 8px;
+  border-radius:999px;
+  display:inline-block;
+  font-size:12px;
+  line-height:1.6;
+}
+
+/* Notes */
+.note-cell{
+  cursor:pointer;
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Modal */
+.modal{
+  display:none;
+  position:fixed;
+  z-index:10;
+  left:0;
+  top:0;
+  width:100%;
+  height:100%;
+  background: rgba(0,0,0,0.75);
+}
+
+.modal-content{
+  background: var(--panel);
+  margin: 8% auto;
+  padding:18px 18px 16px 18px;
+  width:min(520px, 92vw);
+  border-radius:12px;
+  border:1px solid var(--border);
+}
+
+.modal-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
+
+.modal-title{
+  margin:0;
+  color: var(--brand);
+  font-size:16px;
+  font-weight:800;
+}
+
+.close{
+  cursor:pointer;
+  color: var(--brand);
+  font-size:18px;
+  font-weight:900;
+  background: transparent;
+  border:none;
+}
 </style>
 </head>
+
 <body>
-<h1>Hexad Lead Gen</h1>
-<input class="search-box" id="search" placeholder="Search name, company, phone or email..." onkeyup="loadLeads()">
-<button class="collapsible" onclick="toggleForm()">+ Add Lead</button>
-<div class="content" id="formSection">
-  <input id="user" placeholder="Your Name">
-  <select id="company"></select>
-  <input id="name" placeholder="Contact Name">
-  <input id="phone" placeholder="Phone">
-  <input id="email" placeholder="Email">
-  <select id="method">
-    <option value="">Contact Method</option>
-    <option>Phone</option><option>Email</option><option>LinkedIn</option><option>In Person</option>
-  </select>
-  <select id="status">
-    <option value="">Status</option>
-    <option>No Reply</option><option>Interested</option><option>Meeting Set</option><option>Not Interested</option>
-  </select>
-  <br>
-  <textarea id="notes" placeholder="Notes" rows="3" cols="60"></textarea><br>
-  <button class="save" onclick="saveLead()">Save Lead</button>
+
+<!-- Header -->
+<div class="header">
+  <img src="GreenLeadLogo.png" class="logo" alt="GreenLead Logo">
+  <div class="brand">
+    <div class="title">GreenLead</div>
+    <div class="subtitle">Shared lead tracking</div>
+  </div>
 </div>
 
-<table id="leadsTable">
-<thead>
-<tr>
-<th>Date</th><th>User</th><th>Company</th><th>Name</th><th>Phone</th><th>Email</th>
-<th>Method</th><th>Status</th><th style="width:25%">Notes</th><th>Edit</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
+<div class="container">
 
-<div id="noteModal" class="modal">
+  <div class="controls">
+    <input class="search-box" id="search" placeholder="Search name, company, phone or email..." onkeyup="loadLeads()">
+    <button class="collapsible" onclick="toggleForm()">+ Add Lead</button>
+  </div>
+
+  <div class="content" id="formSection">
+    <div class="form-grid">
+      <input id="user" placeholder="Your Name">
+      <select id="company"></select>
+      <input id="name" placeholder="Contact Name">
+      <input id="phone" placeholder="Phone">
+      <input id="email" placeholder="Email">
+
+      <select id="method">
+        <option value="">Contact Method</option>
+        <option>Phone</option><option>Email</option><option>LinkedIn</option><option>In Person</option>
+      </select>
+
+      <select id="status">
+        <option value="">Status</option>
+        <option>No Reply</option><option>Interested</option><option>Meeting Set</option><option>Not Interested</option>
+      </select>
+
+      <textarea id="notes" placeholder="Notes" rows="3"></textarea>
+      <button class="save" onclick="saveLead()">Save Lead</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="leadsTable">
+      <thead>
+        <tr>
+          <th style="width:110px;">Date</th>
+          <th style="width:110px;">User</th>
+          <th style="width:180px;">Company</th>
+          <th style="width:140px;">Name</th>
+          <th style="width:130px;">Phone</th>
+          <th style="width:190px;">Email</th>
+          <th style="width:120px;">Method</th>
+          <th style="width:140px;">Status</th>
+          <th>Notes</th>
+          <th style="width:90px;">Edit</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Notes Modal -->
+<div id="noteModal" class="modal" onclick="if(event.target.id==='noteModal') closeModal();">
   <div class="modal-content">
-    <span class="close" onclick="closeModal()">X</span>
-    <h3>Notes</h3>
-    <div id="modalText"></div>
+    <div class="modal-head">
+      <h3 class="modal-title">Notes</h3>
+      <button class="close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalText" style="white-space:pre-wrap; line-height:1.5;"></div>
   </div>
 </div>
 
 <script>
-const scriptURL = "https://script.google.com/macros/s/AKfycbyDsZ1Y6Urvy7MCxdz5oVpkeCp7_ldVG_3gC9oUrb06RwxTPd05BGJrhf-91VV-z05U/exec"; // replace with deployed Apps Script URL
+const scriptURL = "https://script.google.com/macros/s/AKfycbyDsZ1Y6Urvy7MCxdz5oVpkeCp7_ldVG_3gC9oUrb06RwxTPd05BGJrhf-91VV-z05U/exec"; // keep your existing URL
 let editRow = null;
 
 window.onload = function(){
@@ -73,7 +355,7 @@ window.onload = function(){
 
 function toggleForm(){
   const section = document.getElementById("formSection");
-  section.style.display = section.style.display==="block"?"none":"block";
+  section.style.display = section.style.display==="block" ? "none" : "block";
 }
 
 function loadCompanies(){
@@ -82,7 +364,12 @@ function loadCompanies(){
   .then(data=>{
     const select = document.getElementById("company");
     select.innerHTML="<option value=''>Select Company</option>";
-    data.forEach(c=>{ let opt=document.createElement("option"); opt.text=c; select.add(opt); });
+    data.forEach(c=>{
+      let opt=document.createElement("option");
+      opt.text=c;
+      opt.value=c;
+      select.add(opt);
+    });
   })
   .catch(err=>console.error("Failed to load companies:",err));
 }
@@ -97,19 +384,25 @@ function loadLeads(){
     data.forEach(row=>{
       const text=row.join(" ").toLowerCase();
       if(!text.includes(search)) return;
-      const statusClass=row[8]==="Not Interested"?"status-red":"";
-      const notePreview=(row[9]||"").substring(0,60);
+
+      const statusClass=row[8]==="Not Interested" ? "status-red" : "";
+      const notePreview=(row[9]||"").replace(/\s+/g,' ').trim().substring(0,80);
+
       const tr=document.createElement("tr");
-      tr.innerHTML=`<td>${new Date(row[1]).toLocaleDateString()}</td>
+      tr.innerHTML=`
+        <td>${row[1] ? new Date(row[1]).toLocaleDateString() : ""}</td>
         <td>${row[2]||""}</td>
         <td>${row[3]||""}</td>
         <td>${row[4]||""}</td>
         <td>${row[5]||""}</td>
         <td>${row[6]||""}</td>
         <td>${row[7]||""}</td>
-        <td class="${statusClass}">${row[8]||""}</td>
-        <td class="note-cell" onclick="showNotes(\`${row[9]||""}\`)">${notePreview}${row[9]&&row[9].length>60?"...":""}</td>
-        <td><button onclick='editLead(${JSON.stringify(row)})'>Edit</button></td>`;
+        <td>${row[8] ? (row[8]==="Not Interested" ? `<span class="${statusClass}">${row[8]}</span>` : row[8]) : ""}</td>
+        <td class="note-cell" onclick="showNotes(\`${(row[9]||"").replace(/`/g,"\\`")}\`)">
+          ${notePreview}${(row[9] && row[9].length>80) ? "..." : ""}
+        </td>
+        <td class="actions"><button onclick='editLead(${JSON.stringify(row)})'>Edit</button></td>
+      `;
       tbody.appendChild(tr);
     });
   })
@@ -136,20 +429,23 @@ function editLead(row){
   document.getElementById("status").value=row[8];
   document.getElementById("notes").value=row[9];
   document.getElementById("formSection").style.display="block";
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function saveLead(){
+  // Keep your original behavior; only added safe DOM reads
   const data={
     row: editRow,
-    user: user.value,
-    company: company.value,
-    name: name.value,
-    phone: phone.value,
-    email: email.value,
-    method: method.value,
-    status: status.value,
-    notes: notes.value
+    user: document.getElementById("user").value,
+    company: document.getElementById("company").value,
+    name: document.getElementById("name").value,
+    phone: document.getElementById("phone").value,
+    email: document.getElementById("email").value,
+    method: document.getElementById("method").value,
+    status: document.getElementById("status").value,
+    notes: document.getElementById("notes").value
   };
+
   fetch(scriptURL,{
     method:"POST",
     body:JSON.stringify(data)
@@ -159,7 +455,17 @@ function saveLead(){
     if(res.result==="duplicate"){ alert("Duplicate email or phone exists!"); return; }
     alert("Saved!");
     editRow=null;
-    document.querySelectorAll("input,textarea").forEach(i=>i.value="");
+
+    // clear form
+    document.getElementById("user").value="";
+    document.getElementById("company").value="";
+    document.getElementById("name").value="";
+    document.getElementById("phone").value="";
+    document.getElementById("email").value="";
+    document.getElementById("method").value="";
+    document.getElementById("status").value="";
+    document.getElementById("notes").value="";
+
     document.getElementById("formSection").style.display="none";
     loadLeads();
   })
@@ -168,9 +474,3 @@ function saveLead(){
 </script>
 </body>
 </html>
-
-
-
-
-
-
