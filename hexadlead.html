@@ -26,14 +26,21 @@ body{
 .header{
   display:flex;
   align-items:center;
+  justify-content:space-between;
   gap:14px;
   padding:14px 22px;
   background: var(--panel2);
   border-bottom:1px solid var(--border);
 }
 
+.header-left{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
 .logo{
-  height:120px;
+  height:44px;
   width:auto;
   object-fit:contain;
   filter: drop-shadow(0 0 8px rgba(109,200,77,.35));
@@ -54,6 +61,42 @@ body{
 .brand .subtitle{
   font-size:12px;
   color:#9ca3af;
+}
+
+.header-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.user-pill{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:#0b1220;
+  color:#cbd5e1;
+  font-size:13px;
+}
+
+.user-dot{
+  width:8px;height:8px;border-radius:999px;background:var(--brand);
+  box-shadow: 0 0 0 3px rgba(109,200,77,.15);
+}
+
+.btn{
+  border:1px solid var(--border);
+  background:#0b1220;
+  color:var(--brand);
+  padding:8px 10px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:700;
+}
+.btn:hover{
+  border-color: rgba(109,200,77,.7);
 }
 
 /* ===== Layout ===== */
@@ -96,7 +139,7 @@ body{
   padding:10px 14px;
   border:none;
   text-align:left;
-  font-weight:700;
+  font-weight:800;
   font-size:14px;
   border-radius:10px;
   transition: filter .15s ease;
@@ -117,13 +160,8 @@ body{
   grid-template-columns: repeat(6, minmax(0,1fr));
   gap:10px;
 }
-
-@media (max-width:1100px){
-  .form-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
-}
-@media (max-width:700px){
-  .form-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-}
+@media (max-width:1100px){ .form-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+@media (max-width:700px){ .form-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
 
 input, select, textarea{
   padding:10px 10px;
@@ -153,7 +191,7 @@ button.save{
   border-radius:10px;
   cursor:pointer;
   border:none;
-  font-weight:800;
+  font-weight:900;
   width:fit-content;
 }
 button.save:hover{ filter:brightness(1.05); }
@@ -174,8 +212,8 @@ table{
 th{
   background: var(--panel2);
   color: var(--brand);
-  padding:10px;
   text-align:left;
+  padding:10px;
   font-size:13px;
   border-bottom:1px solid var(--border);
   position: sticky;
@@ -199,11 +237,9 @@ td.actions button{
   padding:6px 10px;
   border-radius:10px;
   cursor:pointer;
-  font-weight:700;
+  font-weight:800;
 }
-td.actions button:hover{
-  border-color: rgba(109,200,77,.7);
-}
+td.actions button:hover{ border-color: rgba(109,200,77,.7); }
 
 /* Status styling */
 .status-red{
@@ -224,7 +260,7 @@ td.actions button:hover{
   text-underline-offset: 2px;
 }
 
-/* Modal */
+/* Notes Modal */
 .modal{
   display:none;
   position:fixed;
@@ -240,7 +276,7 @@ td.actions button:hover{
   background: var(--panel);
   margin: 8% auto;
   padding:18px 18px 16px 18px;
-  width:min(520px, 92vw);
+  width:min(560px, 92vw);
   border-radius:12px;
   border:1px solid var(--border);
 }
@@ -256,7 +292,7 @@ td.actions button:hover{
   margin:0;
   color: var(--brand);
   font-size:16px;
-  font-weight:800;
+  font-weight:900;
 }
 
 .close{
@@ -267,6 +303,30 @@ td.actions button:hover{
   background: transparent;
   border:none;
 }
+
+/* Login Modal */
+.login-card{
+  background: var(--panel);
+  margin: 10% auto;
+  padding:18px;
+  width:min(420px, 92vw);
+  border-radius:12px;
+  border:1px solid var(--border);
+}
+
+.login-actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+
+.err{
+  color:#fca5a5;
+  font-size:13px;
+  margin-top:6px;
+  min-height:18px;
+}
 </style>
 </head>
 
@@ -274,10 +334,20 @@ td.actions button:hover{
 
 <!-- Header -->
 <div class="header">
-  <img src="GreenLeadLogo.png" class="logo" alt="GreenLead Logo">
-  <div class="brand">
-    <div class="title"></div>
-    <div class="subtitle">Shared lead tracking</div>
+  <div class="header-left">
+    <img src="GreenLeadLogo.png" class="logo" alt="GreenLead Logo">
+    <div class="brand">
+      <div class="title">GreenLead</div>
+      <div class="subtitle">Shared lead tracking</div>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <div class="user-pill" id="userPill" style="display:none;">
+      <span class="user-dot"></span>
+      <span id="userNameLabel"></span>
+    </div>
+    <button class="btn" id="logoutBtn" style="display:none;" onclick="logout()">Logout</button>
   </div>
 </div>
 
@@ -290,7 +360,7 @@ td.actions button:hover{
 
   <div class="content" id="formSection">
     <div class="form-grid">
-      <input id="user" placeholder="Your Name">
+      <!-- user field removed: auto from login -->
       <select id="company"></select>
       <input id="name" placeholder="Contact Name">
       <input id="phone" placeholder="Phone">
@@ -316,7 +386,7 @@ td.actions button:hover{
       <thead>
         <tr>
           <th style="width:110px;">Date</th>
-          <th style="width:110px;">User</th>
+          <th style="width:120px;">User</th>
           <th style="width:180px;">Company</th>
           <th style="width:140px;">Name</th>
           <th style="width:130px;">Phone</th>
@@ -344,11 +414,97 @@ td.actions button:hover{
   </div>
 </div>
 
+<!-- Login Modal -->
+<div id="loginModal" class="modal" style="display:none;">
+  <div class="login-card">
+    <div class="modal-head">
+      <h3 class="modal-title">Login</h3>
+      <span></span>
+    </div>
+
+    <input id="loginUsername" placeholder="Username" autocomplete="username">
+    <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password">
+    <div class="err" id="loginError"></div>
+
+    <div class="login-actions">
+      <button class="btn" onclick="attemptLogin()">Login</button>
+    </div>
+
+    <div style="margin-top:10px; color:#94a3b8; font-size:12px;">
+      Tip: If you’re on a restricted work network that blocks Google Apps Script, use a hotspot/home Wi-Fi.
+    </div>
+  </div>
+</div>
+
 <script>
-const scriptURL = "https://script.google.com/macros/s/AKfycbzbuZ5_9NPg60ZeiWz9oALw6Aj98a26JbTzszAnJ2xwsedeyTPrs0iLxJnWo5gPK4xfpg/exec"; // keep your existing URL
+const scriptURL = "https://script.google.com/macros/s/AKfycbyDsZ1Y6Urvy7MCxdz5oVpkeCp7_ldVG_3gC9oUrb06RwxTPd05BGJrhf-91VV-z05U/exec";
 let editRow = null;
 
+function getToken(){ return localStorage.getItem("greenlead_token") || ""; }
+function getDisplayName(){ return localStorage.getItem("greenlead_displayName") || ""; }
+
+function setSession(token, displayName){
+  localStorage.setItem("greenlead_token", token);
+  localStorage.setItem("greenlead_displayName", displayName);
+  renderSessionUI();
+}
+
+function clearSession(){
+  localStorage.removeItem("greenlead_token");
+  localStorage.removeItem("greenlead_displayName");
+  renderSessionUI();
+}
+
+function renderSessionUI(){
+  const token = getToken();
+  const displayName = getDisplayName();
+
+  const pill = document.getElementById("userPill");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const nameLabel = document.getElementById("userNameLabel");
+
+  if(token && displayName){
+    pill.style.display = "flex";
+    logoutBtn.style.display = "inline-block";
+    nameLabel.textContent = displayName;
+  }else{
+    pill.style.display = "none";
+    logoutBtn.style.display = "none";
+    nameLabel.textContent = "";
+  }
+}
+
+function showLogin(){
+  document.getElementById("loginError").textContent = "";
+  document.getElementById("loginPassword").value = "";
+  document.getElementById("loginModal").style.display = "block";
+  setTimeout(()=>document.getElementById("loginUsername").focus(), 50);
+}
+
+function hideLogin(){
+  document.getElementById("loginModal").style.display = "none";
+}
+
+function logout(){
+  clearSession();
+  showLogin();
+}
+
+// allow Enter key in login
+document.addEventListener("keydown", (e)=>{
+  if(document.getElementById("loginModal").style.display === "block" && e.key === "Enter"){
+    attemptLogin();
+  }
+});
+
 window.onload = function(){
+  renderSessionUI();
+
+  // require login before using save (and to auto-assign user)
+  if(!getToken()){
+    showLogin();
+  }
+
   loadCompanies();
   loadLeads();
 };
@@ -358,55 +514,90 @@ function toggleForm(){
   section.style.display = section.style.display==="block" ? "none" : "block";
 }
 
+async function attemptLogin(){
+  const u = document.getElementById("loginUsername").value.trim();
+  const p = document.getElementById("loginPassword").value;
+
+  if(!u || !p){
+    document.getElementById("loginError").textContent = "Enter username and password.";
+    return;
+  }
+
+  try{
+    const res = await fetch(scriptURL, {
+      method:"POST",
+      body: JSON.stringify({ action:"login", username:u, password:p })
+    });
+
+    const data = await res.json();
+
+    if(data.ok){
+      setSession(data.token, data.displayName);
+      hideLogin();
+    }else{
+      document.getElementById("loginError").textContent = data.error || "Login failed.";
+    }
+  }catch(err){
+    console.error("Login failed:", err);
+    document.getElementById("loginError").textContent = "Network blocked or login failed.";
+  }
+}
+
 function loadCompanies(){
   fetch(scriptURL + "?action=getCompanies")
-  .then(r=>r.json())
-  .then(data=>{
-    const select = document.getElementById("company");
-    select.innerHTML="<option value=''>Select Company</option>";
-    data.forEach(c=>{
-      let opt=document.createElement("option");
-      opt.text=c;
-      opt.value=c;
-      select.add(opt);
-    });
-  })
-  .catch(err=>console.error("Failed to load companies:",err));
+    .then(r=>r.json())
+    .then(data=>{
+      const select = document.getElementById("company");
+      select.innerHTML="<option value=''>Select Company</option>";
+      data.forEach(c=>{
+        let opt=document.createElement("option");
+        opt.text=c;
+        opt.value=c;
+        select.add(opt);
+      });
+    })
+    .catch(err=>console.error("Failed to load companies:",err));
 }
 
 function loadLeads(){
   fetch(scriptURL + "?action=getLeads")
-  .then(r=>r.json())
-  .then(data=>{
-    const search=document.getElementById("search").value.toLowerCase();
-    const tbody=document.querySelector("#leadsTable tbody");
-    tbody.innerHTML="";
-    data.forEach(row=>{
-      const text=row.join(" ").toLowerCase();
-      if(!text.includes(search)) return;
+    .then(r=>r.json())
+    .then(data=>{
+      const search=document.getElementById("search").value.toLowerCase();
+      const tbody=document.querySelector("#leadsTable tbody");
+      tbody.innerHTML="";
 
-      const statusClass=row[8]==="Not Interested" ? "status-red" : "";
-      const notePreview=(row[9]||"").replace(/\s+/g,' ').trim().substring(0,80);
+      data.forEach(row=>{
+        const text=row.join(" ").toLowerCase();
+        if(!text.includes(search)) return;
 
-      const tr=document.createElement("tr");
-      tr.innerHTML=`
-        <td>${row[1] ? new Date(row[1]).toLocaleDateString() : ""}</td>
-        <td>${row[2]||""}</td>
-        <td>${row[3]||""}</td>
-        <td>${row[4]||""}</td>
-        <td>${row[5]||""}</td>
-        <td>${row[6]||""}</td>
-        <td>${row[7]||""}</td>
-        <td>${row[8] ? (row[8]==="Not Interested" ? `<span class="${statusClass}">${row[8]}</span>` : row[8]) : ""}</td>
-        <td class="note-cell" onclick="showNotes(\`${(row[9]||"").replace(/`/g,"\\`")}\`)">
-          ${notePreview}${(row[9] && row[9].length>80) ? "..." : ""}
-        </td>
-        <td class="actions"><button onclick='editLead(${JSON.stringify(row)})'>Edit</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
-  })
-  .catch(err=>console.error("Failed to load leads:",err));
+        const notePreview=(row[9]||"").replace(/\s+/g,' ').trim().substring(0,80);
+
+        const statusCell = row[8]==="Not Interested"
+          ? `<span class="status-red">${row[8]}</span>`
+          : (row[8] || "");
+
+        const safeNotes = (row[9]||"").replace(/`/g,"\\`");
+
+        const tr=document.createElement("tr");
+        tr.innerHTML=`
+          <td>${row[1] ? new Date(row[1]).toLocaleDateString() : ""}</td>
+          <td>${row[2]||""}</td>
+          <td>${row[3]||""}</td>
+          <td>${row[4]||""}</td>
+          <td>${row[5]||""}</td>
+          <td>${row[6]||""}</td>
+          <td>${row[7]||""}</td>
+          <td>${statusCell}</td>
+          <td class="note-cell" onclick="showNotes(\`${safeNotes}\`)">
+            ${notePreview}${(row[9] && row[9].length>80) ? "..." : ""}
+          </td>
+          <td class="actions"><button onclick='editLead(${JSON.stringify(row)})'>Edit</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    })
+    .catch(err=>console.error("Failed to load leads:",err));
 }
 
 function showNotes(text){
@@ -420,7 +611,6 @@ function closeModal(){
 
 function editLead(row){
   editRow=row[0];
-  document.getElementById("user").value=row[2];
   document.getElementById("company").value=row[3];
   document.getElementById("name").value=row[4];
   document.getElementById("phone").value=row[5];
@@ -432,11 +622,17 @@ function editLead(row){
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function saveLead(){
-  // Keep your original behavior; only added safe DOM reads
+async function saveLead(){
+  const token = getToken();
+  if(!token){
+    showLogin();
+    return;
+  }
+
   const data={
+    action: "saveLead",
+    token: token,
     row: editRow,
-    user: document.getElementById("user").value,
     company: document.getElementById("company").value,
     name: document.getElementById("name").value,
     phone: document.getElementById("phone").value,
@@ -446,18 +642,35 @@ function saveLead(){
     notes: document.getElementById("notes").value
   };
 
-  fetch(scriptURL,{
-    method:"POST",
-    body:JSON.stringify(data)
-  })
-  .then(r=>r.json())
-  .then(res=>{
-    if(res.result==="duplicate"){ alert("Duplicate email or phone exists!"); return; }
+  // basic validation
+  if(!data.company){ alert("Select a company."); return; }
+  if(!data.name){ alert("Contact name is required."); return; }
+  if(!data.status){ alert("Select a status."); return; }
+
+  try{
+    const res = await fetch(scriptURL,{
+      method:"POST",
+      body:JSON.stringify(data)
+    });
+
+    const out = await res.json();
+
+    if(out.result==="duplicate"){
+      alert("Duplicate email or phone exists!");
+      return;
+    }
+
+    if(out.error){
+      // session expired / not logged in
+      alert(out.error);
+      logout();
+      return;
+    }
+
     alert("Saved!");
     editRow=null;
 
     // clear form
-    document.getElementById("user").value="";
     document.getElementById("company").value="";
     document.getElementById("name").value="";
     document.getElementById("phone").value="";
@@ -468,14 +681,11 @@ function saveLead(){
 
     document.getElementById("formSection").style.display="none";
     loadLeads();
-  })
-  .catch(err=>console.error("Failed to save lead:",err));
+  }catch(err){
+    console.error("Failed to save lead:",err);
+    alert("Save failed. Network may be blocking Apps Script.");
+  }
 }
 </script>
 </body>
 </html>
-
-
-
-
-
