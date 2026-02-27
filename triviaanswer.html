@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Trivia Answer Portal</title>
+  <style>
+    :root{
+      --brand:#6dc84d;
+      --bg:#0b1020;
+      --panel:#121a33;
+      --panel2:#0f172a;
+      --border:rgba(255,255,255,.12);
+      --text:#e7eefc;
+      --muted:rgba(231,238,252,.65);
+      --warn:#fbbf24;
+      --bad:#ef4444;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(900px 500px at 20% 0%, rgba(109,200,77,.18), transparent 60%),
+                  radial-gradient(700px 500px at 90% 20%, rgba(99,102,241,.14), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    .card{
+      width:min(520px, 96vw);
+      background: linear-gradient(180deg, rgba(18,26,51,.98), rgba(15,23,42,.98));
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.45);
+      overflow:hidden;
+    }
+    .top{
+      padding:16px 18px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      background: rgba(15,23,42,.7);
+    }
+    .brand{
+      display:flex; flex-direction:column; line-height:1.1;
+    }
+    .brand .t{
+      font-weight:900; letter-spacing:.4px;
+      color:var(--brand);
+      font-size:18px;
+    }
+    .brand .s{ color:var(--muted); font-size:12px; }
+    .pill{
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.15);
+      padding:8px 10px;
+      border-radius:999px;
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+    }
+    .body{ padding:18px; }
+    label{ display:block; margin:10px 0 6px; color:var(--muted); font-size:12px; }
+    input, textarea{
+      width:100%;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.2);
+      color: var(--text);
+      padding:12px 12px;
+      outline:none;
+      font-size:16px;
+    }
+    textarea{ min-height:90px; resize:vertical; }
+    input:focus, textarea:focus{
+      border-color: rgba(109,200,77,.7);
+      box-shadow: 0 0 0 3px rgba(109,200,77,.18);
+    }
+    .row{ display:flex; gap:10px; }
+    .row > div{ flex:1; }
+    .btn{
+      width:100%;
+      margin-top:14px;
+      padding:12px 14px;
+      border-radius:14px;
+      border: none;
+      background: var(--brand);
+      color:#0b1020;
+      font-weight:900;
+      font-size:16px;
+      cursor:pointer;
+    }
+    .btn:disabled{
+      opacity:.5; cursor:not-allowed;
+    }
+    .subbtn{
+      margin-top:10px;
+      background: transparent;
+      border:1px solid var(--border);
+      color:var(--muted);
+      font-weight:800;
+      padding:10px 12px;
+      border-radius:14px;
+      width:100%;
+      cursor:pointer;
+    }
+    .msg{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      color: var(--muted);
+      font-size:13px;
+      min-height:40px;
+      white-space:pre-wrap;
+    }
+    .good{ color: var(--brand); }
+    .warn{ color: var(--warn); }
+    .bad{ color: var(--bad); }
+    .lock{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:900;
+      font-size:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.15);
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="top">
+      <div class="brand">
+        <div class="t">🎤 Trivia Answer Portal</div>
+        <div class="s">Type it. Submit it. Pray you spelled it right.</div>
+      </div>
+      <div class="pill" id="roundPill">Loading…</div>
+    </div>
+
+    <div class="body">
+      <div id="joinBlock">
+        <label>Team name</label>
+        <input id="teamName" placeholder="Example: Quiztopher Walken" maxlength="40" />
+
+        <label>Game PIN (if required)</label>
+        <input id="pin" placeholder="4-digit PIN" inputmode="numeric" maxlength="10" />
+
+        <button class="btn" onclick="joinTeam()">Join</button>
+        <div class="msg" id="joinMsg">Enter your team name to join.</div>
+      </div>
+
+      <div id="playBlock" style="display:none;">
+        <div class="row">
+          <div>
+            <label>Team</label>
+            <input id="teamDisplay" disabled />
+          </div>
+          <div>
+            <label>Status</label>
+            <div class="lock" id="openState">—</div>
+          </div>
+        </div>
+
+        <label>Your answer (edit until locked)</label>
+        <textarea id="answer" placeholder="Type your answer here…"></textarea>
+
+        <button class="btn" id="submitBtn" onclick="submitAnswer()">Submit Answer</button>
+        <button class="subbtn" onclick="leaveTeam()">Leave / Switch Team</button>
+
+        <div class="msg" id="playMsg">Waiting for the current question…</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ✅ Put your deployed Apps Script web app URL here:
+  const scriptURL = (location.href.includes("script.google.com"))
+    ? location.href.split("?")[0]
+    : ""; // If hosting inside Apps Script, it’s auto.
+
+  // If you publish as Apps Script Web App, just set this manually once:
+  // const scriptURL = "https://script.google.com/macros/s/AKfycbwZOrGC218WJ-Z4D5A8k00dhv6eyOQE0HyTHBRrbmcZs-Kp2CW2Le3l1EgiE-AH3rc/exec";
+
+  function getDeviceToken(){
+    let t = localStorage.getItem("trivia_device_token");
+    if(!t){
+      t = "D" + cryptoRandom();
+      localStorage.setItem("trivia_device_token", t);
+    }
+    return t;
+  }
+  function getTeam(){
+    const raw = localStorage.getItem("trivia_team") || "";
+    try { return raw ? JSON.parse(raw) : null; } catch { return null; }
+  }
+  function setTeam(team){
+    localStorage.setItem("trivia_team", JSON.stringify(team));
+  }
+  function clearTeam(){
+    localStorage.removeItem("trivia_team");
+  }
+
+  function cryptoRandom(){
+    // simple random string
+    return Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
+  }
+
+  async function api(action, payload){
+    if(!scriptURL){
+      // If you served this page from Apps Script, scriptURL can be empty; build relative
+      const res = await fetch("", { method:"POST", body: JSON.stringify({action, ...payload}) });
+      return res.json();
+    }
+    const res = await fetch(scriptURL, { method:"POST", body: JSON.stringify({action, ...payload}) });
+    return res.json();
+  }
+
+  function setMsg(el, text, cls){
+    el.classList.remove("good","warn","bad");
+    if(cls) el.classList.add(cls);
+    el.textContent = text;
+  }
+
+  function showJoinedUI(team){
+    document.getElementById("joinBlock").style.display = "none";
+    document.getElementById("playBlock").style.display = "block";
+    document.getElementById("teamDisplay").value = team.teamName;
+  }
+
+  function showJoinUI(){
+    document.getElementById("joinBlock").style.display = "block";
+    document.getElementById("playBlock").style.display = "none";
+  }
+
+  async function refreshState(){
+    const data = await api("getState", {});
+    if(!data.ok) return;
+
+    const s = data.state;
+    document.getElementById("roundPill").textContent = `Round ${s.round} • Q${s.question}`;
+    document.getElementById("openState").textContent = s.isOpen ? "OPEN ✅" : "LOCKED 🔒";
+    document.getElementById("openState").style.color = s.isOpen ? "var(--brand)" : "var(--warn)";
+
+    // if team joined, also fetch their current answer
+    const team = getTeam();
+    if(team){
+      const mine = await api("getMyAnswer", { teamId: team.teamId, deviceToken: getDeviceToken() });
+      if(mine.ok && mine.answer != null){
+        // Only set if user hasn't typed something different in the last second
+        const a = document.getElementById("answer");
+        if(!a.dataset.dirty) a.value = mine.answer || "";
+      }
+      setOpenUI(s.isOpen);
+      setMsg(document.getElementById("playMsg"),
+        s.isOpen
+          ? "Submissions are OPEN. You can edit until the host locks it."
+          : "This question is LOCKED. If you already submitted, you’re good.",
+        s.isOpen ? "" : "warn"
+      );
+    }
+  }
+
+  function setOpenUI(isOpen){
+    const btn = document.getElementById("submitBtn");
+    const ans = document.getElementById("answer");
+    btn.disabled = !isOpen;
+    ans.disabled = !isOpen;
+  }
+
+  async function joinTeam(){
+    const msg = document.getElementById("joinMsg");
+    const teamName = document.getElementById("teamName").value.trim();
+    const pin = document.getElementById("pin").value.trim();
+    if(!teamName){
+      setMsg(msg, "Team name required.", "bad");
+      return;
+    }
+
+    setMsg(msg, "Summoning your team name into the ledger…", "");
+
+    const out = await api("joinTeam", {
+      teamName,
+      pin,
+      deviceToken: getDeviceToken()
+    });
+
+    if(!out.ok){
+      setMsg(msg, out.error || "Join failed.", "bad");
+      return;
+    }
+
+    setTeam(out.team);
+    showJoinedUI(out.team);
+    setMsg(document.getElementById("playMsg"), "Joined! Loading the current question…", "good");
+    refreshState();
+  }
+
+  function leaveTeam(){
+    clearTeam();
+    document.getElementById("answer").value = "";
+    document.getElementById("answer").dataset.dirty = "";
+    showJoinUI();
+    setMsg(document.getElementById("joinMsg"), "Enter your team name to join.", "");
+  }
+
+  async function submitAnswer(){
+    const team = getTeam();
+    if(!team){
+      leaveTeam();
+      return;
+    }
+
+    const ans = document.getElementById("answer").value.trim();
+    const msg = document.getElementById("playMsg");
+    if(!ans){
+      setMsg(msg, "Answer can’t be blank.", "bad");
+      return;
+    }
+
+    setMsg(msg, "Submitting…", "");
+
+    const out = await api("submitAnswer", {
+      teamId: team.teamId,
+      deviceToken: getDeviceToken(),
+      answer: ans
+    });
+
+    if(out.ok){
+      setMsg(msg, "✅ Saved! You can still edit until it locks.", "good");
+      document.getElementById("answer").dataset.dirty = "";
+      refreshState();
+      return;
+    }
+
+    if(out.locked){
+      setMsg(msg, "🔒 Locked. No more changes.", "warn");
+      refreshState();
+      return;
+    }
+
+    setMsg(msg, out.error || "Submit failed.", "bad");
+  }
+
+  // Mark textarea dirty so refreshState doesn't overwrite what they typed mid-edit
+  document.addEventListener("input", (e)=>{
+    if(e.target && e.target.id === "answer"){
+      e.target.dataset.dirty = "1";
+    }
+  });
+
+  // INIT
+  (async function init(){
+    const team = getTeam();
+    if(team) showJoinedUI(team);
+    await refreshState();
+    setInterval(refreshState, 2500);
+  })();
+</script>
+</body>
+</html>
