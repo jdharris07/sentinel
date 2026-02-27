@@ -185,7 +185,8 @@ td.actions button:hover{ border-color: rgba(109,200,77,.7); }
 const scriptURL = "https://script.google.com/macros/s/AKfycbwzavtLoTGp8NdtZTxu6lX5dybHgS0Fby5VmdYJFAFZqDi1Bep98hz_3yW37-0Tptl0nw/exec";
 let editRow = null;
 let cachedCompanies = [];
-let currentRowNotes = ""; // full notes from selected row (for modal / info)
+let currentRowNotes = "";
+let notesClickWired = false;
 
 function getToken(){ return localStorage.getItem("greenlead_token") || ""; }
 function getDisplayName(){ return localStorage.getItem("greenlead_displayName") || ""; }
@@ -231,7 +232,6 @@ function logout(){
   showLogin();
 }
 
-// Enter submits login
 document.addEventListener("keydown", (e)=>{
   if(document.getElementById("loginModal").style.display === "block" && e.key === "Enter"){
     attemptLogin();
@@ -311,7 +311,6 @@ async function loadCompanies(){
 function renderCompanyDropdown(){
   const select = document.getElementById("company");
 
-  // First option: Add Company
   const opts = [
     `<option value="__add__">➕ Add company...</option>`,
     `<option value="">Select Company</option>`,
@@ -378,8 +377,39 @@ function escapeHtml(s){
 }
 function escapeHtmlAttr(s){ return escapeHtml(s); }
 
+/* ===== Notes safe encoding (Base64 UTF-8) ===== */
+function toB64Utf8(str){
+  // UTF-8 -> base64
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function fromB64Utf8(b64){
+  // base64 -> UTF-8
+  return decodeURIComponent(escape(atob(b64)));
+}
+
+function wireNotesClicks(){
+  if(notesClickWired) return;
+  notesClickWired = true;
+
+  // Delegate clicks for any element with [data-notes-b64]
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-notes-b64]");
+    if(!el) return;
+    const b64 = el.getAttribute("data-notes-b64") || "";
+    try{
+      const text = b64 ? fromB64Utf8(b64) : "";
+      showNotes(text);
+    }catch(err){
+      console.error("Failed to decode notes:", err);
+      showNotes("No notes");
+    }
+  });
+}
+
 /* ===== Leads ===== */
 async function loadLeads(){
+  wireNotesClicks();
+
   try{
     const res = await fetch(scriptURL + "?action=getLeads");
     const data = await res.json();
@@ -396,12 +426,12 @@ async function loadLeads(){
         ? `<span class="status-red">${escapeHtml(row[8])}</span>`
         : escapeHtml(row[8] || "");
 
-      // ✅ SAFE notes link (works with quotes/newlines)
       const notesRaw = String(row[9] || "");
       const hasNotes = notesRaw.trim().length > 0;
-      const encodedNotes = encodeURIComponent(notesRaw);
+
+      // ✅ No inline JS. Just data attribute.
       const notesLink = hasNotes
-        ? `<span class="note-cell" onclick="showNotes(decodeURIComponent('${encodedNotes}'))">View Note</span>`
+        ? `<span class="note-cell" data-notes-b64="${toB64Utf8(notesRaw)}">View Note</span>`
         : "";
 
       const tr = document.createElement("tr");
@@ -445,15 +475,13 @@ function editLead(row){
   document.getElementById("method").value = row[7] || "";
   document.getElementById("status").value = row[8] || "";
 
-  // Notes box is for NEW NOTE ONLY
   document.getElementById("notes").value = "";
 
   const hint = document.getElementById("existingNotesHint");
   if (currentRowNotes.trim()) {
-    const encoded = encodeURIComponent(currentRowNotes);
     hint.style.display = "block";
     hint.innerHTML =
-      `This record already has notes. Use <span class="note-cell" onclick="showNotes(decodeURIComponent('${encoded}'))">View Note</span> to read them. Add a new note above to append with today’s date.`;
+      `This record already has notes. Use <span class="note-cell" data-notes-b64="${toB64Utf8(currentRowNotes)}">View Note</span> to read them. Add a new note above to append with today’s date.`;
   } else {
     hint.style.display = "none";
     hint.textContent = "";
@@ -477,7 +505,7 @@ async function saveLead(){
     email: document.getElementById("email").value.trim(),
     method: document.getElementById("method").value,
     status: document.getElementById("status").value,
-    newNote: document.getElementById("notes").value.trim() // new note only
+    newNote: document.getElementById("notes").value.trim()
   };
 
   if(!body.company || body.company === "__add__"){ alert("Select a company."); return; }
@@ -502,7 +530,6 @@ async function saveLead(){
     editRow = null;
     currentRowNotes = "";
 
-    // clear form
     document.getElementById("company").value = "";
     document.getElementById("name").value = "";
     document.getElementById("phone").value = "";
@@ -524,4 +551,5 @@ async function saveLead(){
 
 </body>
 </html>
+
 
