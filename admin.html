@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GreenLead Trivia - Player</title>
+  <style>
+    :root{
+      --brand:#6dc84d; --bg:#0b1220; --panel:#111827; --panel2:#0f172a;
+      --border:#263244; --text:#e5e7eb; --muted:#94a3b8; --bad:#ef4444;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Arial;background:radial-gradient(900px 500px at 10% 0%, rgba(109,200,77,.20), transparent 60%), var(--bg); color:var(--text);}
+    .wrap{max-width:760px;margin:0 auto;padding:18px;}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
+    .brand{display:flex;align-items:center;gap:10px;}
+    .dot{width:10px;height:10px;border-radius:999px;background:var(--brand); box-shadow: 0 0 0 4px rgba(109,200,77,.12);}
+    .title{font-weight:900;letter-spacing:.2px;}
+    .card{background:linear-gradient(180deg, rgba(17,24,39,.92), rgba(17,24,39,.84)); border:1px solid var(--border); border-radius:16px; padding:14px; box-shadow: 0 18px 40px rgba(0,0,0,.35);}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    @media(max-width:680px){.grid{grid-template-columns:1fr;}}
+    input,textarea,button{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border); background: #0b1220; color:var(--text); outline:none;}
+    input:focus,textarea:focus{border-color: rgba(109,200,77,.75); box-shadow:0 0 0 4px rgba(109,200,77,.12);}
+    textarea{min-height:92px;resize:vertical;}
+    button{background:var(--brand); color:#05210a; border:none; font-weight:900; cursor:pointer;}
+    button:disabled{opacity:.5; cursor:not-allowed;}
+    .pill{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--border); border-radius:999px; background:#0b1220;color:var(--muted); font-size:13px;}
+    .row{display:flex;gap:10px;flex-wrap:wrap; align-items:center;}
+    .muted{color:var(--muted); font-size:13px; line-height:1.35;}
+    .ok{color:var(--brand); font-weight:800;}
+    .bad{color:#fca5a5; font-weight:800;}
+    .lock{background:#3b0b10;border:1px solid rgba(239,68,68,.4); color:#fecaca;}
+    .footer{margin-top:10px;color:var(--muted);font-size:12px;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <span class="dot"></span>
+        <div>
+          <div class="title">GreenLead Trivia</div>
+          <div class="muted">Answer portal</div>
+        </div>
+      </div>
+      <div class="pill" id="statePill">Connecting…</div>
+    </div>
+
+    <div class="card" id="joinCard">
+      <div class="muted" style="margin-bottom:10px;">Enter your team name. If the host set a PIN, enter it too.</div>
+      <div class="grid">
+        <input id="teamName" placeholder="Team name (e.g., Quiztopher Columbus)" maxlength="40" />
+        <input id="pin" placeholder="Game PIN (if required)" inputmode="numeric" maxlength="10" />
+      </div>
+      <div style="margin-top:10px;">
+        <button id="joinBtn" onclick="join()">Join Game</button>
+      </div>
+      <div class="footer" id="joinMsg"></div>
+    </div>
+
+    <div class="card" id="playCard" style="display:none; margin-top:12px;">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px;">
+        <div class="pill"><span>Team:</span> <strong id="teamLabel"></strong></div>
+        <button style="max-width:160px;background:#0b1220;color:var(--brand);border:1px solid var(--border);" onclick="resetTeam()">Change Team</button>
+      </div>
+
+      <div class="row" style="margin-bottom:8px;">
+        <div class="pill" id="rqPill">Round ? • Q?</div>
+        <div class="pill" id="openPill">Status: …</div>
+      </div>
+
+      <textarea id="answer" placeholder="Type your answer here…"></textarea>
+      <div class="row" style="margin-top:10px;">
+        <button id="submitBtn" onclick="submitAnswer()">Submit Answer</button>
+      </div>
+
+      <div class="footer" id="playMsg"></div>
+    </div>
+  </div>
+
+<script>
+  // 🔧 PUT YOUR /exec URL HERE
+  const API = "YOUR_WEB_APP_EXEC_URL";
+
+  // ---------- JSONP helper (no CORS needed) ----------
+  function jsonp(action, params = {}) {
+    return new Promise((resolve, reject) => {
+      const cb = "cb_" + Math.random().toString(36).slice(2);
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error("Request timed out"));
+      }, 12000);
+
+      function cleanup() {
+        clearTimeout(timeout);
+        delete window[cb];
+        script.remove();
+      }
+
+      window[cb] = (data) => { cleanup(); resolve(data); };
+
+      const url = new URL(API);
+      url.searchParams.set("action", action);
+      url.searchParams.set("callback", cb);
+      Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+
+      const script = document.createElement("script");
+      script.src = url.toString();
+      script.onerror = () => { cleanup(); reject(new Error("Network error")); };
+      document.body.appendChild(script);
+    });
+  }
+
+  // ---------- device token ----------
+  function getDeviceToken() {
+    let t = localStorage.getItem("gltriv_device");
+    if (!t) {
+      t = "D" + crypto.getRandomValues(new Uint32Array(4)).join("").slice(0,18);
+      localStorage.setItem("gltriv_device", t);
+    }
+    return t;
+  }
+
+  function setTeamSession(teamId, teamName){
+    localStorage.setItem("gltriv_teamId", teamId);
+    localStorage.setItem("gltriv_teamName", teamName);
+  }
+  function getTeamSession(){
+    return {
+      teamId: localStorage.getItem("gltriv_teamId") || "",
+      teamName: localStorage.getItem("gltriv_teamName") || ""
+    };
+  }
+  function clearTeamSession(){
+    localStorage.removeItem("gltriv_teamId");
+    localStorage.removeItem("gltriv_teamName");
+  }
+
+  // ---------- UI ----------
+  const statePill = document.getElementById("statePill");
+  const joinCard = document.getElementById("joinCard");
+  const playCard = document.getElementById("playCard");
+  const joinMsg = document.getElementById("joinMsg");
+  const playMsg = document.getElementById("playMsg");
+  const teamLabel = document.getElementById("teamLabel");
+  const rqPill = document.getElementById("rqPill");
+  const openPill = document.getElementById("openPill");
+  const submitBtn = document.getElementById("submitBtn");
+  const answerEl = document.getElementById("answer");
+
+  let lastState = null;
+
+  function setStateUI(s){
+    lastState = s;
+    rqPill.textContent = `Round ${s.round} • Q${s.question}`;
+    openPill.textContent = s.isOpen ? "Status: OPEN" : "Status: LOCKED";
+    openPill.className = s.isOpen ? "pill" : "pill lock";
+    statePill.textContent = s.isOpen ? `OPEN • R${s.round} Q${s.question}` : `LOCKED • R${s.round} Q${s.question}`;
+
+    submitBtn.disabled = !s.isOpen;
+    answerEl.disabled = !s.isOpen;
+    if (!s.isOpen) answerEl.placeholder = "Locked. No more answers.";
+    else answerEl.placeholder = "Type your answer here…";
+  }
+
+  async function refreshState(){
+    try{
+      const res = await jsonp("getState");
+      if(res.ok) setStateUI(res.state);
+    }catch(e){
+      statePill.textContent = "Offline / blocked network";
+    }
+  }
+
+  async function join(){
+    joinMsg.textContent = "";
+    const teamName = document.getElementById("teamName").value.trim();
+    const pin = document.getElementById("pin").value.trim();
+    if(!teamName){ joinMsg.innerHTML = `<span class="bad">Team name required.</span>`; return; }
+
+    try{
+      const out = await jsonp("joinTeam", {
+        teamName,
+        pin,
+        deviceToken: getDeviceToken()
+      });
+
+      if(!out.ok){
+        joinMsg.innerHTML = `<span class="bad">${out.error || "Join failed."}</span>`;
+        return;
+      }
+
+      setTeamSession(out.team.teamId, out.team.teamName);
+      showPlay();
+
+    }catch(e){
+      joinMsg.innerHTML = `<span class="bad">Network error (maybe blocked Wi-Fi). Try mobile data.</span>`;
+    }
+  }
+
+  function showPlay(){
+    const sess = getTeamSession();
+    teamLabel.textContent = sess.teamName || "";
+    joinCard.style.display = "none";
+    playCard.style.display = "block";
+    refreshState();
+    refreshMyAnswer();
+  }
+
+  function resetTeam(){
+    clearTeamSession();
+    joinCard.style.display = "block";
+    playCard.style.display = "none";
+    document.getElementById("teamName").value = "";
+    document.getElementById("pin").value = "";
+    playMsg.textContent = "";
+  }
+
+  async function refreshMyAnswer(){
+    const sess = getTeamSession();
+    if(!sess.teamId) return;
+    try{
+      const out = await jsonp("getMyAnswer", {
+        teamId: sess.teamId,
+        deviceToken: getDeviceToken()
+      });
+      if(out.ok && out.answer){
+        playMsg.innerHTML = `<span class="ok">Saved:</span> ${escapeHtml(out.answer)}`;
+      } else {
+        playMsg.textContent = "";
+      }
+    }catch(e){}
+  }
+
+  async function submitAnswer(){
+    playMsg.textContent = "";
+    const sess = getTeamSession();
+    const answer = answerEl.value.trim();
+    if(!answer){ playMsg.innerHTML = `<span class="bad">Answer can’t be blank.</span>`; return; }
+
+    try{
+      const out = await jsonp("submitAnswer", {
+        teamId: sess.teamId,
+        deviceToken: getDeviceToken(),
+        answer
+      });
+
+      if(out.ok){
+        playMsg.innerHTML = `<span class="ok">Saved!</span>`;
+        refreshMyAnswer();
+      } else if(out.locked) {
+        playMsg.innerHTML = `<span class="bad">Locked.</span> Answers are closed.`;
+        refreshState();
+      } else {
+        playMsg.innerHTML = `<span class="bad">${out.error || "Submit failed."}</span>`;
+      }
+
+    }catch(e){
+      playMsg.innerHTML = `<span class="bad">Network error.</span>`;
+    }
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  // ---------- boot ----------
+  (function init(){
+    const sess = getTeamSession();
+    if(sess.teamId) showPlay();
+    refreshState();
+    setInterval(refreshState, 5000);
+    setInterval(refreshMyAnswer, 7000);
+  })();
+</script>
+</body>
+</html>
