@@ -83,33 +83,50 @@
   const API = "https://script.google.com/macros/s/AKfycbwrOmqReLTftoOswMb-gxaktPqUWqRGazcMhvRLfFF1hMav2nXLsjlClB4M_Dn1aiai/exec";
 
   // ---------- JSONP helper (no CORS needed) ----------
-  function jsonp(action, params = {}) {
-    return new Promise((resolve, reject) => {
-      const cb = "cb_" + Math.random().toString(36).slice(2);
-      const timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error("Request timed out"));
-      }, 12000);
+function jsonp(action, params = {}) {
+  return new Promise((resolve, reject) => {
+    const cbName = "GLCB_" + Math.random().toString(36).slice(2);
 
-      function cleanup() {
-        clearTimeout(timeout);
-        delete window[cb];
-        script.remove();
-      }
+    const url = new URL(API);
+    url.searchParams.set("action", action);
+    url.searchParams.set("callback", cbName);
 
-      window[cb] = (data) => { cleanup(); resolve(data); };
-
-      const url = new URL(API);
-      url.searchParams.set("action", action);
-      url.searchParams.set("callback", cb);
-      Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
-
-      const script = document.createElement("script");
-      script.src = url.toString();
-      script.onerror = () => { cleanup(); reject(new Error("Network error")); };
-      document.body.appendChild(script);
+    Object.entries(params).forEach(([k,v]) => {
+      url.searchParams.set(k, v);
     });
-  }
+
+    let done = false;
+    let timer = null;
+
+    const scriptEl = document.createElement("script");
+
+    function cleanup() {
+      if (done) return;
+      done = true;
+      try { delete window[cbName]; } catch(e) {}
+      if (timer) clearTimeout(timer);
+      if (scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
+    }
+
+    window[cbName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+
+    scriptEl.onerror = () => {
+      cleanup();
+      reject(new Error("JSONP network error"));
+    };
+
+    timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("JSONP timeout"));
+    }, 12000);
+
+    scriptEl.src = url.toString();
+    document.head.appendChild(scriptEl);
+  });
+}
 
   // ---------- device token ----------
   function getDeviceToken() {
@@ -276,3 +293,4 @@
 </body>
 
 </html>
+
