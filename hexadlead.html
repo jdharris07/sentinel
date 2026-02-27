@@ -320,7 +320,6 @@ function renderCompanyDropdown(){
 
   select.innerHTML = opts.join("");
 
-  // hook change
   select.onchange = async () => {
     if (select.value === "__add__") {
       await promptAddCompany();
@@ -341,7 +340,6 @@ async function promptAddCompany(){
   name = name.trim().replace(/\s+/g," ");
   const norm = normalizeCompany(name);
 
-  // Front-end duplicate detect
   const existing = cachedCompanies.find(c => normalizeCompany(c) === norm);
   if(existing){
     alert("That company already exists. Selecting existing entry.");
@@ -349,7 +347,6 @@ async function promptAddCompany(){
     return;
   }
 
-  // Backend add (does duplicate detect too)
   try{
     const res = await fetch(scriptURL, {
       method:"POST",
@@ -363,8 +360,6 @@ async function promptAddCompany(){
       return;
     }
 
-    // out.company will be the existing or newly added canonical name
-    // Refresh company list
     await loadCompanies();
     document.getElementById("company").value = out.company;
 
@@ -381,10 +376,7 @@ async function promptAddCompany(){
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
-function escapeHtmlAttr(s){
-  // for attribute values
-  return escapeHtml(s);
-}
+function escapeHtmlAttr(s){ return escapeHtml(s); }
 
 /* ===== Leads ===== */
 async function loadLeads(){
@@ -404,8 +396,13 @@ async function loadLeads(){
         ? `<span class="status-red">${escapeHtml(row[8])}</span>`
         : escapeHtml(row[8] || "");
 
-      const hasNotes = !!(row[9] && String(row[9]).trim().length);
-      const notesLink = hasNotes ? `<span class="note-cell" onclick="showNotesFromRow(${JSON.stringify(row)})">View Note</span>` : "";
+      // ✅ SAFE notes link (works with quotes/newlines)
+      const notesRaw = String(row[9] || "");
+      const hasNotes = notesRaw.trim().length > 0;
+      const encodedNotes = encodeURIComponent(notesRaw);
+      const notesLink = hasNotes
+        ? `<span class="note-cell" onclick="showNotes(decodeURIComponent('${encodedNotes}'))">View Note</span>`
+        : "";
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -428,11 +425,6 @@ async function loadLeads(){
   }
 }
 
-function showNotesFromRow(row){
-  const notes = row[9] || "";
-  showNotes(notes);
-}
-
 function showNotes(text){
   document.getElementById("modalText").innerText = text || "No notes";
   document.getElementById("noteModal").style.display = "block";
@@ -444,7 +436,7 @@ function closeModal(){
 
 function editLead(row){
   editRow = row[0];
-  currentRowNotes = row[9] || "";
+  currentRowNotes = String(row[9] || "");
 
   document.getElementById("company").value = row[3] || "";
   document.getElementById("name").value = row[4] || "";
@@ -453,12 +445,15 @@ function editLead(row){
   document.getElementById("method").value = row[7] || "";
   document.getElementById("status").value = row[8] || "";
 
-  // Notes box is now for NEW NOTE ONLY
+  // Notes box is for NEW NOTE ONLY
   document.getElementById("notes").value = "";
+
   const hint = document.getElementById("existingNotesHint");
   if (currentRowNotes.trim()) {
+    const encoded = encodeURIComponent(currentRowNotes);
     hint.style.display = "block";
-    hint.innerHTML = `This record already has notes. Use <span class="note-cell" onclick="showNotes(${JSON.stringify(currentRowNotes)})">View Note</span> to read them. Add a new note above to append with today’s date.`;
+    hint.innerHTML =
+      `This record already has notes. Use <span class="note-cell" onclick="showNotes(decodeURIComponent('${encoded}'))">View Note</span> to read them. Add a new note above to append with today’s date.`;
   } else {
     hint.style.display = "none";
     hint.textContent = "";
@@ -529,3 +524,4 @@ async function saveLead(){
 
 </body>
 </html>
+
