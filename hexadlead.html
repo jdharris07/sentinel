@@ -163,6 +163,17 @@ td.actions button:hover{ border-color: rgba(109,200,77,.7); }
   </div>
 </div>
 
+<!-- Message Modal (replaces alert()) -->
+<div id="messageModal" class="modal" onclick="if(event.target.id==='messageModal') closeMessage();">
+  <div class="modal-content">
+    <div class="modal-head">
+      <h3 class="modal-title">GreenLead</h3>
+      <button class="close" onclick="closeMessage()">✕</button>
+    </div>
+    <div id="messageText" style="white-space:pre-wrap; line-height:1.5;"></div>
+  </div>
+</div>
+
 <!-- Login Modal -->
 <div id="loginModal" class="modal" style="display:none;">
   <div class="login-card">
@@ -217,6 +228,15 @@ function renderSessionUI(){
     logoutBtn.style.display = "none";
     nameLabel.textContent = "";
   }
+}
+
+/* ===== Branded messages (replaces alert()) ===== */
+function showMessage(text){
+  document.getElementById("messageText").innerText = text || "";
+  document.getElementById("messageModal").style.display = "block";
+}
+function closeMessage(){
+  document.getElementById("messageModal").style.display = "none";
 }
 
 function showLogin(){
@@ -341,7 +361,7 @@ async function promptAddCompany(){
 
   const existing = cachedCompanies.find(c => normalizeCompany(c) === norm);
   if(existing){
-    alert("That company already exists. Selecting existing entry.");
+    showMessage("That company already exists. Selecting the existing entry.");
     document.getElementById("company").value = existing;
     return;
   }
@@ -354,7 +374,7 @@ async function promptAddCompany(){
     const out = await res.json();
 
     if(out.error){
-      alert(out.error);
+      showMessage(out.error);
       document.getElementById("company").value = "";
       return;
     }
@@ -362,12 +382,12 @@ async function promptAddCompany(){
     await loadCompanies();
     document.getElementById("company").value = out.company;
 
-    if(out.added) alert("Company added.");
-    else alert("Company already existed. Selected existing entry.");
+    if(out.added) showMessage("Company added.");
+    else showMessage("Company already existed. Selected existing entry.");
 
   }catch(err){
     console.error("Add company failed:", err);
-    alert("Could not add company (network or server error).");
+    showMessage("Could not add company (network or server error).");
     document.getElementById("company").value = "";
   }
 }
@@ -379,11 +399,9 @@ function escapeHtmlAttr(s){ return escapeHtml(s); }
 
 /* ===== Notes safe encoding (Base64 UTF-8) ===== */
 function toB64Utf8(str){
-  // UTF-8 -> base64
   return btoa(unescape(encodeURIComponent(str)));
 }
 function fromB64Utf8(b64){
-  // base64 -> UTF-8
   return decodeURIComponent(escape(atob(b64)));
 }
 
@@ -391,7 +409,6 @@ function wireNotesClicks(){
   if(notesClickWired) return;
   notesClickWired = true;
 
-  // Delegate clicks for any element with [data-notes-b64]
   document.addEventListener("click", (e) => {
     const el = e.target.closest("[data-notes-b64]");
     if(!el) return;
@@ -429,7 +446,6 @@ async function loadLeads(){
       const notesRaw = String(row[9] || "");
       const hasNotes = notesRaw.trim().length > 0;
 
-      // ✅ No inline JS. Just data attribute.
       const notesLink = hasNotes
         ? `<span class="note-cell" data-notes-b64="${toB64Utf8(notesRaw)}">View Note</span>`
         : "";
@@ -508,25 +524,25 @@ async function saveLead(){
     newNote: document.getElementById("notes").value.trim()
   };
 
-  if(!body.company || body.company === "__add__"){ alert("Select a company."); return; }
-  if(!body.name){ alert("Contact name is required."); return; }
-  if(!body.status){ alert("Select a status."); return; }
+  if(!body.company || body.company === "__add__"){ showMessage("Select a company."); return; }
+  if(!body.name){ showMessage("Contact name is required."); return; }
+  if(!body.status){ showMessage("Select a status."); return; }
 
   try{
     const res = await fetch(scriptURL, { method:"POST", body: JSON.stringify(body) });
     const out = await res.json();
 
     if(out.result === "duplicate"){
-      alert("Duplicate email or phone exists!");
+      showMessage("Duplicate email or phone already exists.");
       return;
     }
     if(out.error){
-      alert(out.error);
+      showMessage(out.error);
       logout();
       return;
     }
 
-    alert("Saved!");
+    showMessage("Lead saved successfully.");
     editRow = null;
     currentRowNotes = "";
 
@@ -544,15 +560,10 @@ async function saveLead(){
 
   }catch(err){
     console.error("Failed to save lead:", err);
-    alert("Save failed. Network may be blocking Apps Script.");
+    showMessage("Save failed. Network may be blocking Apps Script.");
   }
 }
 </script>
 
 </body>
 </html>
-
-
-
-
-
