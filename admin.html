@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GreenLead Trivia - Admin</title>
+  <title>Sentinel Trivia - Admin</title>
   <style>
     :root{
       --brand:#6dc84d; --bg:#0b1220; --panel:#111827; --panel2:#0f172a;
@@ -11,7 +11,7 @@
     }
     *{box-sizing:border-box;}
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Arial;background:radial-gradient(900px 500px at 10% 0%, rgba(109,200,77,.20), transparent 60%), var(--bg); color:var(--text);}
-    .wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .wrap{max-width:1200px;margin:0 auto;padding:18px;}
     .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
     .brand{display:flex;align-items:center;gap:10px;}
     .dot{width:10px;height:10px;border-radius:999px;background:var(--brand); box-shadow: 0 0 0 4px rgba(109,200,77,.12);}
@@ -23,8 +23,8 @@
     .ok{color:var(--brand); font-weight:900;}
     .bad{color:#fca5a5; font-weight:900;}
     .lock{background:#3b0b10;border:1px solid rgba(239,68,68,.4); color:#fecaca;}
-    input,button{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border); background: #0b1220; color:var(--text); outline:none;}
-    input:focus{border-color: rgba(109,200,77,.75); box-shadow:0 0 0 4px rgba(109,200,77,.12);}
+    input,button,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border); background: #0b1220; color:var(--text); outline:none;}
+    input:focus,select:focus{border-color: rgba(109,200,77,.75); box-shadow:0 0 0 4px rgba(109,200,77,.12);}
     button{background:var(--brand); color:#05210a; border:none; font-weight:900; cursor:pointer;}
     button:disabled{opacity:.5; cursor:not-allowed;}
     .btn-dark{background:#0b1220;color:var(--brand);border:1px solid var(--border);}
@@ -46,14 +46,7 @@
       border-color: rgba(109,200,77,.7);
       box-shadow:0 0 0 3px rgba(109,200,77,.10);
     }
-
-    /* Modal */
-    .modal{display:none; position:fixed; inset:0; background:rgba(0,0,0,.72); z-index:9999; padding:18px;}
-    .modal-card{
-      max-width:520px; margin:12vh auto; background:rgba(17,24,39,.98);
-      border:1px solid rgba(109,200,77,.35); border-radius:16px; padding:16px;
-      box-shadow:0 18px 40px rgba(0,0,0,.45);
-    }
+    .small{font-size:12px;color:var(--muted);}
   </style>
 </head>
 <body>
@@ -62,7 +55,7 @@
       <div class="brand">
         <span class="dot"></span>
         <div>
-          <div class="title">GreenLead Trivia</div>
+          <div class="title">Sentinel Trivia</div>
           <div class="muted">Admin Control Room</div>
         </div>
       </div>
@@ -71,7 +64,7 @@
 
     <!-- LOGIN -->
     <div class="card" id="loginCard">
-      <div class="muted" style="margin-bottom:10px;">Enter the host password to control rounds and view submissions.</div>
+      <div class="muted" style="margin-bottom:10px;">Enter host password to control rounds + view submissions.</div>
       <div class="grid2">
         <input id="adminPass" type="password" placeholder="Admin password" autocomplete="current-password" />
         <button onclick="adminLogin()">Login</button>
@@ -79,7 +72,7 @@
       <div class="muted" id="loginMsg" style="margin-top:10px;"></div>
     </div>
 
-    <!-- DASHBOARD -->
+    <!-- DASH -->
     <div class="card" id="dashCard" style="display:none; margin-top:12px;">
       <div class="row" style="justify-content:space-between;margin-bottom:10px;">
         <div class="row">
@@ -90,20 +83,35 @@
         <button class="btn-dark" style="max-width:140px;" onclick="logout()">Logout</button>
       </div>
 
-      <div class="row" style="margin-bottom:10px;">
-        <button style="max-width:220px;" onclick="setOpen(true)">Start Round (OPEN)</button>
-        <button class="btn-warn" style="max-width:220px;" onclick="setOpen(false)">End Round (LOCK)</button>
-        <button class="btn-dark" style="max-width:220px;" onclick="nextRound()">Next Round</button>
-      </div>
+      <div class="grid2" style="align-items:end;">
+        <div class="card" style="padding:12px;">
+          <div class="muted" style="margin-bottom:8px;">Round controls</div>
+          <div class="row" style="margin-bottom:10px;">
+            <select id="roundSel"></select>
+            <button class="btn-dark" style="max-width:170px;" onclick="setRoundOnly()">Set Round</button>
+          </div>
+          <div class="row">
+            <button style="max-width:220px;" onclick="startRound()">Start Round (OPEN)</button>
+            <button class="btn-warn" style="max-width:220px;" onclick="endRound()">End Round (LOCK)</button>
+          </div>
+          <div class="small" style="margin-top:8px;">End Round locks answers. Players can’t edit until you start/open again.</div>
+        </div>
 
-      <div class="muted" id="dashMsg"></div>
+        <div class="card" style="padding:12px;">
+          <div class="muted" style="margin-bottom:8px;">Live status</div>
+          <div class="row">
+            <button class="btn-dark" style="max-width:220px;" onclick="refreshAll()">Refresh Now</button>
+          </div>
+          <div class="muted" id="dashMsg" style="margin-top:8px;"></div>
+        </div>
+      </div>
 
       <div style="overflow:auto; max-height:60vh; border:1px solid var(--border); border-radius:14px; margin-top:12px;">
         <table>
           <thead>
             <tr>
-              <th style="min-width:220px;">Team</th>
-              <th style="min-width:170px;">Answered</th>
+              <th style="min-width:240px;">Team</th>
+              <th style="min-width:170px;">Answered (non-blank)</th>
               <th>Q1–Q15</th>
             </tr>
           </thead>
@@ -113,33 +121,18 @@
     </div>
   </div>
 
-  <!-- Modal -->
-  <div class="modal" id="modal" onclick="if(event.target.id==='modal') hideModal()">
-    <div class="modal-card">
-      <div class="row" style="justify-content:space-between; margin-bottom:8px;">
-        <div style="font-weight:900;color:var(--brand);">Notice</div>
-        <button class="btn-dark" style="max-width:90px;" onclick="hideModal()">OK</button>
-      </div>
-      <div id="modalBody" style="line-height:1.4;"></div>
-    </div>
-  </div>
-
 <script>
-  // 🔧 PUT YOUR /exec URL HERE
   const API = "https://script.google.com/macros/s/AKfycbwrOmqReLTftoOswMb-gxaktPqUWqRGazcMhvRLfFF1hMav2nXLsjlClB4M_Dn1aiai/exec";
 
-  // ---------- JSONP helper (no CORS needed) ----------
+  // ---- JSONP ----
   function jsonp(action, params = {}) {
     return new Promise((resolve, reject) => {
-      const cbName = "GLCB_" + Math.random().toString(36).slice(2);
+      const cbName = "STCB_" + Math.random().toString(36).slice(2);
 
       const url = new URL(API);
       url.searchParams.set("action", action);
       url.searchParams.set("callback", cbName);
-
-      Object.entries(params).forEach(([k, v]) => {
-        url.searchParams.set(k, (v === undefined || v === null) ? "" : String(v));
-      });
+      Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, (v==null) ? "" : String(v)));
 
       let done = false;
       let timer = null;
@@ -148,19 +141,15 @@
       function cleanup() {
         if (done) return;
         done = true;
-        try { delete window[cbName]; } catch (e) {}
+        try { delete window[cbName]; } catch(e) {}
         if (timer) clearTimeout(timer);
         if (scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
       }
 
       window[cbName] = (data) => { cleanup(); resolve(data); };
-
       scriptEl.onerror = () => { cleanup(); reject(new Error("JSONP network error")); };
 
-      timer = setTimeout(() => {
-        cleanup();
-        reject(new Error("JSONP timeout"));
-      }, 12000);
+      timer = setTimeout(() => { cleanup(); reject(new Error("JSONP timeout")); }, 12000);
 
       scriptEl.src = url.toString();
       document.head.appendChild(scriptEl);
@@ -171,20 +160,12 @@
     return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
 
-  function showModal(html){
-    document.getElementById("modalBody").innerHTML = html;
-    document.getElementById("modal").style.display = "block";
-  }
-  function hideModal(){
-    document.getElementById("modal").style.display = "none";
-  }
+  // ---- session ----
+  function setAdminToken(t){ localStorage.setItem("st_adminToken", t); }
+  function getAdminToken(){ return localStorage.getItem("st_adminToken") || ""; }
+  function clearAdminToken(){ localStorage.removeItem("st_adminToken"); }
 
-  // ---------- session ----------
-  function setAdminToken(t){ localStorage.setItem("gltriv_adminToken", t); }
-  function getAdminToken(){ return localStorage.getItem("gltriv_adminToken") || ""; }
-  function clearAdminToken(){ localStorage.removeItem("gltriv_adminToken"); }
-
-  // ---------- UI refs ----------
+  // ---- UI ----
   const statePill = document.getElementById("statePill");
   const loginCard = document.getElementById("loginCard");
   const dashCard  = document.getElementById("dashCard");
@@ -194,6 +175,7 @@
   const openPill  = document.getElementById("openPill");
   const teamsPill = document.getElementById("teamsPill");
   const teamsBody = document.getElementById("teamsBody");
+  const roundSel  = document.getElementById("roundSel");
 
   let lastState = null;
 
@@ -203,13 +185,24 @@
     openPill.textContent = s.isOpen ? "Status: OPEN" : "Status: LOCKED";
     openPill.className = s.isOpen ? "pill" : "pill lock";
     statePill.textContent = s.isOpen ? `OPEN • Round ${s.round}` : `LOCKED • Round ${s.round}`;
+    buildRoundDropdown(s.totalRounds || 4, s.round);
   }
 
-  // ---------- login/logout ----------
+  function buildRoundDropdown(total, current){
+    roundSel.innerHTML = "";
+    for(let i=1;i<=total;i++){
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = `Round ${i}`;
+      roundSel.appendChild(opt);
+    }
+    roundSel.value = String(current || 1);
+  }
+
+  // ---- login/logout ----
   async function adminLogin(){
     loginMsg.textContent = "";
     const pass = document.getElementById("adminPass").value;
-
     if(!pass){
       loginMsg.innerHTML = `<span class="bad">Enter the password.</span>`;
       return;
@@ -232,7 +225,7 @@
     clearAdminToken();
     dashCard.style.display = "none";
     loginCard.style.display = "block";
-    document.getElementById("adminPass").value = "test";
+    document.getElementById("adminPass").value = "";
     loginMsg.textContent = "";
   }
 
@@ -242,46 +235,66 @@
     refreshAll();
   }
 
-  // ---------- admin actions ----------
-  async function setOpen(isOpen){
+  // ---- admin actions ----
+  async function setRoundOnly(){
     const adminToken = getAdminToken();
     if(!adminToken){ logout(); return; }
 
+    const r = Number(roundSel.value) || 1;
     try{
-      const out = await jsonp("adminToggle", { adminToken, isOpen: isOpen ? "true" : "false" });
+      const out = await jsonp("adminSetRound", { adminToken, round: String(r) });
       if(!out.ok){
-        showModal(`<span class="bad">${escapeHtml(out.error || "Not authorized.")}</span>`);
-        if((out.error||"").toLowerCase().includes("authorized")) logout();
+        dashMsg.innerHTML = `<span class="bad">${escapeHtml(out.error || "Failed.")}</span>`;
         return;
       }
       setStateUI(out.state);
-      showModal(isOpen ? `Round <strong>${escapeHtml(out.state.round)}</strong> is now <span class="ok">OPEN</span>.`
-                       : `Round <strong>${escapeHtml(out.state.round)}</strong> is now <span class="bad">LOCKED</span>.`);
-      refreshDashboard();
+      dashMsg.innerHTML = `<span class="ok">Round set to ${escapeHtml(out.state.round)}</span> (still ${out.state.isOpen ? "OPEN" : "LOCKED"}).`;
+      refreshMatrix();
     }catch(e){
-      showModal(`<span class="bad">Network error.</span>`);
+      dashMsg.innerHTML = `<span class="bad">Network error.</span>`;
     }
   }
 
-  async function nextRound(){
+  async function startRound(){
     const adminToken = getAdminToken();
     if(!adminToken){ logout(); return; }
 
+    const r = Number(roundSel.value) || 1;
     try{
-      const out = await jsonp("adminNextRound", { adminToken });
+      const out = await jsonp("adminStartRound", { adminToken, round: String(r) });
       if(!out.ok){
-        showModal(`<span class="bad">${escapeHtml(out.error || "Failed.")}</span>`);
+        dashMsg.innerHTML = `<span class="bad">${escapeHtml(out.error || "Failed.")}</span>`;
         return;
       }
       setStateUI(out.state);
-      showModal(`Moved to <strong>Round ${escapeHtml(out.state.round)}</strong>. Status is <strong>${out.state.isOpen ? "OPEN" : "LOCKED"}</strong>.`);
-      refreshDashboard();
+      dashMsg.innerHTML = `<span class="ok">Round ${escapeHtml(out.state.round)} OPEN.</span>`;
+      refreshMatrix();
     }catch(e){
-      showModal(`<span class="bad">Network error.</span>`);
+      dashMsg.innerHTML = `<span class="bad">Network error.</span>`;
     }
   }
 
-  // ---------- dashboard ----------
+  async function endRound(){
+    const adminToken = getAdminToken();
+    if(!adminToken){ logout(); return; }
+
+    if(!confirm("End round and LOCK answers? Players will not be able to edit.")) return;
+
+    try{
+      const out = await jsonp("adminEndRound", { adminToken });
+      if(!out.ok){
+        dashMsg.innerHTML = `<span class="bad">${escapeHtml(out.error || "Failed.")}</span>`;
+        return;
+      }
+      setStateUI(out.state);
+      dashMsg.innerHTML = `<span class="bad">Round locked.</span> Answers are frozen.`;
+      refreshMatrix();
+    }catch(e){
+      dashMsg.innerHTML = `<span class="bad">Network error.</span>`;
+    }
+  }
+
+  // ---- dashboard data ----
   async function refreshState(){
     try{
       const out = await jsonp("getState");
@@ -291,74 +304,81 @@
     }
   }
 
-  function renderTeams(d){
-    const teams = Array.isArray(d.teams) ? d.teams : [];
-    const qCount = Number(d.questionsPerRound) || 15;
-
-    teamsPill.textContent = `Teams: ${teams.length}`;
-
-    teamsBody.innerHTML = "";
-    for(const t of teams){
-      const answered = Number(t.answeredCount) || 0;
-      const answeredText = `${answered} / ${qCount}`;
-
-      const dots = [];
-      for(let q=1; q<=qCount; q++){
-        const has = !!(t.answered && t.answered[String(q)]);
-        dots.push(`<span class="qdot ${has ? "on" : ""}" title="Q${q}"></span>`);
-      }
-
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="team-name">${escapeHtml(t.teamName || "")}</td>
-        <td>${escapeHtml(answeredText)}</td>
-        <td><div class="dots">${dots.join("")}</div></td>
-      `;
-      teamsBody.appendChild(tr);
-    }
-
-    dashMsg.innerHTML = `Showing submissions for <strong>Round ${escapeHtml(d.round)}</strong>.`;
-  }
-
-  async function refreshDashboard(){
+  async function refreshTeams(){
     const adminToken = getAdminToken();
-    if(!adminToken){ return; }
+    if(!adminToken) return;
 
     try{
-      const out = await jsonp("adminDashboard", { adminToken });
+      const out = await jsonp("adminTeams", { adminToken });
+      if(out.ok){
+        const activeTeams = (out.teams || []).filter(t => t.active);
+        teamsPill.textContent = `Teams: ${activeTeams.length}`;
+      }
+    }catch(e){}
+  }
+
+  async function refreshMatrix(){
+    const adminToken = getAdminToken();
+    if(!adminToken) return;
+
+    try{
+      const out = await jsonp("adminRoundMatrix", { adminToken });
       if(!out.ok){
-        dashMsg.innerHTML = `<span class="bad">${escapeHtml(out.error || "Failed to load dashboard.")}</span>`;
-        if((out.error||"").toLowerCase().includes("authorized")) logout();
+        dashMsg.innerHTML = `<span class="bad">${escapeHtml(out.error || "Failed to load matrix.")}</span>`;
         return;
       }
+
       setStateUI(out.state);
-      renderTeams(out);
+      const qCount = Number(out.questionsPerRound) || 15;
+      const rows = Array.isArray(out.rows) ? out.rows : [];
+
+      teamsPill.textContent = `Teams: ${rows.length}`;
+      teamsBody.innerHTML = "";
+
+      for(const r of rows){
+        const dots = [];
+        for(let i=0;i<qCount;i++){
+          const has = !!(r.answered && r.answered[i]);
+          dots.push(`<span class="qdot ${has ? "on" : ""}" title="Q${i+1}"></span>`);
+        }
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="team-name">${escapeHtml(r.teamName || "")}</td>
+          <td>${escapeHtml(String(r.answeredCount || 0))} / ${escapeHtml(String(qCount))}</td>
+          <td><div class="dots">${dots.join("")}</div></td>
+        `;
+        teamsBody.appendChild(tr);
+      }
+
+      dashMsg.innerHTML = `Showing <strong>Round ${escapeHtml(String(out.state.round))}</strong> submissions.`;
+
     }catch(e){
-      dashMsg.innerHTML = `<span class="bad">Network error loading dashboard.</span>`;
+      dashMsg.innerHTML = `<span class="bad">Network error loading matrix.</span>`;
     }
   }
 
   async function refreshAll(){
     await refreshState();
-    await refreshDashboard();
+    await refreshTeams();
+    await refreshMatrix();
   }
 
-  // ---------- boot ----------
+  // ---- boot ----
   (function init(){
     const token = getAdminToken();
     if(token) showDash();
     else logout();
 
-    // Enter key submits login
     document.addEventListener("keydown", (e)=>{
       if(loginCard.style.display !== "none" && e.key === "Enter") adminLogin();
     });
 
     refreshState();
     setInterval(refreshState, 4000);
-    setInterval(refreshDashboard, 5000);
+    setInterval(() => { if(getAdminToken()) refreshMatrix(); }, 5000);
+    setInterval(() => { if(getAdminToken()) refreshTeams(); }, 9000);
   })();
 </script>
 </body>
 </html>
-
