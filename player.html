@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GreenLead Trivia - Player</title>
+  <title>Sentinel Trivia - Player</title>
   <style>
     :root{
       --brand:#6dc84d; --bg:#0b1220; --panel:#111827; --panel2:#0f172a;
@@ -11,7 +11,7 @@
     }
     *{box-sizing:border-box;}
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Arial;background:radial-gradient(900px 500px at 10% 0%, rgba(109,200,77,.20), transparent 60%), var(--bg); color:var(--text);}
-    .wrap{max-width:760px;margin:0 auto;padding:18px;}
+    .wrap{max-width:860px;margin:0 auto;padding:18px;}
     .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
     .brand{display:flex;align-items:center;gap:10px;}
     .dot{width:10px;height:10px;border-radius:999px;background:var(--brand); box-shadow: 0 0 0 4px rgba(109,200,77,.12);}
@@ -19,16 +19,17 @@
     .card{background:linear-gradient(180deg, rgba(17,24,39,.92), rgba(17,24,39,.84)); border:1px solid var(--border); border-radius:16px; padding:14px; box-shadow: 0 18px 40px rgba(0,0,0,.35);}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
     @media(max-width:680px){.grid{grid-template-columns:1fr;}}
-    input,textarea,button{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border); background: #0b1220; color:var(--text); outline:none;}
-    input:focus,textarea:focus{border-color: rgba(109,200,77,.75); box-shadow:0 0 0 4px rgba(109,200,77,.12);}
+    input,textarea,button,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border); background: #0b1220; color:var(--text); outline:none;}
+    input:focus,textarea:focus,select:focus{border-color: rgba(109,200,77,.75); box-shadow:0 0 0 4px rgba(109,200,77,.12);}
     textarea{min-height:92px;resize:vertical;}
     button{background:var(--brand); color:#05210a; border:none; font-weight:900; cursor:pointer;}
     button:disabled{opacity:.5; cursor:not-allowed;}
+    .btn-dark{background:#0b1220;color:var(--brand);border:1px solid var(--border);}
     .pill{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--border); border-radius:999px; background:#0b1220;color:var(--muted); font-size:13px;}
     .row{display:flex;gap:10px;flex-wrap:wrap; align-items:center;}
     .muted{color:var(--muted); font-size:13px; line-height:1.35;}
-    .ok{color:var(--brand); font-weight:800;}
-    .bad{color:#fca5a5; font-weight:800;}
+    .ok{color:var(--brand); font-weight:900;}
+    .bad{color:#fca5a5; font-weight:900;}
     .lock{background:#3b0b10;border:1px solid rgba(239,68,68,.4); color:#fecaca;}
     .footer{margin-top:10px;color:var(--muted);font-size:12px;}
   </style>
@@ -39,13 +40,14 @@
       <div class="brand">
         <span class="dot"></span>
         <div>
-          <div class="title">GreenLead Trivia</div>
-          <div class="muted">Answer portal</div>
+          <div class="title">Sentinel Trivia</div>
+          <div class="muted">Player Answer Portal</div>
         </div>
       </div>
       <div class="pill" id="statePill">Connecting…</div>
     </div>
 
+    <!-- JOIN -->
     <div class="card" id="joinCard">
       <div class="muted" style="margin-bottom:10px;">Enter your team name. If the host set a PIN, enter it too.</div>
       <div class="grid">
@@ -58,20 +60,29 @@
       <div class="footer" id="joinMsg"></div>
     </div>
 
+    <!-- PLAY -->
     <div class="card" id="playCard" style="display:none; margin-top:12px;">
       <div class="row" style="justify-content:space-between;margin-bottom:8px;">
         <div class="pill"><span>Team:</span> <strong id="teamLabel"></strong></div>
-        <button style="max-width:160px;background:#0b1220;color:var(--brand);border:1px solid var(--border);" onclick="resetTeam()">Change Team</button>
+        <button class="btn-dark" style="max-width:170px;" onclick="resetTeam()">Change Team</button>
       </div>
 
-      <div class="row" style="margin-bottom:8px;">
-        <div class="pill" id="rqPill">Round ? • Q?</div>
+      <div class="row" style="margin-bottom:10px;">
+        <div class="pill" id="roundPill">Round ?</div>
         <div class="pill" id="openPill">Status: …</div>
+        <div class="pill" id="savedPill">Saved: —</div>
+      </div>
+
+      <div class="row" style="margin-bottom:10px;">
+        <select id="questionSel" onchange="switchQuestion()"></select>
+        <button class="btn-dark" style="max-width:160px;" onclick="loadMyRoundAnswers()">Refresh</button>
       </div>
 
       <textarea id="answer" placeholder="Type your answer here…"></textarea>
+
       <div class="row" style="margin-top:10px;">
-        <button id="submitBtn" onclick="submitAnswer()">Submit Answer</button>
+        <button id="submitBtn" onclick="submitAnswer()">Save Answer</button>
+        <button class="btn-dark" style="max-width:220px;" onclick="saveBlank()">Save Blank (Don’t Know)</button>
       </div>
 
       <div class="footer" id="playMsg"></div>
@@ -79,22 +90,17 @@
   </div>
 
 <script>
-  // 🔧 PUT YOUR /exec URL HERE
   const API = "https://script.google.com/macros/s/AKfycbwrOmqReLTftoOswMb-gxaktPqUWqRGazcMhvRLfFF1hMav2nXLsjlClB4M_Dn1aiai/exec";
 
-  // ---------- JSONP helper (no CORS needed) ----------
+  // ---- JSONP ----
   function jsonp(action, params = {}) {
     return new Promise((resolve, reject) => {
-      const cbName = "GLCB_" + Math.random().toString(36).slice(2);
+      const cbName = "STCB_" + Math.random().toString(36).slice(2);
 
       const url = new URL(API);
       url.searchParams.set("action", action);
       url.searchParams.set("callback", cbName);
-
-      Object.entries(params).forEach(([k, v]) => {
-        // ensure everything is stringifiable in querystring
-        url.searchParams.set(k, (v === undefined || v === null) ? "" : String(v));
-      });
+      Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, (v==null) ? "" : String(v)));
 
       let done = false;
       let timer = null;
@@ -103,435 +109,252 @@
       function cleanup() {
         if (done) return;
         done = true;
-        try { delete window[cbName]; } catch (e) {}
+        try { delete window[cbName]; } catch(e) {}
         if (timer) clearTimeout(timer);
         if (scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
       }
 
-      window[cbName] = (data) => {
-        cleanup();
-        resolve(data);
-      };
+      window[cbName] = (data) => { cleanup(); resolve(data); };
+      scriptEl.onerror = () => { cleanup(); reject(new Error("JSONP network error")); };
 
-      scriptEl.onerror = () => {
-        cleanup();
-        reject(new Error("JSONP network error"));
-      };
-
-      timer = setTimeout(() => {
-        cleanup();
-        reject(new Error("JSONP timeout"));
-      }, 12000);
+      timer = setTimeout(() => { cleanup(); reject(new Error("JSONP timeout")); }, 12000);
 
       scriptEl.src = url.toString();
       document.head.appendChild(scriptEl);
     });
   }
 
-  // ---------- device token ----------
+  // ---- device token ----
   function getDeviceToken() {
-    let t = localStorage.getItem("gltriv_device");
+    let t = localStorage.getItem("st_device");
     if (!t) {
-      t = "D" + crypto.getRandomValues(new Uint32Array(4)).join("").slice(0, 18);
-      localStorage.setItem("gltriv_device", t);
+      t = "D" + crypto.getRandomValues(new Uint32Array(4)).join("").slice(0,18);
+      localStorage.setItem("st_device", t);
     }
     return t;
   }
 
-  function setTeamSession(teamId, teamName) {
-    localStorage.setItem("gltriv_teamId", teamId);
-    localStorage.setItem("gltriv_teamName", teamName);
+  function setTeamSession(teamId, teamName){
+    localStorage.setItem("st_teamId", teamId);
+    localStorage.setItem("st_teamName", teamName);
   }
-  function getTeamSession() {
+  function getTeamSession(){
     return {
-      teamId: localStorage.getItem("gltriv_teamId") || "",
-      teamName: localStorage.getItem("gltriv_teamName") || ""
+      teamId: localStorage.getItem("st_teamId") || "",
+      teamName: localStorage.getItem("st_teamName") || ""
     };
   }
-  function clearTeamSession() {
-    localStorage.removeItem("gltriv_teamId");
-    localStorage.removeItem("gltriv_teamName");
+  function clearTeamSession(){
+    localStorage.removeItem("st_teamId");
+    localStorage.removeItem("st_teamName");
   }
 
-  // ---------- UI refs ----------
+  // ---- UI refs ----
   const statePill = document.getElementById("statePill");
-  const joinCard  = document.getElementById("joinCard");
-  const playCard  = document.getElementById("playCard");
-  const joinMsg   = document.getElementById("joinMsg");
-  const playMsg   = document.getElementById("playMsg");
+  const joinCard = document.getElementById("joinCard");
+  const playCard = document.getElementById("playCard");
+  const joinMsg = document.getElementById("joinMsg");
+  const playMsg = document.getElementById("playMsg");
   const teamLabel = document.getElementById("teamLabel");
-  const rqPill    = document.getElementById("rqPill");
-  const openPill  = document.getElementById("openPill");
+  const roundPill = document.getElementById("roundPill");
+  const openPill = document.getElementById("openPill");
+  const savedPill = document.getElementById("savedPill");
+  const submitBtn = document.getElementById("submitBtn");
+  const answerEl = document.getElementById("answer");
+  const questionSel = document.getElementById("questionSel");
 
-  // We will replace the single answer box with a question list UI.
-  // Grab existing textarea and submit button so we can repurpose layout.
-  const oldAnswerEl = document.getElementById("answer");
-  const oldSubmitBtn = document.getElementById("submitBtn");
-
-  // ---------- runtime state ----------
   let lastState = null;
-  let lastIsOpen = null;
-  let currentAnswers = {}; // question -> answer string
-  let saveTimers = {};     // question -> debounce timer
-  let uiBuilt = false;
+  let myAnswers = {};     // { "1": "abc", "2": "" ... }
+  let currentQ = 1;
 
-  // ---------- small helpers ----------
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, m => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[m]));
-  }
-
-  function ensureModal() {
-    if (document.getElementById("glModal")) return;
-
-    const modal = document.createElement("div");
-    modal.id = "glModal";
-    modal.style.cssText = `
-      display:none; position:fixed; inset:0; background:rgba(0,0,0,.72);
-      z-index:9999; padding:18px;
-    `;
-    modal.innerHTML = `
-      <div style="
-        max-width:520px; margin:12vh auto; background:rgba(17,24,39,.98);
-        border:1px solid rgba(109,200,77,.35);
-        border-radius:16px; padding:16px; box-shadow:0 18px 40px rgba(0,0,0,.45);
-      ">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-          <div style="font-weight:900;color:#6dc84d;letter-spacing:.2px;">Round Locked</div>
-          <button id="glModalClose" style="
-            background:#0b1220;color:#6dc84d;border:1px solid #263244;
-            border-radius:12px; padding:8px 12px; font-weight:900; cursor:pointer;
-          ">OK</button>
-        </div>
-        <div id="glModalBody" style="margin-top:10px;color:#e5e7eb;line-height:1.4;">
-          The host ended the round. Answers are locked in.
-        </div>
-      </div>
-    `;
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) hideModal();
-    });
-    document.body.appendChild(modal);
-
-    document.getElementById("glModalClose").onclick = hideModal;
-  }
-
-  function showModal(html) {
-    ensureModal();
-    document.getElementById("glModalBody").innerHTML = html;
-    document.getElementById("glModal").style.display = "block";
-  }
-  function hideModal() {
-    const m = document.getElementById("glModal");
-    if (m) m.style.display = "none";
-  }
-
-  // ---------- build question UI ----------
-  function buildQuestionsUI(qCount) {
-    if (uiBuilt) return;
-
-    // remove old single-question UI
-    if (oldAnswerEl) oldAnswerEl.remove();
-    if (oldSubmitBtn) oldSubmitBtn.remove();
-
-    const container = document.createElement("div");
-    container.id = "questionsWrap";
-    container.style.cssText = "margin-top:10px; display:flex; flex-direction:column; gap:10px;";
-
-    const hint = document.createElement("div");
-    hint.id = "qHint";
-    hint.className = "muted";
-    hint.style.marginBottom = "6px";
-    hint.textContent = "Answer any questions in this round. You can edit until the host locks the round. Blank is allowed.";
-
-    playCard.insertBefore(hint, playMsg);
-
-    // Build Q cards
-    for (let q = 1; q <= qCount; q++) {
-      const card = document.createElement("div");
-      card.className = "card";
-      card.style.cssText = `
-        padding:12px; border-radius:16px; border:1px solid #263244;
-        background:linear-gradient(180deg, rgba(15,23,42,.88), rgba(17,24,39,.82));
-      `;
-
-      card.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="
-              width:10px;height:10px;border-radius:999px;background:#263244;
-              box-shadow:0 0 0 4px rgba(109,200,77,.08);
-            " id="qDot_${q}"></div>
-            <div style="font-weight:900;">Question ${q}</div>
-          </div>
-          <div class="muted" id="qStatus_${q}" style="font-size:12px; min-width:120px; text-align:right;"></div>
-        </div>
-
-        <textarea id="qInput_${q}" placeholder="Type your answer (blank allowed)…" style="min-height:74px;"></textarea>
-
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
-          <button id="qSave_${q}" style="max-width:160px;">Save</button>
-        </div>
-      `;
-
-      container.appendChild(card);
-    }
-
-    playCard.insertBefore(container, playMsg);
-
-    // wire events
-    for (let q = 1; q <= qCount; q++) {
-      const ta = document.getElementById(`qInput_${q}`);
-      const btn = document.getElementById(`qSave_${q}`);
-
-      // debounce autosave on input
-      ta.addEventListener("input", () => {
-        markDirty(q);
-        debounceSave(q, 600);
-      });
-
-      // also save on blur (less network spam than every keystroke)
-      ta.addEventListener("blur", () => {
-        debounceSave(q, 0);
-      });
-
-      // manual save button
-      btn.addEventListener("click", () => {
-        debounceSave(q, 0);
-      });
-    }
-
-    uiBuilt = true;
-  }
-
-  function markDirty(q) {
-    const st = document.getElementById(`qStatus_${q}`);
-    if (st) st.textContent = "Editing…";
-  }
-
-  function setQuestionIndicator(q, answerStr) {
-    const dot = document.getElementById(`qDot_${q}`);
-    if (!dot) return;
-
-    const has = (answerStr || "").trim().length > 0;
-    dot.style.background = has ? "var(--brand)" : "#263244";
-    dot.style.boxShadow = has ? "0 0 0 4px rgba(109,200,77,.12)" : "0 0 0 4px rgba(109,200,77,.08)";
-  }
-
-  function setLockedUI(locked) {
-    const wrap = document.getElementById("questionsWrap");
-    if (!wrap) return;
-    const inputs = wrap.querySelectorAll("textarea, button");
-    inputs.forEach(el => {
-      el.disabled = locked;
-    });
-
-    const hint = document.getElementById("qHint");
-    if (hint) {
-      hint.textContent = locked
-        ? "Round is locked. You can view your answers, but you can’t edit them."
-        : "Answer any questions in this round. You can edit until the host locks the round. Blank is allowed.";
-    }
-  }
-
-  function setStateUI(s) {
+  function setStateUI(s){
     lastState = s;
-
-    const qCount = Number(s.questionsPerRound) || 15;
-    buildQuestionsUI(qCount);
-
-    rqPill.textContent = `Round ${s.round} • ${qCount} Questions`;
+    roundPill.textContent = `Round ${s.round}`;
     openPill.textContent = s.isOpen ? "Status: OPEN" : "Status: LOCKED";
     openPill.className = s.isOpen ? "pill" : "pill lock";
     statePill.textContent = s.isOpen ? `OPEN • Round ${s.round}` : `LOCKED • Round ${s.round}`;
 
-    // lock/unlock controls
-    setLockedUI(!s.isOpen);
+    submitBtn.disabled = !s.isOpen;
+    answerEl.disabled = !s.isOpen;
 
-    // popup when it transitions open -> locked
-    if (lastIsOpen === true && s.isOpen === false) {
-      showModal(`The host ended <strong>Round ${escapeHtml(s.round)}</strong>. Answers are locked in.`);
-    }
-    lastIsOpen = s.isOpen;
+    if (!s.isOpen) answerEl.placeholder = "Locked. Round ended.";
+    else answerEl.placeholder = "Type your answer here…";
+
+    buildQuestionDropdown(s.questionsPerRound || 15);
   }
 
-  async function refreshState() {
-    try {
+  function buildQuestionDropdown(qCount){
+    const existing = questionSel.options.length;
+    if (existing === qCount) return;
+
+    questionSel.innerHTML = "";
+    for(let i=1;i<=qCount;i++){
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = `Question ${i}`;
+      questionSel.appendChild(opt);
+    }
+    if(currentQ < 1) currentQ = 1;
+    if(currentQ > qCount) currentQ = qCount;
+    questionSel.value = String(currentQ);
+  }
+
+  async function refreshState(){
+    try{
       const res = await jsonp("getState");
-      if (res.ok) {
-        setStateUI(res.state);
-      } else {
-        statePill.textContent = "Error";
-      }
-    } catch (e) {
+      if(res.ok) setStateUI(res.state);
+    }catch(e){
       statePill.textContent = "Offline / blocked network";
     }
   }
 
-  // ---------- join / session ----------
-  async function join() {
+  async function join(){
     joinMsg.textContent = "";
     const teamName = document.getElementById("teamName").value.trim();
     const pin = document.getElementById("pin").value.trim();
-    if (!teamName) {
-      joinMsg.innerHTML = `<span class="bad">Team name required.</span>`;
-      return;
-    }
+    if(!teamName){ joinMsg.innerHTML = `<span class="bad">Team name required.</span>`; return; }
 
-    try {
+    try{
       const out = await jsonp("joinTeam", {
         teamName,
         pin,
         deviceToken: getDeviceToken()
       });
 
-      if (!out.ok) {
+      if(!out.ok){
         joinMsg.innerHTML = `<span class="bad">${escapeHtml(out.error || "Join failed.")}</span>`;
         return;
       }
 
       setTeamSession(out.team.teamId, out.team.teamName);
       showPlay();
-    } catch (e) {
+
+    }catch(e){
       joinMsg.innerHTML = `<span class="bad">Network error (maybe blocked Wi-Fi). Try mobile data.</span>`;
     }
   }
 
-  function showPlay() {
+  function showPlay(){
     const sess = getTeamSession();
     teamLabel.textContent = sess.teamName || "";
     joinCard.style.display = "none";
     playCard.style.display = "block";
     playMsg.textContent = "";
-
-    refreshState().then(() => refreshMyRoundAnswers());
+    refreshState();
+    loadMyRoundAnswers();
   }
 
-  function resetTeam() {
+  function resetTeam(){
     clearTeamSession();
     joinCard.style.display = "block";
     playCard.style.display = "none";
     document.getElementById("teamName").value = "";
     document.getElementById("pin").value = "";
     playMsg.textContent = "";
+    joinMsg.textContent = "";
   }
 
-  // ---------- answers ----------
-  async function refreshMyRoundAnswers() {
+  async function loadMyRoundAnswers(){
     const sess = getTeamSession();
-    if (!sess.teamId) return;
+    if(!sess.teamId) return;
 
-    try {
+    try{
       const out = await jsonp("getMyRoundAnswers", {
         teamId: sess.teamId,
         deviceToken: getDeviceToken()
       });
 
-      if (!out.ok) return;
-
-      currentAnswers = out.answers || {};
-      const qCount = (lastState && Number(lastState.questionsPerRound)) ? Number(lastState.questionsPerRound) : 15;
-
-      for (let q = 1; q <= qCount; q++) {
-        const ta = document.getElementById(`qInput_${q}`);
-        const saved = currentAnswers[String(q)] ?? "";
-        if (ta && ta.value !== saved) {
-          ta.value = saved;
-        }
-        setQuestionIndicator(q, saved);
-
-        const st = document.getElementById(`qStatus_${q}`);
-        if (st) st.textContent = saved.trim().length ? "Saved" : "";
+      if(!out.ok){
+        playMsg.innerHTML = `<span class="bad">${escapeHtml(out.error || "Failed.")}</span>`;
+        return;
       }
 
-      // show little summary line
-      const filled = Object.keys(currentAnswers).filter(k => (currentAnswers[k] || "").trim().length > 0).length;
-      playMsg.innerHTML = `<span class="muted">Loaded your answers for Round ${escapeHtml(out.round)}. Answered: <span class="ok">${filled}</span></span>`;
-
-      // if round locked, ensure UI locked
-      if (out.isOpen === false) {
-        setLockedUI(true);
+      // in case state changed
+      if(lastState && typeof out.isOpen === "boolean"){
+        setStateUI({ ...lastState, isOpen: out.isOpen, round: out.round });
       }
 
-    } catch (e) {
-      // ignore
+      myAnswers = out.answers || {};
+      // keep currentQ but clamp if needed
+      const qCount = (lastState && lastState.questionsPerRound) ? lastState.questionsPerRound : 15;
+      if(currentQ > qCount) currentQ = qCount;
+
+      questionSel.value = String(currentQ);
+      answerEl.value = (myAnswers[String(currentQ)] ?? "");
+      updateSavedPill();
+
+      if(out.isOpen === false){
+        playMsg.innerHTML = `<span class="bad">Round locked.</span> You can’t edit answers right now.`;
+      }else{
+        playMsg.textContent = "";
+      }
+
+    }catch(e){
+      playMsg.innerHTML = `<span class="bad">Network error.</span>`;
     }
   }
 
-  function debounceSave(q, delayMs) {
-    if (saveTimers[q]) clearTimeout(saveTimers[q]);
-    saveTimers[q] = setTimeout(() => saveQuestion(q), delayMs);
+  function updateSavedPill(){
+    const v = (myAnswers[String(currentQ)] ?? "");
+    if(v.trim().length === 0){
+      savedPill.textContent = "Saved: (blank)";
+    }else{
+      savedPill.textContent = "Saved: ✓";
+    }
   }
 
-  async function saveQuestion(q) {
+  function switchQuestion(){
+    currentQ = Number(questionSel.value) || 1;
+    answerEl.value = (myAnswers[String(currentQ)] ?? "");
+    updateSavedPill();
+    playMsg.textContent = "";
+  }
+
+  async function submitAnswer(){
     const sess = getTeamSession();
-    if (!sess.teamId) return;
+    const answer = answerEl.value; // allow blank
+    playMsg.textContent = "";
 
-    // If locked, do nothing
-    if (lastState && lastState.isOpen === false) {
-      const st = document.getElementById(`qStatus_${q}`);
-      if (st) st.textContent = "Locked";
-      return;
-    }
-
-    const ta = document.getElementById(`qInput_${q}`);
-    const answer = ta ? ta.value : "";
-
-    const st = document.getElementById(`qStatus_${q}`);
-    const btn = document.getElementById(`qSave_${q}`);
-    if (btn) btn.disabled = true;
-    if (st) st.textContent = "Saving…";
-
-    try {
+    try{
       const out = await jsonp("submitAnswer", {
         teamId: sess.teamId,
         deviceToken: getDeviceToken(),
-        question: q,
-        answer: answer // blank allowed
+        question: String(currentQ),
+        answer: answer
       });
 
-      if (out.ok) {
-        currentAnswers[String(q)] = answer;
-        setQuestionIndicator(q, answer);
-        if (st) st.textContent = "Saved";
-      } else if (out.locked) {
-        if (st) st.textContent = "Locked";
+      if(out.ok){
+        myAnswers[String(currentQ)] = answer;
+        updateSavedPill();
+        playMsg.innerHTML = `<span class="ok">Saved!</span> Q${currentQ} updated.`;
+      } else if(out.locked) {
+        playMsg.innerHTML = `<span class="bad">Locked.</span> Round is closed.`;
         refreshState();
-        showModal(`The host ended the round. Your answers are locked in.`);
       } else {
-        if (st) st.textContent = "Error";
+        playMsg.innerHTML = `<span class="bad">${escapeHtml(out.error || "Save failed.")}</span>`;
       }
-    } catch (e) {
-      if (st) st.textContent = "Network error";
-    } finally {
-      if (btn) btn.disabled = (lastState && lastState.isOpen === false) ? true : false;
+    }catch(e){
+      playMsg.innerHTML = `<span class="bad">Network error.</span>`;
     }
   }
 
-  // ---------- expose functions used by inline HTML buttons ----------
-  window.join = join;
-  window.resetTeam = resetTeam;
+  function saveBlank(){
+    answerEl.value = "";
+    submitAnswer();
+  }
 
-  // ---------- boot ----------
-  (function init() {
-    ensureModal();
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
 
-    // Enter key on join fields should join
-    document.addEventListener("keydown", (e) => {
-      if (joinCard.style.display !== "none" && e.key === "Enter") join();
-    });
-
+  // ---- boot ----
+  (function init(){
     const sess = getTeamSession();
-    if (sess.teamId) showPlay();
-
+    if(sess.teamId) showPlay();
     refreshState();
-    setInterval(refreshState, 4000);
-    setInterval(refreshMyRoundAnswers, 9000);
+    setInterval(refreshState, 5000);
+    setInterval(() => { if(getTeamSession().teamId) loadMyRoundAnswers(); }, 8000);
   })();
 </script>
 </body>
-
 </html>
-
-
