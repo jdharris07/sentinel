@@ -83,148 +83,332 @@
   const API = "https://script.google.com/macros/s/AKfycbwrOmqReLTftoOswMb-gxaktPqUWqRGazcMhvRLfFF1hMav2nXLsjlClB4M_Dn1aiai/exec";
 
   // ---------- JSONP helper (no CORS needed) ----------
-function jsonp(action, params = {}) {
-  return new Promise((resolve, reject) => {
-    const cbName = "GLCB_" + Math.random().toString(36).slice(2);
+  function jsonp(action, params = {}) {
+    return new Promise((resolve, reject) => {
+      const cbName = "GLCB_" + Math.random().toString(36).slice(2);
 
-    const url = new URL(API);
-    url.searchParams.set("action", action);
-    url.searchParams.set("callback", cbName);
+      const url = new URL(API);
+      url.searchParams.set("action", action);
+      url.searchParams.set("callback", cbName);
 
-    Object.entries(params).forEach(([k,v]) => {
-      url.searchParams.set(k, v);
+      Object.entries(params).forEach(([k, v]) => {
+        // ensure everything is stringifiable in querystring
+        url.searchParams.set(k, (v === undefined || v === null) ? "" : String(v));
+      });
+
+      let done = false;
+      let timer = null;
+      const scriptEl = document.createElement("script");
+
+      function cleanup() {
+        if (done) return;
+        done = true;
+        try { delete window[cbName]; } catch (e) {}
+        if (timer) clearTimeout(timer);
+        if (scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
+      }
+
+      window[cbName] = (data) => {
+        cleanup();
+        resolve(data);
+      };
+
+      scriptEl.onerror = () => {
+        cleanup();
+        reject(new Error("JSONP network error"));
+      };
+
+      timer = setTimeout(() => {
+        cleanup();
+        reject(new Error("JSONP timeout"));
+      }, 12000);
+
+      scriptEl.src = url.toString();
+      document.head.appendChild(scriptEl);
     });
-
-    let done = false;
-    let timer = null;
-
-    const scriptEl = document.createElement("script");
-
-    function cleanup() {
-      if (done) return;
-      done = true;
-      try { delete window[cbName]; } catch(e) {}
-      if (timer) clearTimeout(timer);
-      if (scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
-    }
-
-    window[cbName] = (data) => {
-      cleanup();
-      resolve(data);
-    };
-
-    scriptEl.onerror = () => {
-      cleanup();
-      reject(new Error("JSONP network error"));
-    };
-
-    timer = setTimeout(() => {
-      cleanup();
-      reject(new Error("JSONP timeout"));
-    }, 12000);
-
-    scriptEl.src = url.toString();
-    document.head.appendChild(scriptEl);
-  });
-}
+  }
 
   // ---------- device token ----------
   function getDeviceToken() {
     let t = localStorage.getItem("gltriv_device");
     if (!t) {
-      t = "D" + crypto.getRandomValues(new Uint32Array(4)).join("").slice(0,18);
+      t = "D" + crypto.getRandomValues(new Uint32Array(4)).join("").slice(0, 18);
       localStorage.setItem("gltriv_device", t);
     }
     return t;
   }
 
-  function setTeamSession(teamId, teamName){
+  function setTeamSession(teamId, teamName) {
     localStorage.setItem("gltriv_teamId", teamId);
     localStorage.setItem("gltriv_teamName", teamName);
   }
-  function getTeamSession(){
+  function getTeamSession() {
     return {
       teamId: localStorage.getItem("gltriv_teamId") || "",
       teamName: localStorage.getItem("gltriv_teamName") || ""
     };
   }
-  function clearTeamSession(){
+  function clearTeamSession() {
     localStorage.removeItem("gltriv_teamId");
     localStorage.removeItem("gltriv_teamName");
   }
 
-  // ---------- UI ----------
+  // ---------- UI refs ----------
   const statePill = document.getElementById("statePill");
-  const joinCard = document.getElementById("joinCard");
-  const playCard = document.getElementById("playCard");
-  const joinMsg = document.getElementById("joinMsg");
-  const playMsg = document.getElementById("playMsg");
+  const joinCard  = document.getElementById("joinCard");
+  const playCard  = document.getElementById("playCard");
+  const joinMsg   = document.getElementById("joinMsg");
+  const playMsg   = document.getElementById("playMsg");
   const teamLabel = document.getElementById("teamLabel");
-  const rqPill = document.getElementById("rqPill");
-  const openPill = document.getElementById("openPill");
-  const submitBtn = document.getElementById("submitBtn");
-  const answerEl = document.getElementById("answer");
+  const rqPill    = document.getElementById("rqPill");
+  const openPill  = document.getElementById("openPill");
 
+  // We will replace the single answer box with a question list UI.
+  // Grab existing textarea and submit button so we can repurpose layout.
+  const oldAnswerEl = document.getElementById("answer");
+  const oldSubmitBtn = document.getElementById("submitBtn");
+
+  // ---------- runtime state ----------
   let lastState = null;
+  let lastIsOpen = null;
+  let currentAnswers = {}; // question -> answer string
+  let saveTimers = {};     // question -> debounce timer
+  let uiBuilt = false;
 
-  function setStateUI(s){
-    lastState = s;
-    rqPill.textContent = `Round ${s.round} • Q${s.question}`;
-    openPill.textContent = s.isOpen ? "Status: OPEN" : "Status: LOCKED";
-    openPill.className = s.isOpen ? "pill" : "pill lock";
-    statePill.textContent = s.isOpen ? `OPEN • R${s.round} Q${s.question}` : `LOCKED • R${s.round} Q${s.question}`;
-
-    submitBtn.disabled = !s.isOpen;
-    answerEl.disabled = !s.isOpen;
-    if (!s.isOpen) answerEl.placeholder = "Locked. No more answers.";
-    else answerEl.placeholder = "Type your answer here…";
+  // ---------- small helpers ----------
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
   }
 
-  async function refreshState(){
-    try{
+  function ensureModal() {
+    if (document.getElementById("glModal")) return;
+
+    const modal = document.createElement("div");
+    modal.id = "glModal";
+    modal.style.cssText = `
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.72);
+      z-index:9999; padding:18px;
+    `;
+    modal.innerHTML = `
+      <div style="
+        max-width:520px; margin:12vh auto; background:rgba(17,24,39,.98);
+        border:1px solid rgba(109,200,77,.35);
+        border-radius:16px; padding:16px; box-shadow:0 18px 40px rgba(0,0,0,.45);
+      ">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <div style="font-weight:900;color:#6dc84d;letter-spacing:.2px;">Round Locked</div>
+          <button id="glModalClose" style="
+            background:#0b1220;color:#6dc84d;border:1px solid #263244;
+            border-radius:12px; padding:8px 12px; font-weight:900; cursor:pointer;
+          ">OK</button>
+        </div>
+        <div id="glModalBody" style="margin-top:10px;color:#e5e7eb;line-height:1.4;">
+          The host ended the round. Answers are locked in.
+        </div>
+      </div>
+    `;
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) hideModal();
+    });
+    document.body.appendChild(modal);
+
+    document.getElementById("glModalClose").onclick = hideModal;
+  }
+
+  function showModal(html) {
+    ensureModal();
+    document.getElementById("glModalBody").innerHTML = html;
+    document.getElementById("glModal").style.display = "block";
+  }
+  function hideModal() {
+    const m = document.getElementById("glModal");
+    if (m) m.style.display = "none";
+  }
+
+  // ---------- build question UI ----------
+  function buildQuestionsUI(qCount) {
+    if (uiBuilt) return;
+
+    // remove old single-question UI
+    if (oldAnswerEl) oldAnswerEl.remove();
+    if (oldSubmitBtn) oldSubmitBtn.remove();
+
+    const container = document.createElement("div");
+    container.id = "questionsWrap";
+    container.style.cssText = "margin-top:10px; display:flex; flex-direction:column; gap:10px;";
+
+    const hint = document.createElement("div");
+    hint.id = "qHint";
+    hint.className = "muted";
+    hint.style.marginBottom = "6px";
+    hint.textContent = "Answer any questions in this round. You can edit until the host locks the round. Blank is allowed.";
+
+    playCard.insertBefore(hint, playMsg);
+
+    // Build Q cards
+    for (let q = 1; q <= qCount; q++) {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.style.cssText = `
+        padding:12px; border-radius:16px; border:1px solid #263244;
+        background:linear-gradient(180deg, rgba(15,23,42,.88), rgba(17,24,39,.82));
+      `;
+
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="
+              width:10px;height:10px;border-radius:999px;background:#263244;
+              box-shadow:0 0 0 4px rgba(109,200,77,.08);
+            " id="qDot_${q}"></div>
+            <div style="font-weight:900;">Question ${q}</div>
+          </div>
+          <div class="muted" id="qStatus_${q}" style="font-size:12px; min-width:120px; text-align:right;"></div>
+        </div>
+
+        <textarea id="qInput_${q}" placeholder="Type your answer (blank allowed)…" style="min-height:74px;"></textarea>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+          <button id="qSave_${q}" style="max-width:160px;">Save</button>
+        </div>
+      `;
+
+      container.appendChild(card);
+    }
+
+    playCard.insertBefore(container, playMsg);
+
+    // wire events
+    for (let q = 1; q <= qCount; q++) {
+      const ta = document.getElementById(`qInput_${q}`);
+      const btn = document.getElementById(`qSave_${q}`);
+
+      // debounce autosave on input
+      ta.addEventListener("input", () => {
+        markDirty(q);
+        debounceSave(q, 600);
+      });
+
+      // also save on blur (less network spam than every keystroke)
+      ta.addEventListener("blur", () => {
+        debounceSave(q, 0);
+      });
+
+      // manual save button
+      btn.addEventListener("click", () => {
+        debounceSave(q, 0);
+      });
+    }
+
+    uiBuilt = true;
+  }
+
+  function markDirty(q) {
+    const st = document.getElementById(`qStatus_${q}`);
+    if (st) st.textContent = "Editing…";
+  }
+
+  function setQuestionIndicator(q, answerStr) {
+    const dot = document.getElementById(`qDot_${q}`);
+    if (!dot) return;
+
+    const has = (answerStr || "").trim().length > 0;
+    dot.style.background = has ? "var(--brand)" : "#263244";
+    dot.style.boxShadow = has ? "0 0 0 4px rgba(109,200,77,.12)" : "0 0 0 4px rgba(109,200,77,.08)";
+  }
+
+  function setLockedUI(locked) {
+    const wrap = document.getElementById("questionsWrap");
+    if (!wrap) return;
+    const inputs = wrap.querySelectorAll("textarea, button");
+    inputs.forEach(el => {
+      el.disabled = locked;
+    });
+
+    const hint = document.getElementById("qHint");
+    if (hint) {
+      hint.textContent = locked
+        ? "Round is locked. You can view your answers, but you can’t edit them."
+        : "Answer any questions in this round. You can edit until the host locks the round. Blank is allowed.";
+    }
+  }
+
+  function setStateUI(s) {
+    lastState = s;
+
+    const qCount = Number(s.questionsPerRound) || 15;
+    buildQuestionsUI(qCount);
+
+    rqPill.textContent = `Round ${s.round} • ${qCount} Questions`;
+    openPill.textContent = s.isOpen ? "Status: OPEN" : "Status: LOCKED";
+    openPill.className = s.isOpen ? "pill" : "pill lock";
+    statePill.textContent = s.isOpen ? `OPEN • Round ${s.round}` : `LOCKED • Round ${s.round}`;
+
+    // lock/unlock controls
+    setLockedUI(!s.isOpen);
+
+    // popup when it transitions open -> locked
+    if (lastIsOpen === true && s.isOpen === false) {
+      showModal(`The host ended <strong>Round ${escapeHtml(s.round)}</strong>. Answers are locked in.`);
+    }
+    lastIsOpen = s.isOpen;
+  }
+
+  async function refreshState() {
+    try {
       const res = await jsonp("getState");
-      if(res.ok) setStateUI(res.state);
-    }catch(e){
+      if (res.ok) {
+        setStateUI(res.state);
+      } else {
+        statePill.textContent = "Error";
+      }
+    } catch (e) {
       statePill.textContent = "Offline / blocked network";
     }
   }
 
-  async function join(){
+  // ---------- join / session ----------
+  async function join() {
     joinMsg.textContent = "";
     const teamName = document.getElementById("teamName").value.trim();
     const pin = document.getElementById("pin").value.trim();
-    if(!teamName){ joinMsg.innerHTML = `<span class="bad">Team name required.</span>`; return; }
+    if (!teamName) {
+      joinMsg.innerHTML = `<span class="bad">Team name required.</span>`;
+      return;
+    }
 
-    try{
+    try {
       const out = await jsonp("joinTeam", {
         teamName,
         pin,
         deviceToken: getDeviceToken()
       });
 
-      if(!out.ok){
-        joinMsg.innerHTML = `<span class="bad">${out.error || "Join failed."}</span>`;
+      if (!out.ok) {
+        joinMsg.innerHTML = `<span class="bad">${escapeHtml(out.error || "Join failed.")}</span>`;
         return;
       }
 
       setTeamSession(out.team.teamId, out.team.teamName);
       showPlay();
-
-    }catch(e){
+    } catch (e) {
       joinMsg.innerHTML = `<span class="bad">Network error (maybe blocked Wi-Fi). Try mobile data.</span>`;
     }
   }
 
-  function showPlay(){
+  function showPlay() {
     const sess = getTeamSession();
     teamLabel.textContent = sess.teamName || "";
     joinCard.style.display = "none";
     playCard.style.display = "block";
-    refreshState();
-    refreshMyAnswer();
+    playMsg.textContent = "";
+
+    refreshState().then(() => refreshMyRoundAnswers());
   }
 
-  function resetTeam(){
+  function resetTeam() {
     clearTeamSession();
     joinCard.style.display = "block";
     playCard.style.display = "none";
@@ -233,64 +417,121 @@ function jsonp(action, params = {}) {
     playMsg.textContent = "";
   }
 
-  async function refreshMyAnswer(){
+  // ---------- answers ----------
+  async function refreshMyRoundAnswers() {
     const sess = getTeamSession();
-    if(!sess.teamId) return;
-    try{
-      const out = await jsonp("getMyAnswer", {
+    if (!sess.teamId) return;
+
+    try {
+      const out = await jsonp("getMyRoundAnswers", {
         teamId: sess.teamId,
         deviceToken: getDeviceToken()
       });
-      if(out.ok && out.answer){
-        playMsg.innerHTML = `<span class="ok">Saved:</span> ${escapeHtml(out.answer)}`;
-      } else {
-        playMsg.textContent = "";
-      }
-    }catch(e){}
-  }
 
-  async function submitAnswer(){
-    playMsg.textContent = "";
-    const sess = getTeamSession();
-    const answer = answerEl.value.trim();
-    if(!answer){ playMsg.innerHTML = `<span class="bad">Answer can’t be blank.</span>`; return; }
+      if (!out.ok) return;
 
-    try{
-      const out = await jsonp("submitAnswer", {
-        teamId: sess.teamId,
-        deviceToken: getDeviceToken(),
-        answer
-      });
+      currentAnswers = out.answers || {};
+      const qCount = (lastState && Number(lastState.questionsPerRound)) ? Number(lastState.questionsPerRound) : 15;
 
-      if(out.ok){
-        playMsg.innerHTML = `<span class="ok">Saved!</span>`;
-        refreshMyAnswer();
-      } else if(out.locked) {
-        playMsg.innerHTML = `<span class="bad">Locked.</span> Answers are closed.`;
-        refreshState();
-      } else {
-        playMsg.innerHTML = `<span class="bad">${out.error || "Submit failed."}</span>`;
+      for (let q = 1; q <= qCount; q++) {
+        const ta = document.getElementById(`qInput_${q}`);
+        const saved = currentAnswers[String(q)] ?? "";
+        if (ta && ta.value !== saved) {
+          ta.value = saved;
+        }
+        setQuestionIndicator(q, saved);
+
+        const st = document.getElementById(`qStatus_${q}`);
+        if (st) st.textContent = saved.trim().length ? "Saved" : "";
       }
 
-    }catch(e){
-      playMsg.innerHTML = `<span class="bad">Network error.</span>`;
+      // show little summary line
+      const filled = Object.keys(currentAnswers).filter(k => (currentAnswers[k] || "").trim().length > 0).length;
+      playMsg.innerHTML = `<span class="muted">Loaded your answers for Round ${escapeHtml(out.round)}. Answered: <span class="ok">${filled}</span></span>`;
+
+      // if round locked, ensure UI locked
+      if (out.isOpen === false) {
+        setLockedUI(true);
+      }
+
+    } catch (e) {
+      // ignore
     }
   }
 
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  function debounceSave(q, delayMs) {
+    if (saveTimers[q]) clearTimeout(saveTimers[q]);
+    saveTimers[q] = setTimeout(() => saveQuestion(q), delayMs);
   }
 
-  // ---------- boot ----------
-  (function init(){
+  async function saveQuestion(q) {
     const sess = getTeamSession();
-    if(sess.teamId) showPlay();
+    if (!sess.teamId) return;
+
+    // If locked, do nothing
+    if (lastState && lastState.isOpen === false) {
+      const st = document.getElementById(`qStatus_${q}`);
+      if (st) st.textContent = "Locked";
+      return;
+    }
+
+    const ta = document.getElementById(`qInput_${q}`);
+    const answer = ta ? ta.value : "";
+
+    const st = document.getElementById(`qStatus_${q}`);
+    const btn = document.getElementById(`qSave_${q}`);
+    if (btn) btn.disabled = true;
+    if (st) st.textContent = "Saving…";
+
+    try {
+      const out = await jsonp("submitAnswer", {
+        teamId: sess.teamId,
+        deviceToken: getDeviceToken(),
+        question: q,
+        answer: answer // blank allowed
+      });
+
+      if (out.ok) {
+        currentAnswers[String(q)] = answer;
+        setQuestionIndicator(q, answer);
+        if (st) st.textContent = "Saved";
+      } else if (out.locked) {
+        if (st) st.textContent = "Locked";
+        refreshState();
+        showModal(`The host ended the round. Your answers are locked in.`);
+      } else {
+        if (st) st.textContent = "Error";
+      }
+    } catch (e) {
+      if (st) st.textContent = "Network error";
+    } finally {
+      if (btn) btn.disabled = (lastState && lastState.isOpen === false) ? true : false;
+    }
+  }
+
+  // ---------- expose functions used by inline HTML buttons ----------
+  window.join = join;
+  window.resetTeam = resetTeam;
+
+  // ---------- boot ----------
+  (function init() {
+    ensureModal();
+
+    // Enter key on join fields should join
+    document.addEventListener("keydown", (e) => {
+      if (joinCard.style.display !== "none" && e.key === "Enter") join();
+    });
+
+    const sess = getTeamSession();
+    if (sess.teamId) showPlay();
+
     refreshState();
-    setInterval(refreshState, 5000);
-    setInterval(refreshMyAnswer, 7000);
+    setInterval(refreshState, 4000);
+    setInterval(refreshMyRoundAnswers, 9000);
   })();
 </script>
 </body>
 
 </html>
+
 
