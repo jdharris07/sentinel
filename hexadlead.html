@@ -109,6 +109,7 @@ td.actions button.danger:hover{ border-color:#ef4444; }
 
   <div class="content" id="formSection">
     <div class="form-grid">
+
       <select id="leadFor">
         <option value="">Lead For</option>
         <option value="Alpine">Alpine</option>
@@ -153,7 +154,7 @@ td.actions button.danger:hover{ border-color:#ef4444; }
           <th style="width:120px;">Method</th>
           <th style="width:140px;">Status</th>
           <th style="width:120px;">Notes</th>
-          <th style="width:170px;">Actions</th>
+          <th style="width:190px;">Actions</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -173,7 +174,7 @@ td.actions button.danger:hover{ border-color:#ef4444; }
   </div>
 </div>
 
-<!-- Message Modal (replaces alert()) -->
+<!-- Message Modal -->
 <div id="messageModal" class="modal" onclick="if(event.target.id==='messageModal') closeMessage();">
   <div class="modal-content">
     <div class="modal-head">
@@ -203,7 +204,7 @@ td.actions button.danger:hover{ border-color:#ef4444; }
 </div>
 
 <script>
-const scriptURL = "https://script.google.com/macros/s/AKfycbwJ5OvgwIPG6x2SH55g6RjDvwjJ2UfO3oJOuZciFM6NuoHpgdNdGots2jNtGxr3Ej7j-Q/exec";
+const scriptURL = "https://script.google.com/macros/s/AKfycbwzavtLoTGp8NdtZTxu6lX5dybHgS0Fby5VmdYJFAFZqDi1Bep98hz_3yW37-0Tptl0nw/exec";
 let editRow = null;
 let cachedCompanies = [];
 let currentRowNotes = "";
@@ -243,7 +244,6 @@ function renderSessionUI(){
   }
 }
 
-/* ===== Branded messages (replaces alert()) ===== */
 function showMessage(text){
   document.getElementById("messageText").innerText = text || "";
   document.getElementById("messageModal").style.display = "block";
@@ -284,7 +284,7 @@ function toggleForm(){
   section.style.display = section.style.display==="block" ? "none" : "block";
 }
 
-/* ===== Phone auto format: xxx-xxx-xxxx ===== */
+/* Phone mask */
 function wirePhoneMask(){
   const phoneEl = document.getElementById("phone");
   phoneEl.addEventListener("input", () => {
@@ -296,7 +296,7 @@ function wirePhoneMask(){
   });
 }
 
-/* ===== Login ===== */
+/* Login */
 async function attemptLogin(){
   const u = document.getElementById("loginUsername").value.trim();
   const p = document.getElementById("loginPassword").value;
@@ -326,7 +326,7 @@ async function attemptLogin(){
   }
 }
 
-/* ===== Companies ===== */
+/* Companies */
 function normalizeCompany(s){
   return (s || "").trim().replace(/\s+/g," ").toLowerCase();
 }
@@ -396,8 +396,7 @@ async function promptAddCompany(){
     await loadCompanies();
     document.getElementById("company").value = out.company;
 
-    if(out.added) showMessage("Company added.");
-    else showMessage("Company already existed. Selected existing entry.");
+    showMessage(out.added ? "Company added." : "Company already existed. Selected existing entry.");
 
   }catch(err){
     console.error("Add company failed:", err);
@@ -411,13 +410,9 @@ function escapeHtml(s){
 }
 function escapeHtmlAttr(s){ return escapeHtml(s); }
 
-/* ===== Notes safe encoding (Base64 UTF-8) ===== */
-function toB64Utf8(str){
-  return btoa(unescape(encodeURIComponent(str)));
-}
-function fromB64Utf8(b64){
-  return decodeURIComponent(escape(atob(b64)));
-}
+/* Notes base64 */
+function toB64Utf8(str){ return btoa(unescape(encodeURIComponent(str))); }
+function fromB64Utf8(b64){ return decodeURIComponent(escape(atob(b64))); }
 
 function wireNotesClicks(){
   if(notesClickWired) return;
@@ -437,21 +432,20 @@ function wireNotesClicks(){
   });
 }
 
-/* ===== Leads ===== */
 /*
-Row layout from server (after schema upgrade):
-row[0]  = sheet row number
-row[1]  = updated_at (Date)
-row[2]  = updated_by (Display Name)
-row[3]  = customer company
-row[4]  = lead_for (Alpine/Hexad/Both)
-row[5]  = contact name
-row[6]  = phone
-row[7]  = email
-row[8]  = method
-row[9]  = status
-row[10] = notes
-row[11] = created_by_username (locked for deletes)
+Expected row from server:
+row[0]  sheet row number
+row[1]  Date
+row[2]  User (display name)
+row[3]  Company
+row[4]  Lead For
+row[5]  Name
+row[6]  Phone
+row[7]  Email
+row[8]  Method
+row[9]  Status
+row[10] Notes
+row[11] Created By (username)
 */
 async function loadLeads(){
   wireNotesClicks();
@@ -512,7 +506,6 @@ function showNotes(text){
   document.getElementById("modalText").innerText = text || "No notes";
   document.getElementById("noteModal").style.display = "block";
 }
-
 function closeModal(){
   document.getElementById("noteModal").style.display = "none";
 }
@@ -548,7 +541,6 @@ function editLead(row){
 function clearForm(){
   editRow = null;
   currentRowNotes = "";
-
   document.getElementById("leadFor").value = "";
   document.getElementById("company").value = "";
   document.getElementById("name").value = "";
@@ -627,7 +619,7 @@ async function deleteLead(rowNum){
     }
 
     showMessage("Lead deleted.");
-    if(editRow === rowNum) {
+    if(editRow === rowNum){
       clearForm();
       document.getElementById("formSection").style.display = "none";
     }
@@ -642,4 +634,3 @@ async function deleteLead(rowNum){
 
 </body>
 </html>
-
