@@ -56,8 +56,10 @@ table{ width:100%; border-collapse: collapse; }
 th{ background: var(--panel2); color: var(--brand); text-align:left; padding:10px; font-size:13px; border-bottom:1px solid var(--border); position: sticky; top: 0; z-index: 1; }
 td{ padding:9px 10px; border-bottom:1px solid var(--border); font-size:13px; vertical-align: top; }
 tr:hover{ background:#0b1220; }
-td.actions button{ background:#0b1220; border:1px solid var(--border); color: var(--brand); padding:6px 10px; border-radius:10px; cursor:pointer; font-weight:800; }
+td.actions button{ background:#0b1220; border:1px solid var(--border); color: var(--brand); padding:6px 10px; border-radius:10px; cursor:pointer; font-weight:800; margin-right:6px; }
 td.actions button:hover{ border-color: rgba(109,200,77,.7); }
+td.actions button.danger{ color:#fca5a5; border-color:#7f1d1d; }
+td.actions button.danger:hover{ border-color:#ef4444; }
 
 /* Status */
 .status-red{ background:#7f1d1d; color:#fff; padding:3px 8px; border-radius:999px; display:inline-block; font-size:12px; line-height:1.6; }
@@ -101,12 +103,19 @@ td.actions button:hover{ border-color: rgba(109,200,77,.7); }
 <div class="container">
 
   <div class="controls">
-    <input class="search-box" id="search" placeholder="Search name, company, phone or email..." onkeyup="loadLeads()">
+    <input class="search-box" id="search" placeholder="Search lead-for, customer company, name, phone or email..." onkeyup="loadLeads()">
     <button class="collapsible" onclick="toggleForm()">+ Add Lead</button>
   </div>
 
   <div class="content" id="formSection">
     <div class="form-grid">
+      <select id="leadFor">
+        <option value="">Lead For</option>
+        <option value="Alpine">Alpine</option>
+        <option value="Hexad">Hexad</option>
+        <option value="Both">Both</option>
+      </select>
+
       <select id="company"></select>
 
       <input id="name" placeholder="Contact Name">
@@ -136,6 +145,7 @@ td.actions button:hover{ border-color: rgba(109,200,77,.7); }
         <tr>
           <th style="width:110px;">Date</th>
           <th style="width:120px;">User</th>
+          <th style="width:110px;">Lead For</th>
           <th style="width:180px;">Company</th>
           <th style="width:140px;">Name</th>
           <th style="width:130px;">Phone</th>
@@ -143,7 +153,7 @@ td.actions button:hover{ border-color: rgba(109,200,77,.7); }
           <th style="width:120px;">Method</th>
           <th style="width:140px;">Status</th>
           <th style="width:120px;">Notes</th>
-          <th style="width:90px;">Edit</th>
+          <th style="width:170px;">Actions</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -201,15 +211,18 @@ let notesClickWired = false;
 
 function getToken(){ return localStorage.getItem("greenlead_token") || ""; }
 function getDisplayName(){ return localStorage.getItem("greenlead_displayName") || ""; }
+function getUsername(){ return localStorage.getItem("greenlead_username") || ""; }
 
-function setSession(token, displayName){
+function setSession(token, displayName, username){
   localStorage.setItem("greenlead_token", token);
   localStorage.setItem("greenlead_displayName", displayName);
+  localStorage.setItem("greenlead_username", username || "");
   renderSessionUI();
 }
 function clearSession(){
   localStorage.removeItem("greenlead_token");
   localStorage.removeItem("greenlead_displayName");
+  localStorage.removeItem("greenlead_username");
   renderSessionUI();
 }
 function renderSessionUI(){
@@ -301,8 +314,9 @@ async function attemptLogin(){
     const data = await res.json();
 
     if(data.ok){
-      setSession(data.token, data.displayName);
+      setSession(data.token, data.displayName, data.username);
       hideLogin();
+      loadLeads();
     }else{
       document.getElementById("loginError").textContent = data.error || "Login failed.";
     }
@@ -424,6 +438,21 @@ function wireNotesClicks(){
 }
 
 /* ===== Leads ===== */
+/*
+Row layout from server (after schema upgrade):
+row[0]  = sheet row number
+row[1]  = updated_at (Date)
+row[2]  = updated_by (Display Name)
+row[3]  = customer company
+row[4]  = lead_for (Alpine/Hexad/Both)
+row[5]  = contact name
+row[6]  = phone
+row[7]  = email
+row[8]  = method
+row[9]  = status
+row[10] = notes
+row[11] = created_by_username (locked for deletes)
+*/
 async function loadLeads(){
   wireNotesClicks();
 
@@ -435,33 +464,41 @@ async function loadLeads(){
     const tbody = document.querySelector("#leadsTable tbody");
     tbody.innerHTML = "";
 
+    const me = getUsername();
+
     data.forEach(row=>{
       const text = row.join(" ").toLowerCase();
       if(!text.includes(search)) return;
 
-      const statusCell = row[8] === "Not Interested"
-        ? `<span class="status-red">${escapeHtml(row[8])}</span>`
-        : escapeHtml(row[8] || "");
+      const statusCell = row[9] === "Not Interested"
+        ? `<span class="status-red">${escapeHtml(row[9])}</span>`
+        : escapeHtml(row[9] || "");
 
-      const notesRaw = String(row[9] || "");
+      const notesRaw = String(row[10] || "");
       const hasNotes = notesRaw.trim().length > 0;
 
       const notesLink = hasNotes
         ? `<span class="note-cell" data-notes-b64="${toB64Utf8(notesRaw)}">View Note</span>`
         : "";
 
+      const canDelete = (me && String(row[11] || "") === me);
+
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${row[1] ? new Date(row[1]).toLocaleDateString() : ""}</td>
         <td>${escapeHtml(row[2]||"")}</td>
-        <td>${escapeHtml(row[3]||"")}</td>
         <td>${escapeHtml(row[4]||"")}</td>
+        <td>${escapeHtml(row[3]||"")}</td>
         <td>${escapeHtml(row[5]||"")}</td>
         <td>${escapeHtml(row[6]||"")}</td>
         <td>${escapeHtml(row[7]||"")}</td>
+        <td>${escapeHtml(row[8]||"")}</td>
         <td>${statusCell}</td>
         <td>${notesLink}</td>
-        <td class="actions"><button onclick='editLead(${JSON.stringify(row)})'>Edit</button></td>
+        <td class="actions">
+          <button onclick='editLead(${JSON.stringify(row)})'>Edit</button>
+          ${canDelete ? `<button class="danger" onclick='deleteLead(${Number(row[0])})'>Delete</button>` : ``}
+        </td>
       `;
       tbody.appendChild(tr);
     });
@@ -482,14 +519,15 @@ function closeModal(){
 
 function editLead(row){
   editRow = row[0];
-  currentRowNotes = String(row[9] || "");
+  currentRowNotes = String(row[10] || "");
 
+  document.getElementById("leadFor").value = row[4] || "";
   document.getElementById("company").value = row[3] || "";
-  document.getElementById("name").value = row[4] || "";
-  document.getElementById("phone").value = row[5] || "";
-  document.getElementById("email").value = row[6] || "";
-  document.getElementById("method").value = row[7] || "";
-  document.getElementById("status").value = row[8] || "";
+  document.getElementById("name").value = row[5] || "";
+  document.getElementById("phone").value = row[6] || "";
+  document.getElementById("email").value = row[7] || "";
+  document.getElementById("method").value = row[8] || "";
+  document.getElementById("status").value = row[9] || "";
 
   document.getElementById("notes").value = "";
 
@@ -507,6 +545,21 @@ function editLead(row){
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function clearForm(){
+  editRow = null;
+  currentRowNotes = "";
+
+  document.getElementById("leadFor").value = "";
+  document.getElementById("company").value = "";
+  document.getElementById("name").value = "";
+  document.getElementById("phone").value = "";
+  document.getElementById("email").value = "";
+  document.getElementById("method").value = "";
+  document.getElementById("status").value = "";
+  document.getElementById("notes").value = "";
+  document.getElementById("existingNotesHint").style.display = "none";
+}
+
 async function saveLead(){
   const token = getToken();
   if(!token){ showLogin(); return; }
@@ -515,6 +568,7 @@ async function saveLead(){
     action: "saveLead",
     token,
     row: editRow,
+    leadFor: document.getElementById("leadFor").value,
     company: document.getElementById("company").value,
     name: document.getElementById("name").value.trim(),
     phone: document.getElementById("phone").value.trim(),
@@ -524,6 +578,7 @@ async function saveLead(){
     newNote: document.getElementById("notes").value.trim()
   };
 
+  if(!body.leadFor){ showMessage("Select Lead For (Alpine / Hexad / Both)."); return; }
   if(!body.company || body.company === "__add__"){ showMessage("Select a company."); return; }
   if(!body.name){ showMessage("Contact name is required."); return; }
   if(!body.status){ showMessage("Select a status."); return; }
@@ -543,24 +598,44 @@ async function saveLead(){
     }
 
     showMessage("Lead saved successfully.");
-    editRow = null;
-    currentRowNotes = "";
-
-    document.getElementById("company").value = "";
-    document.getElementById("name").value = "";
-    document.getElementById("phone").value = "";
-    document.getElementById("email").value = "";
-    document.getElementById("method").value = "";
-    document.getElementById("status").value = "";
-    document.getElementById("notes").value = "";
-    document.getElementById("existingNotesHint").style.display = "none";
-
+    clearForm();
     document.getElementById("formSection").style.display = "none";
     loadLeads();
 
   }catch(err){
     console.error("Failed to save lead:", err);
     showMessage("Save failed. Network may be blocking Apps Script.");
+  }
+}
+
+async function deleteLead(rowNum){
+  const token = getToken();
+  if(!token){ showLogin(); return; }
+
+  if(!confirm("Delete this lead? This cannot be undone.")) return;
+
+  try{
+    const res = await fetch(scriptURL, {
+      method:"POST",
+      body: JSON.stringify({ action:"deleteLead", token, row: rowNum })
+    });
+    const out = await res.json();
+
+    if(out.error){
+      showMessage(out.error);
+      return;
+    }
+
+    showMessage("Lead deleted.");
+    if(editRow === rowNum) {
+      clearForm();
+      document.getElementById("formSection").style.display = "none";
+    }
+    loadLeads();
+
+  }catch(err){
+    console.error("Delete failed:", err);
+    showMessage("Delete failed. Network or server error.");
   }
 }
 </script>
