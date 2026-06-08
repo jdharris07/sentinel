@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>White Cell: Immune Response - Mobile Five Level Demo</title>
+<style>
+* { box-sizing: border-box; }
+body { margin:0; overflow:hidden; background:#020617; color:white; font-family:system-ui,-apple-system,Segoe UI,sans-serif; touch-action:none; user-select:none; -webkit-user-select:none; }
+canvas { display:block; background:#240808; }
+#hud{position:fixed;top:14px;left:14px;right:14px;display:flex;justify-content:space-between;gap:12px;pointer-events:none;z-index:2}
+.card{background:rgba(15,23,42,.84);border:1px solid rgba(125,211,252,.35);box-shadow:0 0 25px rgba(14,165,233,.12);border-radius:14px;padding:12px 16px;min-width:190px}
+.card strong{color:#e0f2fe}.bar{width:230px;max-width:34vw;height:14px;background:#111827;border-radius:999px;overflow:hidden;margin-top:6px}.fill{height:100%;width:50%;background:linear-gradient(90deg,#38bdf8,#22c55e)}
+#message{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.88);border:1px solid rgba(125,211,252,.35);padding:12px 20px;border-radius:999px;text-align:center;z-index:3;max-width:90vw}
+.overlay{position:fixed;inset:0;background:radial-gradient(circle,rgba(15,23,42,.95),rgba(2,6,23,.98));display:flex;align-items:center;justify-content:center;z-index:10}.panel{width:min(760px,94vw);max-height:92vh;overflow:auto;background:rgba(15,23,42,.96);border:1px solid #38bdf8;border-radius:22px;padding:28px;text-align:center;box-shadow:0 0 60px rgba(56,189,248,.22)}
+h1{margin:0;font-size:46px;letter-spacing:-1px}.subtitle{color:#bae6fd;margin-bottom:18px}.small{color:#cbd5e1;font-size:14px;line-height:1.5}button{width:100%;margin:9px 0;padding:13px;background:linear-gradient(135deg,#1d4ed8,#0891b2);color:#fff;border:0;border-radius:12px;font-size:16px;cursor:pointer;font-weight:800}button:hover{filter:brightness(1.15)}
+#upgrade{display:none}.tree{display:grid;grid-template-columns:repeat(4,minmax(145px,1fr));gap:12px;margin-top:16px}.mut{border:1px solid rgba(125,211,252,.25);border-radius:14px;padding:12px;background:rgba(2,6,23,.55);text-align:left;min-height:150px}.mut h3{margin:0 0 6px;font-size:15px}.mut p{font-size:12px;color:#cbd5e1;margin:0 0 8px}.mut .status{font-size:12px;color:#93c5fd;margin-bottom:8px}.mut.locked{opacity:.45}.mut.owned{border-color:#22c55e;box-shadow:0 0 16px rgba(34,197,94,.18)}.mut button{font-size:13px;padding:9px;margin:0}.branch-title{margin-top:10px;color:#bae6fd;font-size:13px;text-align:left;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+#bossBanner{display:none;position:fixed;top:32%;left:50%;transform:translateX(-50%);font-size:42px;font-weight:950;color:#fda4af;text-shadow:0 0 22px #ef4444;z-index:5;text-align:center}.kbd{display:inline-block;background:#111827;border:1px solid #334155;border-bottom-width:3px;border-radius:6px;padding:1px 6px;color:#e2e8f0}
+#mobileControls{position:fixed;inset:0;pointer-events:none;z-index:6;display:none}#joystick{position:absolute;left:22px;bottom:28px;width:132px;height:132px;border-radius:50%;background:rgba(15,23,42,.5);border:2px solid rgba(186,230,253,.35);pointer-events:auto;touch-action:none}#stick{position:absolute;left:41px;top:41px;width:48px;height:48px;border-radius:50%;background:rgba(56,189,248,.85);box-shadow:0 0 22px rgba(56,189,248,.45)}#dashBtn{position:absolute;right:24px;bottom:42px;width:112px;height:112px;border-radius:50%;border:2px solid rgba(254,202,202,.5);background:radial-gradient(circle,#ef4444,#7f1d1d);color:white;font-weight:950;font-size:18px;pointer-events:auto;touch-action:none;box-shadow:0 0 30px rgba(239,68,68,.3)}#shootHint{position:absolute;right:18px;bottom:164px;color:#dbeafe;background:rgba(15,23,42,.6);border:1px solid rgba(125,211,252,.25);padding:8px 10px;border-radius:999px;font-size:12px}
+@media(pointer:coarse),(max-width:900px){#mobileControls{display:block}#message{bottom:176px;font-size:13px}.card{padding:9px 11px}.bar{width:170px}#hud{top:8px;left:8px;right:8px}.card{min-width:160px;font-size:13px}}
+@media(max-width:760px){#hud{flex-direction:column;right:auto}.card{min-width:185px}.tree{grid-template-columns:1fr 1fr}.panel{padding:18px}h1{font-size:34px}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+  <div class="card"><strong>White Blood Cell</strong><div class="bar"><div id="hpFill" class="fill"></div></div><div>HP: <span id="hp">100</span>/<span id="maxHp">100</span></div></div>
+  <div class="card"><div><strong id="levelName">Skin Wound</strong></div><div>Area: <span id="areaNum">1</span>/3</div><div>Wave: <span id="wave">1</span></div><div>Kills: <span id="kills">0</span></div></div>
+  <div class="card"><div>Cell Level: <span id="level">1</span></div><div>XP: <span id="xp">0</span>/<span id="next">10</span></div><div>Dash: <span id="dash">Ready</span></div></div>
+</div>
+<div id="message">WASD/Arrows move. Click shoots. Space dash-phagocytoses.</div>
+<div id="bossBanner">INFECTED WOUND DETECTED</div>
+
+<div id="start" class="overlay"><div class="panel">
+  <h1>WHITE CELL</h1><p class="subtitle">Immune Response: Multi-Level Prototype</p>
+  <p class="small">Fight through <b>Skin Wound</b>, <b>Bloodstream</b>, and <b>Lung Tissue</b>. Each area has new threats, a different map, obstacles that block movement, and a boss infection.</p>
+  <button onclick="startGame()">Begin Immune Response</button>
+  <p class="small"><span class="kbd">WASD</span> move &nbsp; <span class="kbd">Click</span> shoot &nbsp; <span class="kbd">Space</span> dash<br>Mobile: left joystick moves, tap screen aims/shoots, red button dashes.</p>
+</div></div>
+
+<div id="mobileControls"><div id="joystick"><div id="stick"></div></div><button id="dashBtn">DASH</button><div id="shootHint">Tap anywhere to shoot</div></div>
+
+<div id="upgrade" class="overlay"><div class="panel">
+  <h2>Cellular Evolution</h2><p class="small">Choose one unlocked mutation. Earlier mutations open stronger branches.</p>
+  <div id="tree" class="tree"></div>
+</div></div>
+
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const ui={hp:hp,maxHp:maxHp,hpFill:hpFill,xp:xp,next:next,level:level,wave:wave,kills:kills,dash:dash,levelName:levelName,areaNum:areaNum,message:message,bossBanner:bossBanner,upgrade:upgrade,start:start,tree:tree};
+let keys={},bullets=[],enemies=[],particles=[],pickups=[],obstacles=[];
+let started=false,paused=true,gameOver=false,bossSpawned=false,areaIndex=0,waveNum=1,totalKillsInArea=0,spawnTimer=0,autoFireTimer=0,transitionTimer=0;
+let mouse={x:innerWidth/2,y:innerHeight/2};
+let joystick={active:false,id:null,baseX:0,baseY:0,dx:0,dy:0};
+const player={x:innerWidth/2,y:innerHeight/2,r:20,speed:4,hp:100,maxHp:100,damage:12,xp:0,nextXp:10,level:1,fireRate:34,dashCooldown:0,pierce:0,regen:0,armor:0,dashDamage:2.4,magnet:90};
+
+const areas=[
+ {name:'Skin Wound',bg:['#7f1d1d','#210606'],boss:'Clotted Wound Core',threshold:22,spawnBase:72,enemies:['virus','bacteria','resistant'],obstacles:[
+  {type:'circle',x:.24,y:.35,r:58,label:'Clot'}, {type:'circle',x:.72,y:.62,r:72,label:'Damaged Tissue'}, {type:'rect',x:.46,y:.18,w:170,h:54,label:'Scab Ridge'}, {type:'rect',x:.18,y:.72,w:210,h:48,label:'Collagen Wall'}]},
+ {name:'Bloodstream',bg:['#991b1b','#3f0b0b'],boss:'Septic Cluster',threshold:30,spawnBase:60,enemies:['virus','bacteria','toxin','swarm'],obstacles:[
+  {type:'circle',x:.22,y:.24,r:50,label:'Red Blood Cell'}, {type:'circle',x:.46,y:.52,r:62,label:'Red Blood Cell'}, {type:'circle',x:.78,y:.28,r:56,label:'Platelet Clump'}, {type:'rect',x:.65,y:.72,w:250,h:50,label:'Vessel Wall'}, {type:'rect',x:.08,y:.52,w:180,h:42,label:'Fibrin Strand'}]},
+ {name:'Lung Tissue',bg:['#164e63','#052e3a'],boss:'Pneumonia Bloom',threshold:38,spawnBase:52,enemies:['virus','bacteria','spore','charger','toxin'],obstacles:[
+  {type:'circle',x:.30,y:.30,r:82,label:'Alveolus'}, {type:'circle',x:.68,y:.36,r:75,label:'Alveolus'}, {type:'circle',x:.53,y:.76,r:64,label:'Mucus Pocket'}, {type:'rect',x:.13,y:.66,w:190,h:52,label:'Bronchial Wall'}, {type:'rect',x:.76,y:.62,w:160,h:130,label:'Inflamed Tissue'}]},
+ {name:'Gut Lining',bg:['#854d0e','#2f1603'],boss:'Parasite Knot',threshold:46,spawnBase:45,enemies:['bacteria','resistant','parasite','acid','swarm'],obstacles:[
+  {type:'rect',x:.18,y:.16,w:220,h:70,label:'Villus Ridge'}, {type:'rect',x:.57,y:.22,w:260,h:60,label:'Folded Tissue'}, {type:'circle',x:.35,y:.70,r:70,label:'Mucus Pool'}, {type:'circle',x:.75,y:.72,r:62,label:'Bile Pocket'}, {type:'rect',x:.06,y:.48,w:160,h:46,label:'Enzyme Wall'}]},
+ {name:'Deep Infection Site',bg:['#581c87','#111827'],boss:'Viral Overlord',threshold:58,spawnBase:38,enemies:['virus','bacteria','resistant','toxin','spore','charger','parasite','acid','swarm'],obstacles:[
+  {type:'circle',x:.18,y:.22,r:64,label:'Necrotic Cell'}, {type:'circle',x:.82,y:.22,r:64,label:'Necrotic Cell'}, {type:'circle',x:.50,y:.50,r:78,label:'Infection Mass'}, {type:'rect',x:.18,y:.78,w:250,h:54,label:'Scar Tissue'}, {type:'rect',x:.62,y:.72,w:230,h:58,label:'Scar Tissue'}, {type:'rect',x:.43,y:.12,w:160,h:50,label:'Barrier'}]}
+];
+
+const mutations=[
+ {id:'ab1',branch:'Antibody',name:'Sharper Antibodies',desc:'+5 antibody damage.',req:null,owned:false,apply:()=>player.damage+=5},
+ {id:'ab2',branch:'Antibody',name:'Rapid Production',desc:'Auto-fire is faster.',req:'ab1',owned:false,apply:()=>player.fireRate=Math.max(10,player.fireRate-8)},
+ {id:'ab3',branch:'Antibody',name:'Piercing Antibodies',desc:'Shots pass through one extra pathogen.',req:'ab2',owned:false,apply:()=>player.pierce++},
+ {id:'mem1',branch:'Membrane',name:'Reinforced Membrane',desc:'+30 max HP and heal.',req:null,owned:false,apply:()=>{player.maxHp+=30;player.hp=player.maxHp}},
+ {id:'mem2',branch:'Membrane',name:'Adaptive Armor',desc:'Reduces contact damage.',req:'mem1',owned:false,apply:()=>player.armor+=.25},
+ {id:'mem3',branch:'Membrane',name:'Cell Repair',desc:'Slowly regenerates health.',req:'mem2',owned:false,apply:()=>player.regen+=.012},
+ {id:'mit1',branch:'Mitochondria',name:'Hyperactive Mitochondria',desc:'+0.8 movement speed.',req:null,owned:false,apply:()=>player.speed+=.8},
+ {id:'mit2',branch:'Mitochondria',name:'Nutrient Pull',desc:'Larger pickup magnet range.',req:'mit1',owned:false,apply:()=>player.magnet+=55},
+ {id:'mit3',branch:'Mitochondria',name:'Metabolic Surge',desc:'+damage and +speed.',req:'mit2',owned:false,apply:()=>{player.damage+=3;player.speed+=.5}},
+ {id:'pha1',branch:'Phagocytosis',name:'Digestive Burst',desc:'Dash does more damage.',req:null,owned:false,apply:()=>player.dashDamage+=1.0},
+ {id:'pha2',branch:'Phagocytosis',name:'Short Refractory Period',desc:'Dash cooldown is shorter.',req:'pha1',owned:false,apply:()=>player.dashMax=Math.max(85,(player.dashMax||150)-35)},
+ {id:'pha3',branch:'Phagocytosis',name:'Macrophage Pull',desc:'Dash creates a suction burst.',req:'pha2',owned:false,apply:()=>player.suction=true}
+];
+
+function resizeCanvas(){canvas.width=innerWidth;canvas.height=innerHeight;player.x=Math.max(player.r,Math.min(canvas.width-player.r,player.x));player.y=Math.max(player.r,Math.min(canvas.height-player.r,player.y));buildObstacles();}
+addEventListener('resize',resizeCanvas);resizeCanvas();
+function startGame(){started=true;paused=false;ui.start.style.display='none';loadArea(0,true);}
+function loadArea(i,resetPos=false){areaIndex=i;waveNum=1;bossSpawned=false;totalKillsInArea=0;enemies=[];bullets=[];pickups=[];particles=[];spawnTimer=0;if(resetPos){player.x=canvas.width/2;player.y=canvas.height/2;}buildObstacles();say('Entering '+areas[areaIndex].name+'. Pathogens detected. Obstacles block movement and shots.');updateHUD();}
+function buildObstacles(){const a=areas[areaIndex]||areas[0];obstacles=a.obstacles.map(o=>({...o,x:o.x*canvas.width,y:o.y*canvas.height,w:o.w||0,h:o.h||0}));}
+function say(t){ui.message.textContent=t;}
+function clampAgainstObstacles(obj){for(const o of obstacles){if(o.type==='circle'){const d=Math.hypot(obj.x-o.x,obj.y-o.y),min=obj.r+o.r;if(d<min){const ang=Math.atan2(obj.y-o.y,obj.x-o.x);obj.x=o.x+Math.cos(ang)*min;obj.y=o.y+Math.sin(ang)*min;}}else{const cx=Math.max(o.x,Math.min(obj.x,o.x+o.w)),cy=Math.max(o.y,Math.min(obj.y,o.y+o.h));const d=Math.hypot(obj.x-cx,obj.y-cy);if(d<obj.r){const ang=Math.atan2(obj.y-cy,obj.x-cx)||0;obj.x=cx+Math.cos(ang)*obj.r;obj.y=cy+Math.sin(ang)*obj.r;}}}obj.x=Math.max(obj.r,Math.min(canvas.width-obj.r,obj.x));obj.y=Math.max(obj.r,Math.min(canvas.height-obj.r,obj.y));}
+function hitsObstacle(x,y,r=4){for(const o of obstacles){if(o.type==='circle'&&Math.hypot(x-o.x,y-o.y)<r+o.r)return true;if(o.type==='rect'){const cx=Math.max(o.x,Math.min(x,o.x+o.w)),cy=Math.max(o.y,Math.min(y,o.y+o.h));if(Math.hypot(x-cx,y-cy)<r)return true;}}return false;}
+
+function spawnEnemy(type){const a=areas[areaIndex];if(!type){type=a.enemies[Math.floor(Math.random()*a.enemies.length)];}
+ let x,y,tries=0;do{const side=Math.floor(Math.random()*4); if(side===0){x=Math.random()*canvas.width;y=-50}else if(side===1){x=canvas.width+50;y=Math.random()*canvas.height}else if(side===2){x=Math.random()*canvas.width;y=canvas.height+50}else{x=-50;y=Math.random()*canvas.height} tries++;}while(hitsObstacle(x,y,35)&&tries<20);
+ const specs={
+  virus:{r:14,hp:22,speed:2.35,damage:7,xp:4,color:'#22c55e',name:'Virus'},
+  bacteria:{r:19,hp:38,speed:1.45,damage:10,xp:6,color:'#facc15',name:'Bacteria'},
+  resistant:{r:24,hp:70,speed:.95,damage:14,xp:10,color:'#fb7185',name:'Resistant Bacteria'},
+  swarm:{r:10,hp:14,speed:3.2,damage:5,xp:3,color:'#84cc16',name:'Viral Swarm'},
+  toxin:{r:16,hp:30,speed:1.15,damage:18,xp:9,color:'#c084fc',name:'Toxin Globule',toxic:true},
+  spore:{r:18,hp:48,speed:1.05,damage:9,xp:11,color:'#f472b6',name:'Fungal Spore',split:true},
+  charger:{r:20,hp:55,speed:1.0,damage:16,xp:12,color:'#fb923c',name:'Pneumo Charger',charger:true,cool:80},
+  parasite:{r:28,hp:95,speed:1.25,damage:18,xp:15,color:'#bef264',name:'Parasite Larva',split:true},
+  acid:{r:17,hp:42,speed:1.55,damage:22,xp:13,color:'#fde047',name:'Acid Globule',toxic:true}
+ };
+ if(type==='boss'){const bosses={
+  'Clotted Wound Core':{r:52,hp:480,speed:1.0,damage:20,xp:80,color:'#a855f7'},
+  'Septic Cluster':{r:58,hp:680,speed:.90,damage:24,xp:100,color:'#dc2626'},
+  'Pneumonia Bloom':{r:64,hp:880,speed:.82,damage:28,xp:130,color:'#0ea5e9'},
+  'Parasite Knot':{r:68,hp:1120,speed:.88,damage:32,xp:165,color:'#84cc16'},
+  'Viral Overlord':{r:82,hp:1800,speed:.72,damage:38,xp:250,color:'#f43f5e'}
+ }; const b=bosses[a.boss]; enemies.push({...b,x,y,maxHp:b.hp,name:a.boss,boss:true,pulse:0}); return; }
+ const s=specs[type]; const scale=1+areaIndex*.22; enemies.push({...s,x,y,hp:Math.round(s.hp*scale),maxHp:Math.round(s.hp*scale),speed:s.speed+areaIndex*.06,damage:Math.round(s.damage*(1+areaIndex*.15)),xp:Math.round(s.xp*(1+areaIndex*.12)),type});}
+function shoot(tx,ty){if(!started||paused||gameOver)return;const ang=Math.atan2(ty-player.y,tx-player.x);bullets.push({x:player.x,y:player.y,r:6,vx:Math.cos(ang)*9,vy:Math.sin(ang)*9,damage:player.damage,life:80,pierce:player.pierce});}
+function autoFire(){if(!enemies.length)return;let near=null,best=Infinity;for(const e of enemies){const d=Math.hypot(e.x-player.x,e.y-player.y);if(d<best){best=d;near=e;}}if(near)shoot(near.x,near.y);}
+function dash(){if(!started||paused||gameOver||player.dashCooldown>0)return;let dx=0,dy=0;if(keys.a||keys.arrowleft)dx--;if(keys.d||keys.arrowright)dx++;if(keys.w||keys.arrowup)dy--;if(keys.s||keys.arrowdown)dy++;if(dx===0&&dy===0){dx=Math.cos(Math.atan2(mouse.y-player.y,mouse.x-player.x));dy=Math.sin(Math.atan2(mouse.y-player.y,mouse.x-player.x));}const len=Math.hypot(dx,dy)||1;dx/=len;dy/=len;for(let i=0;i<10;i++){player.x+=dx*12;player.y+=dy*12;clampAgainstObstacles(player);}for(const e of enemies){const d=Math.hypot(e.x-player.x,e.y-player.y);if(d<player.r+e.r+28){e.hp-=player.damage*player.dashDamage;createParticles(e.x,e.y,'#e0f2fe',18);}}if(player.suction){for(const e of enemies){const d=Math.hypot(e.x-player.x,e.y-player.y);if(d<170){e.x+=(player.x-e.x)*.18;e.y+=(player.y-e.y)*.18;}}}player.dashCooldown=player.dashMax||150;}
+
+function update(){if(!started||paused||gameOver)return;let mx=joystick.dx,my=joystick.dy;if(keys.a||keys.arrowleft)mx--;if(keys.d||keys.arrowright)mx++;if(keys.w||keys.arrowup)my--;if(keys.s||keys.arrowdown)my++;if(mx||my){const l=Math.hypot(mx,my);player.x+=(mx/l)*player.speed;player.y+=(my/l)*player.speed;clampAgainstObstacles(player);}if(player.regen)player.hp=Math.min(player.maxHp,player.hp+player.regen);if(player.dashCooldown>0)player.dashCooldown--;spawnTimer++;autoFireTimer++;
+ const area=areas[areaIndex];if(!bossSpawned&&spawnTimer>Math.max(18,area.spawnBase-waveNum*6)){spawnEnemy();spawnTimer=0;}if(autoFireTimer>player.fireRate){autoFire();autoFireTimer=0;}
+ bullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy;b.life--;if(hitsObstacle(b.x,b.y,b.r)){b.dead=true;createParticles(b.x,b.y,'#94a3b8',5);}});bullets=bullets.filter(b=>!b.dead&&b.life>0&&b.x>-60&&b.x<canvas.width+60&&b.y>-60&&b.y<canvas.height+60);
+ enemies.forEach(e=>{let ang=Math.atan2(player.y-e.y,player.x-e.x),spd=e.speed;if(e.charger){e.cool--;if(e.cool<0){spd=4.2;if(e.cool<-22)e.cool=95;}}e.x+=Math.cos(ang)*spd;e.y+=Math.sin(ang)*spd;clampAgainstObstacles(e);if(e.boss){e.pulse=(e.pulse||0)+1;if(e.pulse%115===0)spawnEnemy(areaIndex>=4?'swarm':(areaIndex>=2?'virus':'bacteria'));}const d=Math.hypot(player.x-e.x,player.y-e.y);if(d<player.r+e.r){player.hp-=Math.max(.02,e.damage*(1-player.armor)*.025);if(e.toxic)player.hp-=.035;}});
+ bullets.forEach(b=>{for(const e of enemies){const d=Math.hypot(b.x-e.x,b.y-e.y);if(d<b.r+e.r){e.hp-=b.damage;createParticles(b.x,b.y,'#38bdf8',4);if(b.pierce>0)b.pierce--;else {b.dead=true;break;}}}});bullets=bullets.filter(b=>!b.dead);
+ enemies=enemies.filter(e=>{if(e.hp<=0){totalKillsInArea++;player.xp+=e.xp;createParticles(e.x,e.y,e.color,20);if(e.split&&!e.baby){for(let i=0;i<2;i++)enemies.push({x:e.x+(Math.random()-.5)*30,y:e.y+(Math.random()-.5)*30,r:10,hp:16,maxHp:16,speed:2.1,damage:5,xp:2,color:'#f9a8d4',name:'Sporeling',baby:true});}if(Math.random()<.22)pickups.push({x:e.x,y:e.y,r:7,type:'nutrient'});if(e.boss){finishArea();}return false;}return true;});
+ pickups.forEach(p=>{const d=Math.hypot(p.x-player.x,p.y-player.y);if(d<player.magnet){p.x+=(player.x-p.x)*.06;p.y+=(player.y-p.y)*.06;}if(d<player.r+p.r){player.hp=Math.min(player.maxHp,player.hp+9);p.dead=true;}});pickups=pickups.filter(p=>!p.dead);
+ if(player.xp>=player.nextXp){player.xp-=player.nextXp;player.level++;player.nextXp+=10;if(hasAvailableMutation()){paused=true;renderTree();ui.upgrade.style.display='flex';}else{player.hp=Math.min(player.maxHp,player.hp+20);say('Cell level increased. All mutations acquired, so no evolution menu opened. +20 HP recovered.');}}
+ if(totalKillsInArea>=area.threshold&&!bossSpawned){bossSpawned=true;ui.bossBanner.textContent=area.boss.toUpperCase()+' DETECTED';ui.bossBanner.style.display='block';setTimeout(()=>ui.bossBanner.style.display='none',1600);spawnEnemy('boss');say('Boss incoming: '+area.boss+'!');}
+ else if(!bossSpawned&&totalKillsInArea>=waveNum*10){waveNum++;say(areas[areaIndex].name+' infection intensifies. Wave '+waveNum+'.');}
+ if(player.hp<=0){player.hp=0;gameOver=true;say('You were overwhelmed by infection. Refresh to try again.');}
+ particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;});particles=particles.filter(p=>p.life>0);updateHUD();}
+function finishArea(){if(areaIndex<areas.length-1){paused=true;say('Level '+(areaIndex+1)+' cleared! Moving deeper into the body...');setTimeout(()=>{areaIndex++;player.hp=Math.min(player.maxHp,player.hp+40);loadArea(areaIndex,true);paused=false;},1200);}else{gameOver=true;say('Victory! You cleared all five infection sites and defeated the Viral Overlord.');}}
+function draw(){drawMap();drawObstacles();for(const p of pickups){ctx.fillStyle='#86efac';ctx.shadowColor='#86efac';ctx.shadowBlur=10;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}for(const p of particles){ctx.globalAlpha=p.life/p.maxLife;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}for(const b of bullets){ctx.fillStyle='#38bdf8';ctx.shadowColor='#38bdf8';ctx.shadowBlur=12;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}enemies.forEach(drawEnemy);drawPlayer();}
+function drawMap(){const a=areas[areaIndex];const g=ctx.createRadialGradient(canvas.width/2,canvas.height/2,80,canvas.width/2,canvas.height/2,canvas.width);g.addColorStop(0,a.bg[0]);g.addColorStop(1,a.bg[1]);ctx.fillStyle=g;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.strokeStyle='rgba(255,255,255,.055)';ctx.lineWidth=2;for(let i=0;i<35;i++){const x=(i*173+80)%canvas.width,y=(i*97+120)%canvas.height;ctx.beginPath();ctx.ellipse(x,y,80,34,i,0,Math.PI*2);ctx.stroke();}}
+function drawObstacles(){for(const o of obstacles){ctx.save();ctx.fillStyle='rgba(148,163,184,.32)';ctx.strokeStyle='rgba(226,232,240,.45)';ctx.lineWidth=2;ctx.shadowColor='rgba(15,23,42,.5)';ctx.shadowBlur=12;if(o.type==='circle'){ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='rgba(255,255,255,.55)';ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText(o.label,o.x,o.y+4);}else{roundRect(ctx,o.x,o.y,o.w,o.h,18);ctx.fill();ctx.stroke();ctx.fillStyle='rgba(255,255,255,.55)';ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText(o.label,o.x+o.w/2,o.y+o.h/2+4);}ctx.restore();}}
+function drawEnemy(e){ctx.fillStyle=e.color;ctx.shadowColor=e.color;ctx.shadowBlur=e.boss?22:8;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(e.x-e.r,e.y-e.r-13,e.r*2,6);ctx.fillStyle='#ef4444';ctx.fillRect(e.x-e.r,e.y-e.r-13,Math.max(0,e.hp/e.maxHp)*e.r*2,6);if(e.boss||e.toxic||e.charger){ctx.fillStyle='#f8fafc';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText(e.name,e.x,e.y-e.r-19);}}
+function drawPlayer(){
+ const t=performance.now()/1000;
+ const ownedTotal=mutations.filter(m=>m.owned).length;
+ const ab=branchCount('Antibody'), mem=branchCount('Membrane'), mit=branchCount('Mitochondria'), pha=branchCount('Phagocytosis');
+ const pulse=Math.sin(t*4)*2;
+
+ // Growth aura: every mutation makes the cell look more evolved without changing collision size.
+ if(ownedTotal>0){
+  ctx.save();
+  ctx.globalAlpha=.14+Math.min(.18,ownedTotal*.015);
+  ctx.strokeStyle='#bae6fd';
+  ctx.lineWidth=3+ownedTotal*.35;
+  ctx.beginPath();
+  ctx.arc(player.x,player.y,player.r+10+ownedTotal*1.7+pulse,0,Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+ }
+
+ // Membrane branch: protective outer rings.
+ for(let i=0;i<mem;i++){
+  ctx.save();
+  ctx.globalAlpha=.55-i*.11;
+  ctx.strokeStyle=i===2?'#86efac':'#38bdf8';
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.arc(player.x,player.y,player.r+8+i*7+Math.sin(t*3+i)*1.5,0,Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+ }
+
+ // Phagocytosis branch: pseudopod arms/tendrils.
+ if(pha>0){
+  ctx.save();
+  ctx.strokeStyle='#e0f2fe';
+  ctx.lineWidth=5;
+  ctx.lineCap='round';
+  ctx.globalAlpha=.62;
+  const arms=pha*3;
+  for(let i=0;i<arms;i++){
+   const a=t*.9+i*Math.PI*2/arms;
+   const len=player.r+14+pha*7+Math.sin(t*5+i)*4;
+   ctx.beginPath();
+   ctx.moveTo(player.x+Math.cos(a)*(player.r-2),player.y+Math.sin(a)*(player.r-2));
+   ctx.quadraticCurveTo(player.x+Math.cos(a+.35)*len,player.y+Math.sin(a+.35)*len,player.x+Math.cos(a)*len,player.y+Math.sin(a)*len);
+   ctx.stroke();
+  }
+  ctx.restore();
+ }
+
+ // Main cell body.
+ ctx.shadowColor='#e0f2fe';ctx.shadowBlur=18+ownedTotal*2;
+ ctx.fillStyle='#e0f2fe';ctx.beginPath();ctx.arc(player.x,player.y,player.r+Math.min(6,ownedTotal*.45),0,Math.PI*2);ctx.fill();
+ ctx.shadowBlur=0;ctx.strokeStyle=mem?'#86efac':'#38bdf8';ctx.lineWidth=4+mem;ctx.stroke();
+
+ // Mitochondria branch: glowing organelles inside the cell.
+ if(mit>0){
+  ctx.save();
+  ctx.fillStyle='#facc15';
+  ctx.shadowColor='#facc15';ctx.shadowBlur=8;
+  for(let i=0;i<mit*3;i++){
+   const a=t*1.6+i*Math.PI*2/(mit*3);
+   const rr=6+(i%2)*5;
+   ctx.beginPath();
+   ctx.ellipse(player.x+Math.cos(a)*rr,player.y+Math.sin(a*1.4)*rr,4,2,a,0,Math.PI*2);
+   ctx.fill();
+  }
+  ctx.restore();
+ }
+
+ // Antibody branch: orbiting antibody nodes and tiny spikes.
+ if(ab>0){
+  ctx.save();
+  const nodes=ab*3;
+  for(let i=0;i<nodes;i++){
+   const a=-t*2+i*Math.PI*2/nodes;
+   const rr=player.r+20+ab*4;
+   ctx.fillStyle='#38bdf8';ctx.shadowColor='#38bdf8';ctx.shadowBlur=10;
+   ctx.beginPath();ctx.arc(player.x+Math.cos(a)*rr,player.y+Math.sin(a)*rr,4+ab*.7,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+ }
+
+ // Face/targeting receptors.
+ ctx.fillStyle='#0f172a';ctx.beginPath();ctx.arc(player.x-7,player.y-5,3,0,Math.PI*2);ctx.arc(player.x+7,player.y-5,3,0,Math.PI*2);ctx.fill();
+ if(ownedTotal>=8){ctx.strokeStyle='#0f172a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(player.x,player.y+5,6,0,Math.PI);ctx.stroke();}
+}
+function createParticles(x,y,color,amount=10){for(let i=0;i<amount;i++){const life=20+Math.random()*18;particles.push({x,y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,r:2+Math.random()*3,life,maxLife:life,color});}}
+function owns(id){const m=mutations.find(x=>x.id===id);return !!(m&&m.owned);}function branchCount(branch){return mutations.filter(m=>m.branch===branch&&m.owned).length;}function hasAvailableMutation(){return mutations.some(m=>!m.owned&&(!m.req||owns(m.req)));}
+function renderTree(){ui.tree.innerHTML='';const branches=[...new Set(mutations.map(m=>m.branch))];for(const branch of branches){const list=mutations.filter(m=>m.branch===branch);for(const m of list){const locked=m.req&&!mutations.find(x=>x.id===m.req)?.owned;const div=document.createElement('div');div.className='mut '+(locked?'locked ':'')+(m.owned?'owned ':'');div.innerHTML=`<div class="branch-title">${branch}</div><h3>${m.name}</h3><p>${m.desc}</p><div class="status">${m.owned?'Acquired':locked?'Requires '+mutations.find(x=>x.id===m.req).name:'Available'}</div>`;const btn=document.createElement('button');btn.textContent=m.owned?'Acquired':locked?'Locked':'Evolve';btn.disabled=m.owned||locked;btn.onclick=()=>chooseMutation(m.id);div.appendChild(btn);ui.tree.appendChild(div);}}}
+function chooseMutation(id){const m=mutations.find(x=>x.id===id);if(!m||m.owned)return;m.owned=true;m.apply();ui.upgrade.style.display='none';paused=false;say('Mutation acquired: '+m.name+'.');updateHUD();}
+function updateHUD(){ui.hp.textContent=Math.floor(player.hp);ui.maxHp.textContent=player.maxHp;ui.xp.textContent=player.xp;ui.next.textContent=player.nextXp;ui.level.textContent=player.level;ui.wave.textContent=waveNum;ui.kills.textContent=totalKillsInArea;ui.levelName.textContent=areas[areaIndex].name;ui.areaNum.textContent=(areaIndex+1)+' / '+areas.length;ui.hpFill.style.width=(player.hp/player.maxHp*100)+'%';ui.dash.textContent=player.dashCooldown<=0?'Ready':'Cooling';}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function loop(){update();draw();requestAnimationFrame(loop);}
+const joy=document.getElementById('joystick'),stick=document.getElementById('stick'),dashBtn=document.getElementById('dashBtn');
+function setStick(clientX,clientY){const rect=joy.getBoundingClientRect();const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;let dx=clientX-cx,dy=clientY-cy;const max=42,len=Math.hypot(dx,dy);if(len>max){dx=dx/len*max;dy=dy/len*max;}joystick.dx=dx/max;joystick.dy=dy/max;stick.style.transform=`translate(${dx}px,${dy}px)`;}
+function resetStick(){joystick.active=false;joystick.id=null;joystick.dx=0;joystick.dy=0;stick.style.transform='translate(0,0)';}
+joy.addEventListener('pointerdown',e=>{e.preventDefault();joystick.active=true;joystick.id=e.pointerId;joy.setPointerCapture(e.pointerId);setStick(e.clientX,e.clientY);});
+joy.addEventListener('pointermove',e=>{if(joystick.active&&e.pointerId===joystick.id){e.preventDefault();setStick(e.clientX,e.clientY);}});
+joy.addEventListener('pointerup',e=>{if(e.pointerId===joystick.id)resetStick();});joy.addEventListener('pointercancel',resetStick);
+dashBtn.addEventListener('pointerdown',e=>{e.preventDefault();dash();});
+document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.code==='Space'){e.preventDefault();dash();}});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);canvas.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});canvas.addEventListener('pointerdown',e=>{if(e.target===canvas){mouse.x=e.clientX;mouse.y=e.clientY;shoot(e.clientX,e.clientY);}});updateHUD();loop();
+</script>
+</body>
+</html>
