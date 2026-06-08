@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pro Home Finishings Quote Tool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- PDF generation libraries. These load from CDN when hosted on GitHub Pages. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root { --blue:#123a7a; --light:#f4f7fb; --border:#d6dce8; --yellow:#fff36a; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Arial, sans-serif; background:var(--light); color:#111; }
+    header { background:var(--blue); color:white; padding:16px; position:sticky; top:0; z-index:20; }
+    header h1 { margin:0; font-size:21px; }
+    main { max-width:1120px; margin:auto; padding:14px; display:grid; grid-template-columns:420px 1fr; gap:14px; }
+    .card { background:white; border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px; box-shadow:0 2px 8px #00000012; }
+    h2 { margin:0 0 10px; color:var(--blue); font-size:18px; }
+    label { display:block; font-weight:700; margin:9px 0 4px; }
+    input, select, textarea, button { font:inherit; }
+    input, select, textarea { width:100%; padding:9px; border:1px solid #bcc6d8; border-radius:8px; }
+    textarea { min-height:75px; resize:vertical; }
+    button { border:none; background:var(--blue); color:white; border-radius:8px; padding:10px 12px; font-weight:800; cursor:pointer; }
+    button.secondary { background:#52606d; }
+    button.danger { background:#9e1c1c; }
+    button.highlight { background:#e2b600; color:#111; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .item { border:1px solid var(--border); border-radius:10px; padding:10px; margin:8px 0; background:#fff; }
+    .small { color:#52606d; font-size:12px; line-height:1.35; }
+    .discount-banner { background:var(--yellow); border:2px solid #d2bf00; padding:8px; border-radius:8px; font-weight:900; margin-top:8px; }
+    .status { font-weight:800; margin-top:10px; color:var(--blue); }
+    .preview-wrap { overflow:auto; }
+
+    /* Printable quote */
+    #quotePaper {
+      width:816px;
+      min-height:1056px;
+      background:white;
+      padding:28px 38px;
+      margin:auto;
+      box-shadow:0 2px 12px #00000030;
+      font-family:Arial, sans-serif;
+    }
+    .q-header { display:flex; align-items:flex-start; justify-content:space-between; }
+    .q-logo { width:150px; max-height:110px; object-fit:contain; }
+    .q-center { text-align:center; flex:1; padding:0 12px; }
+    .q-title { margin:0; font-size:44px; color:var(--blue); font-weight:900; }
+    .q-company { white-space:pre-line; font-style:italic; line-height:1.2; }
+    .q-tagline { color:var(--blue); font-weight:900; margin-top:4px; }
+    .q-page { color:var(--blue); font-weight:900; font-size:20px; white-space:nowrap; }
+    .q-rule { border-top:2px solid #333; margin:12px 0 14px; }
+    .q-info { display:grid; grid-template-columns:1fr 1fr; gap:80px; margin-bottom:10px; }
+    .q-line { border-bottom:1px solid #333; padding:4px 8px; text-align:center; font-size:18px; min-height:29px; }
+    .q-table { width:100%; border-collapse:collapse; table-layout:fixed; }
+    .q-table th, .q-table td { border:1px solid #333; padding:6px; vertical-align:top; }
+    .q-table th { text-align:center; font-weight:900; font-size:16px; }
+    .q-table th:nth-child(1), .q-table td:nth-child(1){ width:70%; }
+    .q-table th:nth-child(2), .q-table td:nth-child(2){ width:15%; }
+    .q-table th:nth-child(3), .q-table td:nth-child(3){ width:15%; }
+    .q-section { text-align:center; font-weight:900; font-family:Georgia, serif; }
+    .q-money { text-align:right; white-space:nowrap; }
+    .q-summary-label { text-align:right; font-weight:900; }
+    .q-discount td { background:var(--yellow); font-weight:900; text-align:center; }
+    .q-total-label { background:#777; color:white; font-weight:900; text-align:center; font-size:18px; }
+    .q-footer { display:grid; grid-template-columns:1fr 150px; gap:18px; margin-top:14px; }
+    .q-h2 { margin:7px 0 3px; color:var(--blue); font-size:21px; }
+    .q-p { margin:0 0 7px; line-height:1.32; font-size:13.5px; }
+    .q-qr { width:135px; margin-top:18px; }
+    .q-finance-logo { font-size:28px; font-weight:900; color:#555; text-align:center; margin-bottom:6px; }
+    .hide-preview { display:none; }
+
+    @media (max-width:900px) {
+      main { grid-template-columns:1fr; }
+      #quotePaper { transform:scale(.58); transform-origin:top left; margin:0; }
+      .preview-wrap { height:650px; }
+    }
+    @media print {
+      body { background:white; }
+      header, .controls { display:none !important; }
+      main { display:block; padding:0; max-width:none; }
+      .preview-wrap { overflow:visible; }
+      #quotePaper { box-shadow:none; margin:0; width:8.5in; min-height:11in; padding:.35in; transform:none; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Pro Home Finishings Quote Tool</h1>
+</header>
+
+<main>
+  <section class="controls">
+<div class="card">
+      <h2>Customer Info</h2>
+      <label>Customer / Company Name</label><input id="customerName" oninput="updatePreview()">
+      <label>Phone</label><input id="customerPhone" oninput="updatePreview()">
+      <label>Street Address</label><input id="customerStreet" oninput="updatePreview()">
+      <label>City, State ZIP</label><input id="customerCityStateZip" oninput="updatePreview()">
+      <div class="grid">
+        <div><label>Quote Date</label><input id="quoteDate" type="date" onchange="updatePreview()"></div>
+        <div><label>Job Type</label><select id="jobType" onchange="updatePreview()">
+          <option>Interior Painting</option><option>Exterior Painting</option><option>Residential Painting</option>
+          <option>Commercial Painting</option><option>Pressure Washing</option><option>Cabinets</option>
+          <option>Trim / Doors</option><option>Custom</option>
+        </select></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Templates</h2>
+      <div class="actions">
+        <button onclick="loadTemplate('interior')">Interior</button>
+        <button onclick="loadTemplate('exterior')">Exterior</button>
+        <button onclick="loadTemplate('pressure')">Pressure Washing</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Line Items</h2>
+      <div class="actions">
+        <button class="secondary" onclick="addItem()">Add Line</button>
+        <button class="secondary" onclick="addSection()">Add Section</button>
+      </div>
+      <div id="items"></div>
+    </div>
+
+    <div class="card">
+      <h2>Discount</h2>
+      <label><input id="discountEnabled" type="checkbox" style="width:auto;" onchange="updatePreview()"> Add discount</label>
+      <label>Discount Label</label><input id="discountLabel" value="NEW CUSTOMER DISCOUNT" oninput="updatePreview()">
+      <label>Discount Percent</label><input id="discountPercent" type="number" value="20" min="0" max="100" oninput="updatePreview()">
+      <div id="discountBanner"></div>
+    </div>
+
+    <div class="card">
+      <h2>Payment / Terms</h2>
+      <label>Payment Info</label>
+      <textarea id="paymentInfo" oninput="updatePreview()">Please make checks payable to “Pro Home Finishings Mississippi, LLC”. A receipt upon payment will be provided. Alternative payment methods available. Please note material cost may be required to be paid upfront before the work can begin. An itemized bill of materials will be provided if on a reimbursement basis unless other arrangements for materials is made.</textarea>
+      <label>Terms and Conditions</label>
+      <textarea id="terms" oninput="updatePreview()">This estimate is valid for thirty (30) days from the date listed. It includes all items and services detailed above. Any additional work, changes in scope, or increases in material costs that may cause the project to exceed the original budget will be discussed and agreed upon in advance before proceeding. Unless otherwise stated above, all materials must be paid in advance. The remainder of the payment is due upon completion of work unless other arrangements have been made. Failure to pay will result in a 20% late fee.</textarea>
+    </div>
+
+    <div class="card">
+      <h2>Generate</h2>
+      <div class="actions">
+        <button class="highlight" onclick="downloadPdf()">Download PDF</button>
+        <button class="secondary" onclick="window.print()">Print / Save as PDF</button>
+      </div>
+      <div id="pdfStatus" class="status"></div>
+      <p class="small">The PDF downloads directly to the device being used. No customer data is sent to a server.</p>
+    </div>
+  </section>
+
+  <section class="preview-wrap">
+    <div id="quotePaper">
+      <div class="q-header">
+        <div id="logoBox"></div>
+        <div class="q-center">
+          <h1 class="q-title">Quote</h1>
+          <div class="q-company">5319 HWY 15 South
+Pontotoc, MS 38863</div>
+          <div class="q-tagline">Interior/Exterior • Residential & Commercial • Pressure Washing & More</div>
+          <div>662-296-9164 &nbsp; www.ProHomeFinishings.com</div>
+        </div>
+        <div class="q-page">Page 1 of 1</div>
+      </div>
+      <div class="q-rule"></div>
+      <div class="q-info">
+        <div>
+          <div class="q-line" id="pCustomerName"></div>
+          <div class="q-line" id="pCustomerStreet"></div>
+          <div class="q-line" id="pCustomerCityStateZip"></div>
+          <div class="q-line" id="pCustomerPhone"></div>
+        </div>
+        <div>
+          <div class="q-line" id="pQuoteDate"></div>
+          <div class="q-line" id="pJobType"></div>
+        </div>
+      </div>
+      <table class="q-table">
+        <thead><tr><th>DESCRIPTION</th><th>PRICE</th><th>AMOUNT</th></tr></thead>
+        <tbody id="pRows"></tbody>
+      </table>
+      <div class="q-footer">
+        <div>
+          <h2 class="q-h2">Payment Info</h2>
+          <p class="q-p" id="pPaymentInfo"></p>
+          <h2 class="q-h2">Financing</h2>
+          <p class="q-p">We are proud to offer financing option through Acorn Finance. This option allows you to pay for your project over time. To apply, please visit: <strong>https://www.acornfinance.com/pre-qualify/?d=YYIUW</strong> or scan the QR code to the right.</p>
+        </div>
+        <div>
+          <div class="q-finance-logo">Acorn<br><span style="font-size:14px;letter-spacing:3px;">FINANCE</span></div>
+          <div id="qrBox"></div>
+        </div>
+      </div>
+      <h2 class="q-h2">Terms and Conditions</h2>
+      <p class="q-p" id="pTerms"></p>
+    </div>
+  </section>
+</main>
+
+<datalist id="standardItems">
+  <option value="Patch & Prep (caulk, spackle, and sand)">
+  <option value="Prime walls & trim">
+  <option value="Paint ceiling">
+  <option value="Paint walls">
+  <option value="Paint trim">
+  <option value="Paint doors">
+  <option value="Paint cabinets">
+  <option value="Pressure wash">
+  <option value="Customer provided materials">
+  <option value="Paint and supplies">
+</datalist>
+
+<script>
+let items = [];
+
+const templates = {
+  interior: [
+    { type:'section', description:'Labor', price:0, amount:0 },
+    { type:'labor', description:'Patch & Prep (caulk, spackle, and sand)', price:300, amount:300 },
+    { type:'labor', description:'Prime walls & trim (oil based primer)', price:0, amount:0 },
+    { type:'labor', description:'Paint ceiling (2 coats “Ceiling White”)', price:0, amount:0 },
+    { type:'labor', description:'Paint walls (2 coats selected color/sheen)', price:0, amount:0 },
+    { type:'labor', description:'Paint trim (2 coats selected color/semi-gloss)', price:3900, amount:3900 },
+    { type:'section', description:'Materials', price:0, amount:0 },
+    { type:'material', description:'Paint, primer, caulking, spackling and related supplies', price:0, amount:0 }
+  ],
+  exterior: [
+    { type:'section', description:'Labor', price:0, amount:0 },
+    { type:'labor', description:'Pressure wash exterior surfaces', price:0, amount:0 },
+    { type:'labor', description:'Scrape, caulk, patch, and prep exterior', price:0, amount:0 },
+    { type:'labor', description:'Prime bare/problem areas', price:0, amount:0 },
+    { type:'labor', description:'Paint exterior body, trim, doors, and shutters', price:0, amount:0 },
+    { type:'section', description:'Materials', price:0, amount:0 },
+    { type:'material', description:'Exterior paint, primer, caulk, and supplies', price:0, amount:0 }
+  ],
+  pressure: [
+    { type:'section', description:'Labor', price:0, amount:0 },
+    { type:'labor', description:'Pressure wash driveway/walkway', price:0, amount:0 },
+    { type:'labor', description:'Pressure wash siding/exterior surfaces', price:0, amount:0 },
+    { type:'section', description:'Materials', price:0, amount:0 },
+    { type:'material', description:'Cleaning solution and related supplies', price:0, amount:0 }
+  ]
+};
+
+function init() {
+  document.getElementById('quoteDate').valueAsDate = new Date();
+  loadStaticImages();
+  loadTemplate('interior');
+}
+init();
+
+function val(id){ return document.getElementById(id).value; }
+function money(n){ return Number(n || 0).toLocaleString('en-US', {style:'currency', currency:'USD'}); }
+function esc(s){ return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function loadTemplate(name) {
+  items = JSON.parse(JSON.stringify(templates[name]));
+  renderItems();
+  updatePreview();
+}
+
+function addItem() {
+  items.push({type:'labor', description:'', price:0, amount:0});
+  renderItems();
+}
+
+function addSection() {
+  items.push({type:'section', description:'New Section', price:0, amount:0});
+  renderItems();
+}
+
+function removeItem(i) {
+  items.splice(i, 1);
+  renderItems();
+}
+
+function updateItem(i, field, value) {
+  items[i][field] = ['price','amount'].includes(field) ? Number(value || 0) : value;
+  updatePreview();
+}
+
+function renderItems() {
+  const box = document.getElementById('items');
+  box.innerHTML = '';
+  items.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'item';
+    if (item.type === 'section') {
+      div.innerHTML = `
+        <label>Section Title</label>
+        <input value="${esc(item.description)}" oninput="updateItem(${i}, 'description', this.value)">
+        <div class="actions"><button class="danger" onclick="removeItem(${i})">Remove</button></div>`;
+    } else {
+      div.innerHTML = `
+        <label>Description</label>
+        <input list="standardItems" value="${esc(item.description)}" oninput="updateItem(${i}, 'description', this.value)">
+        <div class="grid">
+          <div><label>Price</label><input type="number" step="0.01" value="${item.price}" oninput="updateItem(${i}, 'price', this.value)"></div>
+          <div><label>Amount</label><input type="number" step="0.01" value="${item.amount}" oninput="updateItem(${i}, 'amount', this.value)"></div>
+        </div>
+        <label><input type="checkbox" style="width:auto;" ${item.type === 'material' ? 'checked' : ''} onchange="items[${i}].type=this.checked?'material':'labor'; renderItems(); updatePreview();"> Material/customer provided style</label>
+        <div class="actions"><button class="danger" onclick="removeItem(${i})">Remove</button></div>`;
+    }
+    box.appendChild(div);
+  });
+  updatePreview();
+}
+
+function totals() {
+  const subtotal = items.reduce((s, item) => item.type === 'section' ? s : s + Number(item.amount || 0), 0);
+  const discountOn = document.getElementById('discountEnabled').checked;
+  const discountPercent = discountOn ? Number(val('discountPercent') || 0) : 0;
+  const total = subtotal - subtotal * discountPercent / 100;
+  return {subtotal, discountPercent, total};
+}
+
+function updatePreview() {
+  document.getElementById('pCustomerName').textContent = val('customerName');
+  document.getElementById('pCustomerStreet').textContent = val('customerStreet');
+  document.getElementById('pCustomerCityStateZip').textContent = val('customerCityStateZip');
+  document.getElementById('pCustomerPhone').textContent = val('customerPhone');
+  document.getElementById('pQuoteDate').textContent = val('quoteDate');
+  document.getElementById('pJobType').textContent = val('jobType');
+  document.getElementById('pPaymentInfo').textContent = val('paymentInfo');
+  document.getElementById('pTerms').textContent = val('terms');
+
+  const tbody = document.getElementById('pRows');
+  tbody.innerHTML = '';
+  items.forEach(item => {
+    const tr = document.createElement('tr');
+    if (item.type === 'section') {
+      tr.innerHTML = `<td class="q-section" colspan="3">${esc(item.description)}</td>`;
+    } else {
+      const isMaterial = item.type === 'material';
+      tr.innerHTML = `<td>${esc(item.description)}</td>
+        <td class="q-money">${isMaterial && !item.price ? 'customer provided' : money(item.price)}</td>
+        <td class="q-money">${isMaterial && !item.amount ? 'customer provided' : money(item.amount)}</td>`;
+    }
+    tbody.appendChild(tr);
+  });
+
+  const t = totals();
+  tbody.insertAdjacentHTML('beforeend', `<tr><td colspan="2" class="q-summary-label">SUBTOTAL:</td><td class="q-money">${money(t.subtotal)}</td></tr>`);
+  if (document.getElementById('discountEnabled').checked) {
+    tbody.insertAdjacentHTML('beforeend', `<tr class="q-discount"><td colspan="2">${esc(val('discountLabel') || 'DISCOUNT')} - ${t.discountPercent}%</td><td class="q-money">-${t.discountPercent}%</td></tr>`);
+  }
+  tbody.insertAdjacentHTML('beforeend', `<tr><td colspan="2" class="q-total-label">TOTAL:</td><td class="q-money">${money(t.total)}</td></tr>`);
+
+  document.getElementById('discountBanner').innerHTML = document.getElementById('discountEnabled').checked
+    ? `<div class="discount-banner">${esc(val('discountLabel'))} - ${t.discountPercent}% will be highlighted on the quote.</div>` : '';
+}
+
+function loadStaticImages() {
+  // These image files should be uploaded to the same GitHub repo:
+  // assets/logo.png
+  // assets/acorn-qr.png
+  document.getElementById('logoBox').innerHTML = `<img class="q-logo" src="assets/logo.png" onerror="this.outerHTML='<div style=&quot;font-size:28px;font-weight:900;color:#123a7a;&quot;>Pro Home<br>Finishings</div>'">`;
+  document.getElementById('qrBox').innerHTML = `<img class="q-qr" src="assets/acorn-qr.png" onerror="this.outerHTML='<div class=&quot;small&quot;>QR image missing: assets/acorn-qr.png</div>'">`;
+}
+
+async function downloadPdf() {
+  updatePreview();
+  const status = document.getElementById('pdfStatus');
+  status.textContent = 'Creating PDF...';
+
+  if (!window.jspdf || !window.html2canvas) {
+    status.textContent = 'PDF library did not load. Use Print / Save as PDF instead, or check that the CDN is not blocked.';
+    return;
+  }
+
+  const paper = document.getElementById('quotePaper');
+  const canvas = await html2canvas(paper, { scale:2, useCORS:true, backgroundColor:'#ffffff' });
+  const img = canvas.toDataURL('image/jpeg', 0.98);
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'pt', 'letter');
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  pdf.addImage(img, 'JPEG', 0, 0, pageW, pageH);
+
+  const name = (val('customerName') || 'Paint_Quote').replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'_');
+  const date = val('quoteDate') || new Date().toISOString().slice(0,10);
+  pdf.save(`${name}_${date}_Quote.pdf`);
+  status.textContent = 'PDF downloaded.';
+}
+</script>
+</body>
+</html>
