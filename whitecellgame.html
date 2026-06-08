@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>White Cell: Immune Response - Mobile Five Level Demo</title>
+<title>White Cell: Immune Response - Mobile Five Level Demo v6</title>
 <style>
 * { box-sizing: border-box; }
 body { margin:0; overflow:hidden; background:#020617; color:white; font-family:system-ui,-apple-system,Segoe UI,sans-serif; touch-action:none; user-select:none; -webkit-user-select:none; }
@@ -17,15 +17,27 @@ h1{margin:0;font-size:46px;letter-spacing:-1px}.subtitle{color:#bae6fd;margin-bo
 #upgrade{display:none}.tree{display:grid;grid-template-columns:repeat(4,minmax(145px,1fr));gap:12px;margin-top:16px}.mut{border:1px solid rgba(125,211,252,.25);border-radius:14px;padding:12px;background:rgba(2,6,23,.55);text-align:left;min-height:150px}.mut h3{margin:0 0 6px;font-size:15px}.mut p{font-size:12px;color:#cbd5e1;margin:0 0 8px}.mut .status{font-size:12px;color:#93c5fd;margin-bottom:8px}.mut.locked{opacity:.45}.mut.owned{border-color:#22c55e;box-shadow:0 0 16px rgba(34,197,94,.18)}.mut button{font-size:13px;padding:9px;margin:0}.branch-title{margin-top:10px;color:#bae6fd;font-size:13px;text-align:left;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
 #bossBanner{display:none;position:fixed;top:32%;left:50%;transform:translateX(-50%);font-size:42px;font-weight:950;color:#fda4af;text-shadow:0 0 22px #ef4444;z-index:5;text-align:center}.kbd{display:inline-block;background:#111827;border:1px solid #334155;border-bottom-width:3px;border-radius:6px;padding:1px 6px;color:#e2e8f0}
 #mobileControls{position:fixed;inset:0;pointer-events:none;z-index:6;display:none}#joystick{position:absolute;left:22px;bottom:28px;width:132px;height:132px;border-radius:50%;background:rgba(15,23,42,.5);border:2px solid rgba(186,230,253,.35);pointer-events:auto;touch-action:none}#stick{position:absolute;left:41px;top:41px;width:48px;height:48px;border-radius:50%;background:rgba(56,189,248,.85);box-shadow:0 0 22px rgba(56,189,248,.45)}#dashBtn{position:absolute;right:24px;bottom:42px;width:112px;height:112px;border-radius:50%;border:2px solid rgba(254,202,202,.5);background:radial-gradient(circle,#ef4444,#7f1d1d);color:white;font-weight:950;font-size:18px;pointer-events:auto;touch-action:none;box-shadow:0 0 30px rgba(239,68,68,.3)}#shootHint{position:absolute;right:18px;bottom:164px;color:#dbeafe;background:rgba(15,23,42,.6);border:1px solid rgba(125,211,252,.25);padding:8px 10px;border-radius:999px;font-size:12px}
-@media(pointer:coarse),(max-width:900px){#mobileControls{display:block}#message{bottom:176px;font-size:13px}.card{padding:9px 11px}.bar{width:170px}#hud{top:8px;left:8px;right:8px}.card{min-width:160px;font-size:13px}}
-@media(max-width:760px){#hud{flex-direction:column;right:auto}.card{min-width:185px}.tree{grid-template-columns:1fr 1fr}.panel{padding:18px}h1{font-size:34px}}
+@media(pointer:coarse),(max-width:900px){
+  #mobileControls{display:block}
+  #message{display:none}
+  #shootHint{display:none}
+  #hud{top:6px;left:6px;right:6px;display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:start}
+  .card{min-width:0;padding:6px 8px;border-radius:10px;font-size:11px;line-height:1.25;background:rgba(15,23,42,.62);backdrop-filter:blur(3px)}
+  .card:first-child{grid-column:1 / span 2}
+  .card strong{font-size:12px}.bar{width:100%;max-width:none;height:9px;margin-top:4px}
+  .card:nth-child(2) div:nth-child(n+4){display:none}
+  .card:nth-child(3) div:nth-child(3){display:none}
+  #joystick{left:16px;bottom:18px;width:118px;height:118px}#stick{left:35px;top:35px;width:44px;height:44px}
+  #dashBtn{right:18px;bottom:28px;width:96px;height:96px;font-size:15px}
+}
+@media(max-width:760px){.tree{grid-template-columns:1fr 1fr}.panel{padding:16px}h1{font-size:34px}}
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 <div id="hud">
   <div class="card"><strong>White Blood Cell</strong><div class="bar"><div id="hpFill" class="fill"></div></div><div>HP: <span id="hp">100</span>/<span id="maxHp">100</span></div></div>
-  <div class="card"><div><strong id="levelName">Skin Wound</strong></div><div>Area: <span id="areaNum">1</span>/3</div><div>Wave: <span id="wave">1</span></div><div>Kills: <span id="kills">0</span></div></div>
+  <div class="card"><div><strong id="levelName">Skin Wound</strong></div><div>Area: <span id="areaNum">1</span>/5</div><div>Wave: <span id="wave">1</span></div><div>Kills: <span id="kills">0</span></div></div>
   <div class="card"><div>Cell Level: <span id="level">1</span></div><div>XP: <span id="xp">0</span>/<span id="next">10</span></div><div>Dash: <span id="dash">Ready</span></div></div>
 </div>
 <div id="message">WASD/Arrows move. Click shoots. Space dash-phagocytoses.</div>
@@ -33,7 +45,7 @@ h1{margin:0;font-size:46px;letter-spacing:-1px}.subtitle{color:#bae6fd;margin-bo
 
 <div id="start" class="overlay"><div class="panel">
   <h1>WHITE CELL</h1><p class="subtitle">Immune Response: Multi-Level Prototype</p>
-  <p class="small">Fight through <b>Skin Wound</b>, <b>Bloodstream</b>, and <b>Lung Tissue</b>. Each area has new threats, a different map, obstacles that block movement, and a boss infection.</p>
+  <p class="small">Fight through five infection sites: <b>Skin Wound</b>, <b>Bloodstream</b>, <b>Lung Tissue</b>, <b>Gut Lining</b>, and the <b>Deep Infection Site</b>. Each area has new threats, a different map, obstacles that block movement, and a boss infection.</p>
   <button onclick="startGame()">Begin Immune Response</button>
   <p class="small"><span class="kbd">WASD</span> move &nbsp; <span class="kbd">Click</span> shoot &nbsp; <span class="kbd">Space</span> dash<br>Mobile: left joystick moves, tap screen aims/shoots, red button dashes.</p>
 </div></div>
@@ -41,7 +53,7 @@ h1{margin:0;font-size:46px;letter-spacing:-1px}.subtitle{color:#bae6fd;margin-bo
 <div id="mobileControls"><div id="joystick"><div id="stick"></div></div><button id="dashBtn">DASH</button><div id="shootHint">Tap anywhere to shoot</div></div>
 
 <div id="upgrade" class="overlay"><div class="panel">
-  <h2>Cellular Evolution</h2><p class="small">Choose one unlocked mutation. Earlier mutations open stronger branches.</p>
+  <h2>Cellular Evolution</h2><p class="small">Mutations are rarer now. Choose one unlocked growth path; earlier mutations open stronger branches.</p>
   <div id="tree" class="tree"></div>
 </div></div>
 
@@ -52,7 +64,7 @@ let keys={},bullets=[],enemies=[],particles=[],pickups=[],obstacles=[];
 let started=false,paused=true,gameOver=false,bossSpawned=false,areaIndex=0,waveNum=1,totalKillsInArea=0,spawnTimer=0,autoFireTimer=0,transitionTimer=0;
 let mouse={x:innerWidth/2,y:innerHeight/2};
 let joystick={active:false,id:null,baseX:0,baseY:0,dx:0,dy:0};
-const player={x:innerWidth/2,y:innerHeight/2,r:20,speed:4,hp:100,maxHp:100,damage:12,xp:0,nextXp:10,level:1,fireRate:34,dashCooldown:0,pierce:0,regen:0,armor:0,dashDamage:2.4,magnet:90};
+const player={x:innerWidth/2,y:innerHeight/2,r:20,speed:4,hp:100,maxHp:100,damage:12,xp:0,nextXp:35,level:1,fireRate:34,dashCooldown:0,pierce:0,regen:0,armor:0,dashDamage:2.4,magnet:90};
 
 const areas=[
  {name:'Skin Wound',bg:['#7f1d1d','#210606'],boss:'Clotted Wound Core',threshold:22,spawnBase:72,enemies:['virus','bacteria','resistant'],obstacles:[
@@ -94,24 +106,24 @@ function hitsObstacle(x,y,r=4){for(const o of obstacles){if(o.type==='circle'&&M
 function spawnEnemy(type){const a=areas[areaIndex];if(!type){type=a.enemies[Math.floor(Math.random()*a.enemies.length)];}
  let x,y,tries=0;do{const side=Math.floor(Math.random()*4); if(side===0){x=Math.random()*canvas.width;y=-50}else if(side===1){x=canvas.width+50;y=Math.random()*canvas.height}else if(side===2){x=Math.random()*canvas.width;y=canvas.height+50}else{x=-50;y=Math.random()*canvas.height} tries++;}while(hitsObstacle(x,y,35)&&tries<20);
  const specs={
-  virus:{r:14,hp:22,speed:2.35,damage:7,xp:4,color:'#22c55e',name:'Virus'},
-  bacteria:{r:19,hp:38,speed:1.45,damage:10,xp:6,color:'#facc15',name:'Bacteria'},
-  resistant:{r:24,hp:70,speed:.95,damage:14,xp:10,color:'#fb7185',name:'Resistant Bacteria'},
-  swarm:{r:10,hp:14,speed:3.2,damage:5,xp:3,color:'#84cc16',name:'Viral Swarm'},
-  toxin:{r:16,hp:30,speed:1.15,damage:18,xp:9,color:'#c084fc',name:'Toxin Globule',toxic:true},
-  spore:{r:18,hp:48,speed:1.05,damage:9,xp:11,color:'#f472b6',name:'Fungal Spore',split:true},
-  charger:{r:20,hp:55,speed:1.0,damage:16,xp:12,color:'#fb923c',name:'Pneumo Charger',charger:true,cool:80},
-  parasite:{r:28,hp:95,speed:1.25,damage:18,xp:15,color:'#bef264',name:'Parasite Larva',split:true},
-  acid:{r:17,hp:42,speed:1.55,damage:22,xp:13,color:'#fde047',name:'Acid Globule',toxic:true}
+  virus:{r:14,hp:22,speed:2.35,damage:7,xp:3,color:'#22c55e',name:'Virus'},
+  bacteria:{r:19,hp:38,speed:1.45,damage:10,xp:4,color:'#facc15',name:'Bacteria'},
+  resistant:{r:24,hp:70,speed:.95,damage:14,xp:6,color:'#fb7185',name:'Resistant Bacteria'},
+  swarm:{r:10,hp:14,speed:3.2,damage:5,xp:2,color:'#84cc16',name:'Viral Swarm'},
+  toxin:{r:16,hp:30,speed:1.15,damage:18,xp:5,color:'#c084fc',name:'Toxin Globule',toxic:true},
+  spore:{r:18,hp:48,speed:1.05,damage:9,xp:6,color:'#f472b6',name:'Fungal Spore',split:true},
+  charger:{r:20,hp:55,speed:1.0,damage:16,xp:7,color:'#fb923c',name:'Pneumo Charger',charger:true,cool:80},
+  parasite:{r:28,hp:95,speed:1.25,damage:18,xp:8,color:'#bef264',name:'Parasite Larva',split:true},
+  acid:{r:17,hp:42,speed:1.55,damage:22,xp:7,color:'#fde047',name:'Acid Globule',toxic:true}
  };
  if(type==='boss'){const bosses={
-  'Clotted Wound Core':{r:52,hp:480,speed:1.0,damage:20,xp:80,color:'#a855f7'},
-  'Septic Cluster':{r:58,hp:680,speed:.90,damage:24,xp:100,color:'#dc2626'},
-  'Pneumonia Bloom':{r:64,hp:880,speed:.82,damage:28,xp:130,color:'#0ea5e9'},
-  'Parasite Knot':{r:68,hp:1120,speed:.88,damage:32,xp:165,color:'#84cc16'},
-  'Viral Overlord':{r:82,hp:1800,speed:.72,damage:38,xp:250,color:'#f43f5e'}
+  'Clotted Wound Core':{r:52,hp:480,speed:1.0,damage:20,xp:28,color:'#a855f7'},
+  'Septic Cluster':{r:58,hp:680,speed:.90,damage:24,xp:36,color:'#dc2626'},
+  'Pneumonia Bloom':{r:64,hp:880,speed:.82,damage:28,xp:44,color:'#0ea5e9'},
+  'Parasite Knot':{r:68,hp:1120,speed:.88,damage:32,xp:56,color:'#84cc16'},
+  'Viral Overlord':{r:82,hp:1800,speed:.72,damage:38,xp:90,color:'#f43f5e'}
  }; const b=bosses[a.boss]; enemies.push({...b,x,y,maxHp:b.hp,name:a.boss,boss:true,pulse:0}); return; }
- const s=specs[type]; const scale=1+areaIndex*.22; enemies.push({...s,x,y,hp:Math.round(s.hp*scale),maxHp:Math.round(s.hp*scale),speed:s.speed+areaIndex*.06,damage:Math.round(s.damage*(1+areaIndex*.15)),xp:Math.round(s.xp*(1+areaIndex*.12)),type});}
+ const s=specs[type]; const scale=1+areaIndex*.22; enemies.push({...s,x,y,hp:Math.round(s.hp*scale),maxHp:Math.round(s.hp*scale),speed:s.speed+areaIndex*.06,damage:Math.round(s.damage*(1+areaIndex*.15)),xp:Math.max(1,Math.round(s.xp*(1+areaIndex*.06))),type});}
 function shoot(tx,ty){if(!started||paused||gameOver)return;const ang=Math.atan2(ty-player.y,tx-player.x);bullets.push({x:player.x,y:player.y,r:6,vx:Math.cos(ang)*9,vy:Math.sin(ang)*9,damage:player.damage,life:80,pierce:player.pierce});}
 function autoFire(){if(!enemies.length)return;let near=null,best=Infinity;for(const e of enemies){const d=Math.hypot(e.x-player.x,e.y-player.y);if(d<best){best=d;near=e;}}if(near)shoot(near.x,near.y);}
 function dash(){if(!started||paused||gameOver||player.dashCooldown>0)return;let dx=0,dy=0;if(keys.a||keys.arrowleft)dx--;if(keys.d||keys.arrowright)dx++;if(keys.w||keys.arrowup)dy--;if(keys.s||keys.arrowdown)dy++;if(dx===0&&dy===0){dx=Math.cos(Math.atan2(mouse.y-player.y,mouse.x-player.x));dy=Math.sin(Math.atan2(mouse.y-player.y,mouse.x-player.x));}const len=Math.hypot(dx,dy)||1;dx/=len;dy/=len;for(let i=0;i<10;i++){player.x+=dx*12;player.y+=dy*12;clampAgainstObstacles(player);}for(const e of enemies){const d=Math.hypot(e.x-player.x,e.y-player.y);if(d<player.r+e.r+28){e.hp-=player.damage*player.dashDamage;createParticles(e.x,e.y,'#e0f2fe',18);}}if(player.suction){for(const e of enemies){const d=Math.hypot(e.x-player.x,e.y-player.y);if(d<170){e.x+=(player.x-e.x)*.18;e.y+=(player.y-e.y)*.18;}}}player.dashCooldown=player.dashMax||150;}
@@ -121,9 +133,9 @@ function update(){if(!started||paused||gameOver)return;let mx=joystick.dx,my=joy
  bullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy;b.life--;if(hitsObstacle(b.x,b.y,b.r)){b.dead=true;createParticles(b.x,b.y,'#94a3b8',5);}});bullets=bullets.filter(b=>!b.dead&&b.life>0&&b.x>-60&&b.x<canvas.width+60&&b.y>-60&&b.y<canvas.height+60);
  enemies.forEach(e=>{let ang=Math.atan2(player.y-e.y,player.x-e.x),spd=e.speed;if(e.charger){e.cool--;if(e.cool<0){spd=4.2;if(e.cool<-22)e.cool=95;}}e.x+=Math.cos(ang)*spd;e.y+=Math.sin(ang)*spd;clampAgainstObstacles(e);if(e.boss){e.pulse=(e.pulse||0)+1;if(e.pulse%115===0)spawnEnemy(areaIndex>=4?'swarm':(areaIndex>=2?'virus':'bacteria'));}const d=Math.hypot(player.x-e.x,player.y-e.y);if(d<player.r+e.r){player.hp-=Math.max(.02,e.damage*(1-player.armor)*.025);if(e.toxic)player.hp-=.035;}});
  bullets.forEach(b=>{for(const e of enemies){const d=Math.hypot(b.x-e.x,b.y-e.y);if(d<b.r+e.r){e.hp-=b.damage;createParticles(b.x,b.y,'#38bdf8',4);if(b.pierce>0)b.pierce--;else {b.dead=true;break;}}}});bullets=bullets.filter(b=>!b.dead);
- enemies=enemies.filter(e=>{if(e.hp<=0){totalKillsInArea++;player.xp+=e.xp;createParticles(e.x,e.y,e.color,20);if(e.split&&!e.baby){for(let i=0;i<2;i++)enemies.push({x:e.x+(Math.random()-.5)*30,y:e.y+(Math.random()-.5)*30,r:10,hp:16,maxHp:16,speed:2.1,damage:5,xp:2,color:'#f9a8d4',name:'Sporeling',baby:true});}if(Math.random()<.22)pickups.push({x:e.x,y:e.y,r:7,type:'nutrient'});if(e.boss){finishArea();}return false;}return true;});
+ enemies=enemies.filter(e=>{if(e.hp<=0){totalKillsInArea++;player.xp+=e.xp;createParticles(e.x,e.y,e.color,20);if(e.split&&!e.baby){for(let i=0;i<2;i++)enemies.push({x:e.x+(Math.random()-.5)*30,y:e.y+(Math.random()-.5)*30,r:10,hp:16,maxHp:16,speed:2.1,damage:5,xp:1,color:'#f9a8d4',name:'Sporeling',baby:true});}if(Math.random()<.22)pickups.push({x:e.x,y:e.y,r:7,type:'nutrient'});if(e.boss){finishArea();}return false;}return true;});
  pickups.forEach(p=>{const d=Math.hypot(p.x-player.x,p.y-player.y);if(d<player.magnet){p.x+=(player.x-p.x)*.06;p.y+=(player.y-p.y)*.06;}if(d<player.r+p.r){player.hp=Math.min(player.maxHp,player.hp+9);p.dead=true;}});pickups=pickups.filter(p=>!p.dead);
- if(player.xp>=player.nextXp){player.xp-=player.nextXp;player.level++;player.nextXp+=10;if(hasAvailableMutation()){paused=true;renderTree();ui.upgrade.style.display='flex';}else{player.hp=Math.min(player.maxHp,player.hp+20);say('Cell level increased. All mutations acquired, so no evolution menu opened. +20 HP recovered.');}}
+ if(player.xp>=player.nextXp){player.xp-=player.nextXp;player.level++;player.nextXp+=22+player.level*6;if(hasAvailableMutation()){paused=true;renderTree();ui.upgrade.style.display='flex';}else{player.hp=Math.min(player.maxHp,player.hp+20);say('Cell level increased. All mutations acquired, so no evolution menu opened. +20 HP recovered.');}}
  if(totalKillsInArea>=area.threshold&&!bossSpawned){bossSpawned=true;ui.bossBanner.textContent=area.boss.toUpperCase()+' DETECTED';ui.bossBanner.style.display='block';setTimeout(()=>ui.bossBanner.style.display='none',1600);spawnEnemy('boss');say('Boss incoming: '+area.boss+'!');}
  else if(!bossSpawned&&totalKillsInArea>=waveNum*10){waveNum++;say(areas[areaIndex].name+' infection intensifies. Wave '+waveNum+'.');}
  if(player.hp<=0){player.hp=0;gameOver=true;say('You were overwhelmed by infection. Refresh to try again.');}
