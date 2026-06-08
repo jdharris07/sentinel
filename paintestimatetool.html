@@ -354,11 +354,17 @@ function updatePreview() {
 }
 
 function loadStaticImages() {
-  // These image files should be uploaded to the same GitHub repo:
-  // assets/logo.png
-  // assets/acorn-qr.png
-  document.getElementById('logoBox').innerHTML = `<img class="q-logo" src="assets/logo.png" onerror="this.outerHTML='<div style=&quot;font-size:28px;font-weight:900;color:#123a7a;&quot;>Pro Home<br>Finishings</div>'">`;
-  document.getElementById('qrBox').innerHTML = `<img class="q-qr" src="assets/acorn-qr.png" onerror="this.outerHTML='<div class=&quot;small&quot;>QR image missing: assets/acorn-qr.png</div>'">`;
+  document.getElementById('logoBox').innerHTML = `
+    <img class="q-logo"
+         src="https://jdharris07.github.io/sentinel/logo.png"
+         alt="Pro Home Finishings Logo">
+  `;
+
+  document.getElementById('qrBox').innerHTML = `
+    <img class="q-qr"
+         src="https://jdharris07.github.io/sentinel/acorn-qr.png"
+         alt="Acorn Finance QR Code">
+  `;
 }
 
 async function downloadPdf() {
