@@ -24,6 +24,7 @@
     button.secondary { background:#52606d; }
     button.danger { background:#9e1c1c; }
     button.highlight { background:#e2b600; color:#111; }
+    button.move { background:#6b7280; min-width:42px; padding:8px 10px; }
     .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .item { border:1px solid var(--border); border-radius:10px; padding:10px; margin:8px 0; background:#fff; }
@@ -126,10 +127,11 @@
     </div>
 
     <div class="card">
-      <h2>Discount</h2>
-      <label><input id="discountEnabled" type="checkbox" style="width:auto;" onchange="updatePreview()"> Add discount</label>
+      <h2>Labor Discount</h2>
+      <label><input id="discountEnabled" type="checkbox" style="width:auto;" onchange="updatePreview()"> Add labor discount</label>
       <label>Discount Label</label><input id="discountLabel" value="NEW CUSTOMER DISCOUNT" oninput="updatePreview()">
-      <label>Discount Percent</label><input id="discountPercent" type="number" value="20" min="0" max="100" oninput="updatePreview()">
+      <label>Labor Discount Percent</label><input id="discountPercent" type="number" value="20" min="0" max="100" oninput="updatePreview()">
+      <p class="small">This percentage applies to labor only. Material discounts are entered separately on each material line.</p>
       <div id="discountBanner"></div>
     </div>
 
@@ -282,39 +284,138 @@ function updateItem(i, field, value) {
   updatePreview();
 }
 
+function moveItem(i, direction) {
+  if (items[i].type === 'section') {
+    moveSection(i, direction);
+    return;
+  }
+
+  const newIndex = i + direction;
+  if (newIndex < 0 || newIndex >= items.length) return;
+
+  [items[i], items[newIndex]] = [items[newIndex], items[i]];
+  renderItems();
+}
+
+function getSectionEnd(startIndex) {
+  let end = startIndex + 1;
+  while (end < items.length && items[end].type !== 'section') end++;
+  return end;
+}
+
+function findPreviousSection(startIndex) {
+  for (let i = startIndex - 1; i >= 0; i--) {
+    if (items[i].type === 'section') return i;
+  }
+  return -1;
+}
+
+function moveSection(startIndex, direction) {
+  const currentEnd = getSectionEnd(startIndex);
+  const currentBlock = items.slice(startIndex, currentEnd);
+
+  if (direction < 0) {
+    const prevStart = findPreviousSection(startIndex);
+    if (prevStart < 0) return;
+
+    const before = items.slice(0, prevStart);
+    const prevBlock = items.slice(prevStart, startIndex);
+    const after = items.slice(currentEnd);
+
+    items = [...before, ...currentBlock, ...prevBlock, ...after];
+  } else {
+    if (currentEnd >= items.length || items[currentEnd].type !== 'section') return;
+
+    const nextStart = currentEnd;
+    const nextEnd = getSectionEnd(nextStart);
+    const before = items.slice(0, startIndex);
+    const nextBlock = items.slice(nextStart, nextEnd);
+    const after = items.slice(nextEnd);
+
+    items = [...before, ...nextBlock, ...currentBlock, ...after];
+  }
+
+  renderItems();
+}
+
 function renderItems() {
   const box = document.getElementById('items');
   box.innerHTML = '';
+
   items.forEach((item, i) => {
     const div = document.createElement('div');
     div.className = 'item';
+
+    const movementButtons = `
+      <button class="move" type="button" onclick="moveItem(${i}, -1)" title="Move up">↑</button>
+      <button class="move" type="button" onclick="moveItem(${i}, 1)" title="Move down">↓</button>`;
+
     if (item.type === 'section') {
       div.innerHTML = `
         <label>Section Title</label>
         <input value="${esc(item.description)}" oninput="updateItem(${i}, 'description', this.value)">
-        <div class="actions"><button class="danger" onclick="removeItem(${i})">Remove</button></div>`;
+        <div class="actions">
+          ${movementButtons}
+          <button class="danger" type="button" onclick="removeItem(${i})">Remove Section</button>
+        </div>`;
     } else {
+      const isMaterial = item.type === 'material';
       div.innerHTML = `
         <label>Description</label>
         <input list="standardItems" value="${esc(item.description)}" oninput="updateItem(${i}, 'description', this.value)">
         <div class="grid">
-          <div><label>Price</label><input type="number" step="0.01" value="${item.price}" oninput="updateItem(${i}, 'price', this.value)"></div>
-          <div><label>Amount</label><input type="number" step="0.01" value="${item.amount}" oninput="updateItem(${i}, 'amount', this.value)"></div>
+          <div>
+            <label>${isMaterial ? 'Normal Material Price' : 'Price'}</label>
+            <input type="number" step="0.01" value="${item.price}" oninput="updateItem(${i}, 'price', this.value)">
+          </div>
+          <div>
+            <label>${isMaterial ? 'Discounted Material Price' : 'Amount'}</label>
+            <input type="number" step="0.01" value="${item.amount}" oninput="updateItem(${i}, 'amount', this.value)">
+          </div>
         </div>
-        <label><input type="checkbox" style="width:auto;" ${item.type === 'material' ? 'checked' : ''} onchange="items[${i}].type=this.checked?'material':'labor'; renderItems(); updatePreview();"> Material/customer provided style</label>
-        <div class="actions"><button class="danger" onclick="removeItem(${i})">Remove</button></div>`;
+        <label>
+          <input type="checkbox" style="width:auto;" ${isMaterial ? 'checked' : ''}
+            onchange="items[${i}].type=this.checked?'material':'labor'; renderItems(); updatePreview();">
+          Material line
+        </label>
+        ${isMaterial ? '<p class="small">Enter the regular material price on the left and the actual discounted material price on the right.</p>' : ''}
+        <div class="actions">
+          ${movementButtons}
+          <button class="danger" type="button" onclick="removeItem(${i})">Remove</button>
+        </div>`;
     }
+
     box.appendChild(div);
   });
+
   updatePreview();
 }
 
 function totals() {
-  const subtotal = items.reduce((s, item) => item.type === 'section' ? s : s + Number(item.amount || 0), 0);
+  const laborSubtotal = items.reduce((s, item) =>
+    item.type === 'labor' ? s + Number(item.amount || 0) : s, 0);
+
+  const materialNormal = items.reduce((s, item) =>
+    item.type === 'material' ? s + Number(item.price || 0) : s, 0);
+
+  const materialTotal = items.reduce((s, item) =>
+    item.type === 'material' ? s + Number(item.amount || 0) : s, 0);
+
   const discountOn = document.getElementById('discountEnabled').checked;
   const discountPercent = discountOn ? Number(val('discountPercent') || 0) : 0;
-  const total = subtotal - subtotal * discountPercent / 100;
-  return {subtotal, discountPercent, total};
+  const laborDiscount = laborSubtotal * discountPercent / 100;
+  const subtotal = laborSubtotal + materialTotal;
+  const total = subtotal - laborDiscount;
+
+  return {
+    laborSubtotal,
+    materialNormal,
+    materialTotal,
+    subtotal,
+    discountPercent,
+    laborDiscount,
+    total
+  };
 }
 
 function updatePreview() {
@@ -335,22 +436,49 @@ function updatePreview() {
       tr.innerHTML = `<td class="q-section" colspan="3">${esc(item.description)}</td>`;
     } else {
       const isMaterial = item.type === 'material';
-      tr.innerHTML = `<td>${esc(item.description)}</td>
-        <td class="q-money">${isMaterial && !item.price ? 'customer provided' : money(item.price)}</td>
-        <td class="q-money">${isMaterial && !item.amount ? 'customer provided' : money(item.amount)}</td>`;
+
+      if (isMaterial) {
+        const normalText = item.price ? money(item.price) : 'customer provided';
+        const discountedText = item.amount ? money(item.amount) : 'customer provided';
+
+        tr.innerHTML = `<td>${esc(item.description)}</td>
+          <td class="q-money">${normalText}</td>
+          <td class="q-money">${discountedText}</td>`;
+      } else {
+        tr.innerHTML = `<td>${esc(item.description)}</td>
+          <td class="q-money">${money(item.price)}</td>
+          <td class="q-money">${money(item.amount)}</td>`;
+      }
     }
     tbody.appendChild(tr);
   });
 
   const t = totals();
-  tbody.insertAdjacentHTML('beforeend', `<tr><td colspan="2" class="q-summary-label">SUBTOTAL:</td><td class="q-money">${money(t.subtotal)}</td></tr>`);
-  if (document.getElementById('discountEnabled').checked) {
-    tbody.insertAdjacentHTML('beforeend', `<tr class="q-discount"><td colspan="2">${esc(val('discountLabel') || 'DISCOUNT')} - ${t.discountPercent}%</td><td class="q-money">-${t.discountPercent}%</td></tr>`);
-  }
-  tbody.insertAdjacentHTML('beforeend', `<tr><td colspan="2" class="q-total-label">TOTAL:</td><td class="q-money">${money(t.total)}</td></tr>`);
 
-  document.getElementById('discountBanner').innerHTML = document.getElementById('discountEnabled').checked
-    ? `<div class="discount-banner">${esc(val('discountLabel'))} - ${t.discountPercent}% will be highlighted on the quote.</div>` : '';
+  tbody.insertAdjacentHTML(
+    'beforeend',
+    `<tr><td colspan="2" class="q-summary-label">SUBTOTAL:</td><td class="q-money">${money(t.subtotal)}</td></tr>`
+  );
+
+  if (document.getElementById('discountEnabled').checked) {
+    tbody.insertAdjacentHTML(
+      'beforeend',
+      `<tr class="q-discount">
+        <td colspan="2">${esc(val('discountLabel') || 'LABOR DISCOUNT')} - ${t.discountPercent}% LABOR ONLY</td>
+        <td class="q-money">-${money(t.laborDiscount)}</td>
+      </tr>`
+    );
+  }
+
+  tbody.insertAdjacentHTML(
+    'beforeend',
+    `<tr><td colspan="2" class="q-total-label">TOTAL:</td><td class="q-money">${money(t.total)}</td></tr>`
+  );
+
+  document.getElementById('discountBanner').innerHTML =
+    document.getElementById('discountEnabled').checked
+      ? `<div class="discount-banner">${esc(val('discountLabel'))} - ${t.discountPercent}% applies to labor only. Labor savings: ${money(t.laborDiscount)}.</div>`
+      : '';
 }
 
 function loadStaticImages() {
