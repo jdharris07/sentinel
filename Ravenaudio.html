@@ -5,93 +5,58 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#090909" />
   <title>The Raven</title>
-
   <style>
     :root {
-      --bg: #070707;
       --panel: rgba(15, 15, 15, 0.90);
       --text: #e7e1d7;
       --muted: #a79f94;
-      --accent: #8f1f1f;
       --accent-light: #c44a3f;
       --border: rgba(231, 225, 215, 0.18);
     }
-
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body {
       margin: 0;
       min-height: 100%;
       background:
-        radial-gradient(circle at 50% 15%, rgba(120, 20, 20, 0.14), transparent 38%),
-        linear-gradient(rgba(0,0,0,0.72), rgba(0,0,0,0.92)),
-        repeating-linear-gradient(
-          90deg,
-          rgba(255,255,255,0.018) 0px,
-          rgba(255,255,255,0.018) 1px,
-          transparent 1px,
-          transparent 5px
-        ),
+        radial-gradient(circle at 50% 15%, rgba(120,20,20,.14), transparent 38%),
+        linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.92)),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.018) 0 1px, transparent 1px 5px),
         #070707;
       color: var(--text);
       font-family: Georgia, "Times New Roman", serif;
     }
-
     body {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding:
-        max(22px, env(safe-area-inset-top))
-        18px
-        max(22px, env(safe-area-inset-bottom));
+      padding: max(22px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
     }
-
-    .page {
-      width: min(100%, 520px);
-      text-align: center;
-    }
-
-    .ornament {
-      font-size: 1.2rem;
-      letter-spacing: 0.45rem;
-      color: var(--muted);
-      margin-bottom: 12px;
-      opacity: 0.85;
-    }
-
+    .page { width: min(100%, 520px); text-align: center; }
+    .ornament { font-size: 1.2rem; letter-spacing: .45rem; color: var(--muted); margin-bottom: 12px; opacity: .85; }
     h1 {
       margin: 0;
       font-size: clamp(2.4rem, 11vw, 4.2rem);
-      line-height: 0.95;
+      line-height: .95;
       font-weight: 600;
-      letter-spacing: 0.08em;
+      letter-spacing: .08em;
       text-transform: uppercase;
-      text-shadow: 0 3px 18px rgba(0,0,0,0.75);
+      text-shadow: 0 3px 18px rgba(0,0,0,.75);
     }
-
     .subtitle {
       margin: 10px 0 26px;
-      font-size: 0.95rem;
+      font-size: .95rem;
       color: var(--muted);
-      letter-spacing: 0.24em;
+      letter-spacing: .24em;
       text-transform: uppercase;
     }
-
     .card {
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 18px;
       padding: 24px 20px 22px;
-      box-shadow:
-        0 18px 50px rgba(0,0,0,0.55),
-        inset 0 0 35px rgba(255,255,255,0.018);
+      box-shadow: 0 18px 50px rgba(0,0,0,.55), inset 0 0 35px rgba(255,255,255,.018);
       backdrop-filter: blur(8px);
     }
-
     .quote {
       margin: 0 auto 22px;
       max-width: 32ch;
@@ -100,24 +65,35 @@
       font-style: italic;
       color: #d5cec4;
     }
-
-    .raven {
-      font-size: 3.2rem;
-      margin-bottom: 12px;
-      filter: grayscale(1);
+    .raven { font-size: 3.2rem; margin-bottom: 12px; filter: grayscale(1); }
+    .name-gate { margin-top: 8px; }
+    .name-gate label {
+      display: block;
+      margin-bottom: 10px;
+      color: #d7d0c6;
+      font-size: 1rem;
+      line-height: 1.5;
     }
-
-    .controls {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      margin: 8px 0 14px;
+    .name-input {
+      width: 100%;
+      min-height: 52px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.52);
+      color: var(--text);
+      font: inherit;
+      font-size: 1.05rem;
+      text-align: center;
+      padding: 12px 14px;
+      outline: none;
     }
-
+    .name-input:focus {
+      border-color: rgba(196,74,63,.75);
+      box-shadow: 0 0 0 3px rgba(143,31,31,.15);
+    }
     button {
       appearance: none;
-      border: 1px solid rgba(255,255,255,0.13);
+      border: 1px solid rgba(255,255,255,.13);
       background: linear-gradient(#9e2929, #681414);
       color: white;
       border-radius: 999px;
@@ -127,68 +103,41 @@
       font-family: inherit;
       font-size: 1.05rem;
       font-weight: 700;
-      letter-spacing: 0.06em;
-      box-shadow: 0 7px 24px rgba(80,0,0,0.35);
+      letter-spacing: .06em;
+      box-shadow: 0 7px 24px rgba(80,0,0,.35);
       cursor: pointer;
     }
-
-    button:active {
-      transform: translateY(1px) scale(0.99);
-    }
-
-    .timeline {
-      width: 100%;
-      margin-top: 8px;
-    }
-
-    input[type="range"] {
-      width: 100%;
-      accent-color: var(--accent-light);
-    }
-
+    button:active { transform: translateY(1px) scale(.99); }
+    .submit-name { margin-top: 14px; }
+    .message { min-height: 24px; margin-top: 12px; color: #c4bbb0; font-size: .92rem; font-style: italic; }
+    .player-wrap { display: none; margin-top: 18px; animation: reveal .8s ease; }
+    .player-wrap.visible { display: block; }
+    @keyframes reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .controls { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 8px 0 14px; }
+    .timeline { width: 100%; margin-top: 8px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent-light); }
     .time-row {
       display: flex;
       justify-content: space-between;
-      font-size: 0.78rem;
+      font-size: .78rem;
       color: var(--muted);
       margin-top: 2px;
       font-variant-numeric: tabular-nums;
     }
-
-    .instruction {
-      margin: 20px 0 0;
-      font-size: 0.9rem;
-      line-height: 1.5;
-      color: var(--muted);
-    }
-
+    .instruction { margin: 20px 0 0; font-size: .9rem; line-height: 1.5; color: var(--muted); }
     .divider {
       width: 70px;
       height: 1px;
       margin: 24px auto 18px;
       background: linear-gradient(90deg, transparent, var(--accent-light), transparent);
     }
-
-    .footer {
-      font-size: 0.72rem;
-      color: #67615b;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-    }
-
+    .footer { font-size: .72rem; color: #67615b; letter-spacing: .15em; text-transform: uppercase; }
     @media (max-width: 380px) {
-      .card {
-        padding-left: 16px;
-        padding-right: 16px;
-      }
-
-      button {
-        min-width: 140px;
-      }
+      .card { padding-left: 16px; padding-right: 16px; }
+      button { min-width: 140px; }
     }
   </style>
 </head>
-
 <body>
   <main class="page">
     <div class="ornament">✦ ☾ ✦</div>
@@ -199,39 +148,48 @@
       <div class="raven" aria-hidden="true">🪶</div>
 
       <p class="quote">
-        “Listen to what the raven has to say...”
+        “Deep into that darkness peering, long I stood there wondering, fearing...”
       </p>
 
-      <audio
-        id="ravenAudio"
-        preload="metadata"
-        src="https://raw.githubusercontent.com/jdharris07/sentinel/refs/heads/main/Ravensoundsile.mp3">
-      </audio>
-
-      <div class="controls">
-        <button id="playPauseBtn" type="button" aria-label="Play audio">
-          ▶ Play
-        </button>
-      </div>
-
-      <div class="timeline">
+      <div id="nameGate" class="name-gate">
+        <label for="ravenName">Call the raven by his name, and he may answer.</label>
         <input
-          id="seek"
-          type="range"
-          min="0"
-          max="100"
-          value="0"
-          step="0.1"
-          aria-label="Audio position">
-        <div class="time-row">
-          <span id="currentTime">0:00</span>
-          <span id="duration">0:00</span>
-        </div>
+          id="ravenName"
+          class="name-input"
+          type="text"
+          placeholder="Speak his name..."
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+        />
+        <button id="submitName" class="submit-name" type="button">Call the Raven</button>
+        <div id="nameMessage" class="message" aria-live="polite"></div>
       </div>
 
-      <p class="instruction">
-        
-      </p>
+      <div id="playerWrap" class="player-wrap">
+        <audio
+          id="ravenAudio"
+          preload="metadata"
+          src="https://raw.githubusercontent.com/jdharris07/sentinel/refs/heads/main/Ravensoundsile.mp3">
+        </audio>
+
+        <div class="controls">
+          <button id="playPauseBtn" type="button" aria-label="Play audio">▶ Play</button>
+        </div>
+
+        <div class="timeline">
+          <input id="seek" type="range" min="0" max="100" value="0" step="0.1" aria-label="Audio position" />
+          <div class="time-row">
+            <span id="currentTime">0:00</span>
+            <span id="duration">0:00</span>
+          </div>
+        </div>
+
+        <p class="instruction">
+          Press play and listen closely.<br />
+          What is heard may matter more than what is seen.
+        </p>
+      </div>
 
       <div class="divider"></div>
       <div class="footer">Nevermore</div>
@@ -239,11 +197,44 @@
   </main>
 
   <script>
+    const correctName = "prospero";
+
+    const nameGate = document.getElementById("nameGate");
+    const ravenName = document.getElementById("ravenName");
+    const submitName = document.getElementById("submitName");
+    const nameMessage = document.getElementById("nameMessage");
+    const playerWrap = document.getElementById("playerWrap");
+
     const audio = document.getElementById("ravenAudio");
     const playPauseBtn = document.getElementById("playPauseBtn");
     const seek = document.getElementById("seek");
     const currentTimeEl = document.getElementById("currentTime");
     const durationEl = document.getElementById("duration");
+
+    function checkName() {
+      const enteredName = ravenName.value.trim().toLowerCase();
+
+      if (enteredName === correctName) {
+        nameMessage.textContent = "He knows that name.";
+        ravenName.disabled = true;
+        submitName.disabled = true;
+
+        setTimeout(() => {
+          nameGate.style.display = "none";
+          playerWrap.classList.add("visible");
+        }, 500);
+      } else {
+        nameMessage.textContent = "The raven remains silent.";
+        ravenName.value = "";
+        ravenName.focus();
+      }
+    }
+
+    submitName.addEventListener("click", checkName);
+
+    ravenName.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") checkName();
+    });
 
     function formatTime(seconds) {
       if (!Number.isFinite(seconds)) return "0:00";
@@ -254,11 +245,8 @@
 
     playPauseBtn.addEventListener("click", async () => {
       if (audio.paused) {
-        try {
-          await audio.play();
-        } catch (err) {
-          console.error("Audio playback failed:", err);
-        }
+        try { await audio.play(); }
+        catch (err) { console.error("Audio playback failed:", err); }
       } else {
         audio.pause();
       }
@@ -280,16 +268,11 @@
 
     audio.addEventListener("timeupdate", () => {
       currentTimeEl.textContent = formatTime(audio.currentTime);
-
-      if (audio.duration) {
-        seek.value = (audio.currentTime / audio.duration) * 100;
-      }
+      if (audio.duration) seek.value = (audio.currentTime / audio.duration) * 100;
     });
 
     seek.addEventListener("input", () => {
-      if (audio.duration) {
-        audio.currentTime = (seek.value / 100) * audio.duration;
-      }
+      if (audio.duration) audio.currentTime = (seek.value / 100) * audio.duration;
     });
 
     audio.addEventListener("ended", () => {
