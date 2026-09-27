@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#090909" />
+  <title>The Raven</title>
+
+  <style>
+    :root {
+      --bg: #070707;
+      --panel: rgba(15, 15, 15, 0.90);
+      --text: #e7e1d7;
+      --muted: #a79f94;
+      --accent: #8f1f1f;
+      --accent-light: #c44a3f;
+      --border: rgba(231, 225, 215, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 50% 15%, rgba(120, 20, 20, 0.14), transparent 38%),
+        linear-gradient(rgba(0,0,0,0.72), rgba(0,0,0,0.92)),
+        repeating-linear-gradient(
+          90deg,
+          rgba(255,255,255,0.018) 0px,
+          rgba(255,255,255,0.018) 1px,
+          transparent 1px,
+          transparent 5px
+        ),
+        #070707;
+      color: var(--text);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding:
+        max(22px, env(safe-area-inset-top))
+        18px
+        max(22px, env(safe-area-inset-bottom));
+    }
+
+    .page {
+      width: min(100%, 520px);
+      text-align: center;
+    }
+
+    .ornament {
+      font-size: 1.2rem;
+      letter-spacing: 0.45rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      opacity: 0.85;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.4rem, 11vw, 4.2rem);
+      line-height: 0.95;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-shadow: 0 3px 18px rgba(0,0,0,0.75);
+    }
+
+    .subtitle {
+      margin: 10px 0 26px;
+      font-size: 0.95rem;
+      color: var(--muted);
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px 20px 22px;
+      box-shadow:
+        0 18px 50px rgba(0,0,0,0.55),
+        inset 0 0 35px rgba(255,255,255,0.018);
+      backdrop-filter: blur(8px);
+    }
+
+    .quote {
+      margin: 0 auto 22px;
+      max-width: 32ch;
+      font-size: 1.05rem;
+      line-height: 1.55;
+      font-style: italic;
+      color: #d5cec4;
+    }
+
+    .raven {
+      font-size: 3.2rem;
+      margin-bottom: 12px;
+      filter: grayscale(1);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin: 8px 0 14px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.13);
+      background: linear-gradient(#9e2929, #681414);
+      color: white;
+      border-radius: 999px;
+      min-width: 150px;
+      min-height: 54px;
+      padding: 13px 24px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      box-shadow: 0 7px 24px rgba(80,0,0,0.35);
+      cursor: pointer;
+    }
+
+    button:active {
+      transform: translateY(1px) scale(0.99);
+    }
+
+    .timeline {
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-light);
+    }
+
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .instruction {
+      margin: 20px 0 0;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .divider {
+      width: 70px;
+      height: 1px;
+      margin: 24px auto 18px;
+      background: linear-gradient(90deg, transparent, var(--accent-light), transparent);
+    }
+
+    .footer {
+      font-size: 0.72rem;
+      color: #67615b;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 380px) {
+      .card {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      button {
+        min-width: 140px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <div class="ornament">✦ ☾ ✦</div>
+    <h1>The Raven</h1>
+    <div class="subtitle">A Listening in the Dark</div>
+
+    <section class="card">
+      <div class="raven" aria-hidden="true">🪶</div>
+
+      <p class="quote">
+        “Deep into that darkness peering, long I stood there wondering, fearing...”
+      </p>
+
+      <audio
+        id="ravenAudio"
+        preload="metadata"
+        src="https://raw.githubusercontent.com/jdharris07/sentinel/refs/heads/main/Ravensoundsile.mp3">
+      </audio>
+
+      <div class="controls">
+        <button id="playPauseBtn" type="button" aria-label="Play audio">
+          ▶ Play
+        </button>
+      </div>
+
+      <div class="timeline">
+        <input
+          id="seek"
+          type="range"
+          min="0"
+          max="100"
+          value="0"
+          step="0.1"
+          aria-label="Audio position">
+        <div class="time-row">
+          <span id="currentTime">0:00</span>
+          <span id="duration">0:00</span>
+        </div>
+      </div>
+
+      <p class="instruction">
+        Press play and listen closely.<br>
+        What is heard may matter more than what is seen.
+      </p>
+
+      <div class="divider"></div>
+      <div class="footer">Nevermore</div>
+    </section>
+  </main>
+
+  <script>
+    const audio = document.getElementById("ravenAudio");
+    const playPauseBtn = document.getElementById("playPauseBtn");
+    const seek = document.getElementById("seek");
+    const currentTimeEl = document.getElementById("currentTime");
+    const durationEl = document.getElementById("duration");
+
+    function formatTime(seconds) {
+      if (!Number.isFinite(seconds)) return "0:00";
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs.toString().padStart(2, "0")}`;
+    }
+
+    playPauseBtn.addEventListener("click", async () => {
+      if (audio.paused) {
+        try {
+          await audio.play();
+        } catch (err) {
+          console.error("Audio playback failed:", err);
+        }
+      } else {
+        audio.pause();
+      }
+    });
+
+    audio.addEventListener("play", () => {
+      playPauseBtn.textContent = "❚❚ Pause";
+      playPauseBtn.setAttribute("aria-label", "Pause audio");
+    });
+
+    audio.addEventListener("pause", () => {
+      playPauseBtn.textContent = "▶ Play";
+      playPauseBtn.setAttribute("aria-label", "Play audio");
+    });
+
+    audio.addEventListener("loadedmetadata", () => {
+      durationEl.textContent = formatTime(audio.duration);
+    });
+
+    audio.addEventListener("timeupdate", () => {
+      currentTimeEl.textContent = formatTime(audio.currentTime);
+
+      if (audio.duration) {
+        seek.value = (audio.currentTime / audio.duration) * 100;
+      }
+    });
+
+    seek.addEventListener("input", () => {
+      if (audio.duration) {
+        audio.currentTime = (seek.value / 100) * audio.duration;
+      }
+    });
+
+    audio.addEventListener("ended", () => {
+      playPauseBtn.textContent = "▶ Play Again";
+      seek.value = 0;
+      currentTimeEl.textContent = "0:00";
+    });
+  </script>
+</body>
+</html>
