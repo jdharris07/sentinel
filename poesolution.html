@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Final Exit</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+        margin: 0;
+        min-height: 100%;
+        background: #070505;
+    }
+
+    body {
+        min-height: 100dvh;
+        font-family: Georgia, "Times New Roman", serif;
+        color: #e8dccb;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding:
+            max(18px, env(safe-area-inset-top))
+            14px
+            max(18px, env(safe-area-inset-bottom));
+        background:
+            radial-gradient(circle at 50% 25%, rgba(95, 12, 12, 0.22), transparent 34%),
+            linear-gradient(rgba(5, 3, 3, .88), rgba(10, 6, 6, .97)),
+            #090606;
+    }
+
+    .page {
+        width: 100%;
+        max-width: 520px;
+    }
+
+    .panel {
+        width: 100%;
+        background:
+            linear-gradient(rgba(24, 16, 15, .97), rgba(10, 8, 8, .98));
+        border: 1px solid #57463d;
+        border-radius: 10px;
+        padding: 28px 18px 24px;
+        box-shadow:
+            0 18px 45px rgba(0,0,0,.85),
+            inset 0 0 28px rgba(90, 15, 15, .12);
+        text-align: center;
+    }
+
+    .ornament {
+        font-size: 20px;
+        opacity: .55;
+        letter-spacing: 10px;
+        margin-bottom: 10px;
+    }
+
+    h1 {
+        margin: 0;
+        color: #d6c3a7;
+        font-size: clamp(2.2rem, 10vw, 3.7rem);
+        line-height: .95;
+        text-transform: uppercase;
+        letter-spacing: 4px;
+        text-shadow: 0 2px 10px #000;
+    }
+
+    .subtitle {
+        margin: 14px auto 30px;
+        max-width: 360px;
+        color: #9b8b7c;
+        font-style: italic;
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+
+    .section-title {
+        margin: 0 0 14px;
+        color: #a98774;
+        text-transform: uppercase;
+        font-size: .78rem;
+        font-weight: bold;
+        letter-spacing: 3px;
+    }
+
+    /* NUMBER LOCK */
+
+    .rollers {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        width: 100%;
+        max-width: 390px;
+        margin: 0 auto 34px;
+    }
+
+    .roller {
+        min-width: 0;
+        overflow: hidden;
+        border: 2px solid #675449;
+        border-radius: 7px;
+        background: #090707;
+        box-shadow:
+            inset 0 0 13px #000,
+            0 6px 12px rgba(0,0,0,.55);
+    }
+
+    .roller-btn {
+        width: 100%;
+        height: 52px;
+        border: 0;
+        border-radius: 0;
+        background:
+            linear-gradient(#30231f, #1a1412);
+        color: #d1bd9f;
+        font-size: 28px;
+        line-height: 1;
+        font-family: Arial, sans-serif;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .roller-btn:active {
+        background: #4a2c27;
+        transform: scale(.98);
+    }
+
+    .digit {
+        height: 86px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background:
+            linear-gradient(
+                to bottom,
+                #050505 0%,
+                #171311 46%,
+                #2c2420 50%,
+                #171311 54%,
+                #050505 100%
+            );
+        border-top: 1px solid #352a25;
+        border-bottom: 1px solid #352a25;
+        color: #f0dfc5;
+        font-family: "Courier New", monospace;
+        font-size: clamp(3.2rem, 14vw, 4.4rem);
+        font-weight: bold;
+        line-height: 1;
+        user-select: none;
+        text-shadow:
+            0 1px 0 #fff2,
+            0 0 12px rgba(240, 220, 190, .12);
+    }
+
+    /* WORD INPUTS */
+
+    .words {
+        max-width: 420px;
+        margin: 0 auto;
+    }
+
+    .word-input {
+        appearance: none;
+        display: block;
+        width: 100%;
+        min-height: 58px;
+        margin: 12px 0;
+        padding: 11px 12px;
+        border: 1px solid #574a43;
+        border-radius: 6px;
+        outline: none;
+        background: rgba(5,5,5,.72);
+        color: #f1e4d3;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 22px;
+        text-align: center;
+        letter-spacing: 1px;
+        box-shadow: inset 0 0 10px rgba(0,0,0,.8);
+    }
+
+    .word-input:focus {
+        border-color: #a78670;
+        box-shadow:
+            0 0 0 2px rgba(167, 134, 112, .12),
+            inset 0 0 10px rgba(0,0,0,.8);
+    }
+
+    .word-input::placeholder {
+        color: #62564e;
+        letter-spacing: 4px;
+    }
+
+    /* UNLOCK BUTTON */
+
+    #submitBtn {
+        width: 100%;
+        max-width: 420px;
+        min-height: 62px;
+        margin-top: 22px;
+        padding: 14px 18px;
+        border: 1px solid #8a6758;
+        border-radius: 7px;
+        background:
+            linear-gradient(#5b211f, #321211);
+        color: #f0dfc9;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 18px;
+        font-weight: bold;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        cursor: pointer;
+        touch-action: manipulation;
+        box-shadow: 0 7px 15px rgba(0,0,0,.45);
+    }
+
+    #submitBtn:active {
+        transform: translateY(1px);
+        background: #681f1c;
+    }
+
+    #message {
+        min-height: 74px;
+        margin-top: 22px;
+        padding: 0 5px;
+        font-size: 18px;
+        line-height: 1.5;
+    }
+
+    .wrong {
+        color: #c25c54;
+        animation: shake .28s ease;
+    }
+
+    .footer-mark {
+        margin-top: 20px;
+        color: #6b5750;
+        font-size: 25px;
+    }
+
+    /* SUCCESS VIDEO */
+
+    .video-screen {
+        width: 100%;
+        min-height: 70vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .success-video {
+        display: block;
+        width: 100%;
+        max-width: 520px;
+        max-height: 85vh;
+        background: #000;
+        border: 1px solid #68564c;
+        border-radius: 8px;
+        box-shadow:
+            0 0 40px rgba(0,0,0,.95),
+            0 0 25px rgba(70,0,0,.25);
+    }
+
+    .video-fallback {
+        margin-top: 18px;
+        color: #bba892;
+        font-size: 16px;
+        font-style: italic;
+    }
+
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-7px); }
+        50% { transform: translateX(7px); }
+        75% { transform: translateX(-4px); }
+    }
+
+    /* SMALL PHONES */
+
+    @media (max-width: 370px) {
+        .panel {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+
+        .rollers {
+            gap: 5px;
+        }
+
+        .roller-btn {
+            height: 48px;
+        }
+
+        .digit {
+            height: 76px;
+            font-size: 48px;
+        }
+
+        .word-input {
+            font-size: 20px;
+        }
+    }
+
+    /* LANDSCAPE PHONES */
+
+    @media (max-height: 650px) and (orientation: landscape) {
+        body {
+            align-items: flex-start;
+        }
+
+        .panel {
+            padding-top: 18px;
+        }
+
+        .subtitle {
+            margin-bottom: 20px;
+        }
+
+        .rollers {
+            margin-bottom: 22px;
+        }
+
+        .video-screen {
+            min-height: auto;
+        }
+
+        .success-video {
+            max-height: 90vh;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="page">
+    <main class="panel" id="mainPanel">
+
+        <div class="ornament">◆ ◆ ◆</div>
+
+        <h1>The Final Exit</h1>
+
+        <div class="subtitle">
+            The tale is nearly ended.<br>
+            Speak the secrets and turn the final lock.
+        </div>
+
+        <div class="section-title">
+            The Final Number
+        </div>
+
+        <div class="rollers">
+
+            <div class="roller">
+                <button
+                    class="roller-btn"
+                    type="button"
+                    aria-label="Increase first digit"
+                    onclick="changeDigit(0, 1)">
+                    ▲
+                </button>
+
+                <div class="digit" id="digit0">0</div>
+
+                <button
+                    class="roller-btn"
+                    type="button"
+                    aria-label="Decrease first digit"
+                    onclick="changeDigit(0, -1)">
+                    ▼
+                </button>
+            </div>
+
+            <div class="roller">
+                <button
+                    class="roller-btn"
+                    type="button"
+                    aria-label="Increase second digit"
+                    onclick="changeDigit(1, 1)">
+                    ▲
+                </button>
+
+                <div class="digit" id="digit1">0</div>
+
+                <button
+                    class="roller-btn"
+                    type="button"
+                    aria-label="Decrease second digit"
+                    onclick="changeDigit(1, -1)">
+                    ▼
+                </button>
+            </div>
+
+            <div class="roller">
+                <button
+                    class="roller-btn"
+                    type="button"
+                    aria-label="Increase third digit"
+                    onclick="changeDigit(2, 1)">
+                    ▲
+                </button>
+
+                <div class="digit" id="digit2">0</div>
+
+                <button
+                    class="roller-btn"
+                    type="button"
+                    aria-label="Decrease third digit"
+                    onclick="changeDigit(2, -1)">
+                    ▼
+                </button>
+            </div>
+
+            <div class="roller">
+                <button
+                    class="roller-btn"
+                    type="button"
+                    aria-label="Increase fourth digit"
+                    onclick="changeDigit(3, 1)">
+                    ▲
+                </button>
+
+                <div class="digit" id="digit3">0</div>
+
+                <button
+                    class="roller-btn"
+                    type="button"
+                    aria-label="Decrease fourth digit"
+                    onclick="changeDigit(3, -1)">
+                    ▼
+                </button>
+            </div>
+
+        </div>
+
+        <div class="section-title">
+            The Three Secrets
+        </div>
+
+        <div class="words">
+
+            <input
+                class="word-input"
+                id="word1"
+                type="text"
+                placeholder="___________"
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false">
+
+            <input
+                class="word-input"
+                id="word2"
+                type="text"
+                placeholder="___________"
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false">
+
+            <input
+                class="word-input"
+                id="word3"
+                type="text"
+                placeholder="___________"
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false">
+
+        </div>
+
+        <button
+            id="submitBtn"
+            type="button"
+            onclick="checkAnswer()">
+            Unlock the Exit
+        </button>
+
+        <div id="message" aria-live="polite"></div>
+
+        <div class="footer-mark">†</div>
+
+    </main>
+</div>
+
+<script>
+
+const digits = [0, 0, 0, 0];
+
+function changeDigit(index, amount) {
+
+    digits[index] += amount;
+
+    if (digits[index] > 9) {
+        digits[index] = 0;
+    }
+
+    if (digits[index] < 0) {
+        digits[index] = 9;
+    }
+
+    document.getElementById("digit" + index).textContent = digits[index];
+}
+
+
+function normalizeWord(word) {
+
+    return word
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+}
+
+
+function checkAnswer() {
+
+    const correctCode = "1849";
+
+    const correctWords = [
+        "atmosphere",
+        "suspense",
+        "symbolism"
+    ];
+
+    const enteredCode = digits.join("");
+
+    const enteredWords = [
+        normalizeWord(document.getElementById("word1").value),
+        normalizeWord(document.getElementById("word2").value),
+        normalizeWord(document.getElementById("word3").value)
+    ];
+
+    const uniqueWords = [...new Set(enteredWords)];
+
+    const wordsCorrect =
+        uniqueWords.length === 3 &&
+        correctWords.every(word => uniqueWords.includes(word));
+
+    const codeCorrect = enteredCode === correctCode;
+
+    const message = document.getElementById("message");
+
+    /*
+        CORRECT ANSWER:
+        CODE: 1849
+
+        WORDS:
+        atmosphere
+        suspense
+        symbolism
+
+        Words may be entered in ANY order
+        and capitalization does not matter.
+    */
+
+    if (codeCorrect && wordsCorrect) {
+
+        playSuccessVideo();
+        return;
+    }
+
+
+    message.className = "wrong";
+
+    if (!codeCorrect && !wordsCorrect) {
+
+        message.innerHTML =
+            "The chamber remains sealed.<br>" +
+            "The number and the secrets are still incomplete.";
+
+    } else if (!codeCorrect) {
+
+        message.innerHTML =
+            "The secrets are known...<br>" +
+            "but the final number is false.";
+
+    } else {
+
+        message.innerHTML =
+            "The number is true...<br>" +
+            "but the three secrets have not yet been spoken.";
+    }
+
+
+    /*
+        Restart the shake animation
+        every time they submit a wrong answer.
+    */
+
+    message.style.animation = "none";
+
+    void message.offsetWidth;
+
+    message.style.animation = "";
+}
+
+
+function playSuccessVideo() {
+
+    const panel = document.getElementById("mainPanel");
+
+    /*
+        Replace the entire lock screen
+        with the success video.
+    */
+
+    panel.innerHTML = `
+        <div class="video-screen">
+
+            <video
+                id="successVideo"
+                class="success-video"
+                playsinline
+                webkit-playsinline
+                preload="auto"
+                controls>
+
+                <source
+                    src="poesuccessvideo.mp4"
+                    type="video/mp4">
+
+                Your browser does not support video playback.
+
+            </video>
+
+            <div
+                id="videoFallback"
+                class="video-fallback"
+                style="display:none;">
+
+                Tap the video to reveal your fate.
+
+            </div>
+
+        </div>
+    `;
+
+    const video = document.getElementById("successVideo");
+    const fallback = document.getElementById("videoFallback");
+
+    /*
+        Because the player has just tapped
+        "Unlock the Exit", most mobile browsers
+        will allow playback with sound.
+    */
+
+    video.currentTime = 0;
+
+    const playPromise = video.play();
+
+    if (playPromise !== undefined) {
+
+        playPromise.catch(() => {
+
+            /*
+                If a phone blocks automatic playback,
+                controls remain visible so the player
+                can simply tap Play.
+            */
+
+            fallback.style.display = "block";
+        });
+    }
+}
+
+
+/*
+    Pressing Enter while typing
+    also submits the final answer.
+*/
+
+document.addEventListener("keydown", function(event) {
+
+    if (event.key === "Enter") {
+        checkAnswer();
+    }
+
+});
+
+</script>
+
+</body>
+</html>
